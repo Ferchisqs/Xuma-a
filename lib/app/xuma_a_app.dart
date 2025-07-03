@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/config/app_theme.dart';
-import '../features/auth/presentation/pages/login_page.dart';
+import '../features/auth/presentation/pages/login_page.dart'; // 🆕 IMPORT
+
 
 class XumaAApp extends StatelessWidget {
   const XumaAApp({Key? key}) : super(key: key);
@@ -8,10 +9,10 @@ class XumaAApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Xuma\'a - Conciencia Ambiental',
+      title: 'XUMA\'A - Protector Ambiental',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const LoginPage(),
+      theme: AppTheme.lightTheme, // 🔄 Usar tema claro
+      home: const LoginPage(), // 🆕 Iniciar en Login
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(

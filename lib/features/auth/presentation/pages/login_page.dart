@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../di/injection.dart';
+import '../../../navigation/presentation/pages/main_wrapper_page.dart'; // 🆕 IMPORT
 import '../cubit/auth_cubit.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/custom_button.dart';
@@ -56,12 +57,20 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                 ),
               );
             } else if (state is AuthAuthenticated) {
-              // Navegar a home page
+              // 🆕 NAVEGAR AL HOME
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('¡Bienvenido a Xuma\'a!'),
+                  content: Text('¡Bienvenido a XUMA\'A!'),
                   backgroundColor: AppColors.success,
                 ),
+              );
+
+              // Navegar al MainWrapper (que contiene Home + NavBar)
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => const MainWrapperPage(),
+                ),
+                (route) => false, // Remover todas las rutas anteriores
               );
             }
           },
@@ -73,15 +82,16 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 40),
-                  
+
                   // Logo y header
                   const LogoHeader(
                     title: 'Inicio de Sesión',
-                    subtitle: '¡Hola! Me da mucho gusto por Xice',
+                    subtitle:
+                        '¡Hola! Me da mucho gusto por Xico', // 🔄 Corrección
                   ),
-                  
+
                   const SizedBox(height: 48),
-                  
+
                   // Email field
                   AuthTextField(
                     controller: _emailController,
@@ -90,9 +100,9 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                     keyboardType: TextInputType.emailAddress,
                     validator: _validateEmail,
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Password field
                   AuthTextField(
                     controller: _passwordController,
@@ -101,8 +111,10 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                     obscureText: _obscurePassword,
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                        color: AppColors.primary, // Ícono verde
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: AppColors.primary,
                       ),
                       onPressed: () {
                         setState(() {
@@ -112,9 +124,9 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                     ),
                     validator: _validatePassword,
                   ),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Login button
                   BlocBuilder<AuthCubit, AuthState>(
                     builder: (context, state) {
@@ -125,9 +137,28 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                       );
                     },
                   ),
-                  
+                  // 🔧 BOTÓN TEMPORAL PARA TESTING
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () {
+                      // Ir directo al Home para testing
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => const MainWrapperPage(),
+                        ),
+                        (route) => false,
+                      );
+                    },
+                    child: Text(
+                      'Skip Login (Testing)',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textHint,
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 24),
-                  
+
                   // Register link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -154,9 +185,9 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 40),
-                  
+
                   // Environment info
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -217,9 +248,9 @@ class _LoginPageContentState extends State<_LoginPageContent> {
   void _handleLogin() {
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthCubit>().login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+            _emailController.text.trim(),
+            _passwordController.text,
+          );
     }
   }
 

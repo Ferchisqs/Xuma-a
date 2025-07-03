@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Core dependencies
+  # Core
   cupertino_icons: ^1.0.2
 
   # State Management
@@ -33,7 +33,7 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
 
-  # Image handling
+  # Image Handling
   cached_network_image: ^3.3.0
 
   # UI/UX
@@ -53,6 +53,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  # Linting
   flutter_lints: ^3.0.0
 
   # Code Generation

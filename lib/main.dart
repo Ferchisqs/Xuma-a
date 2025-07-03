@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app/xuma_a_app.dart';
+import 'core/services/cache_service.dart';
 import 'di/injection.dart';
 
 void main() async {
@@ -15,12 +16,12 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
   
-  // Set system UI overlay style
+  // Set system UI overlay style (modo claro para XUMA'A)
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Color(0xFFF8F9FA),
+      statusBarIconBrightness: Brightness.dark, // 🔄 Cambiado a dark
+      systemNavigationBarColor: Color(0xFFF8F9FA), // 🔄 Fondo claro
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
@@ -30,11 +31,10 @@ void main() async {
 
 Future<void> _initializeServices() async {
   try {
-    // Initialize dependency injection
     configureDependencies();
-    
-    debugPrint('✅ Xuma\'a services initialized successfully');
+    await CacheService().init();
+    debugPrint('✅ XUMA\'A services initialized successfully');
   } catch (e) {
-    debugPrint('❌ Error initializing Xuma\'a services: $e');
+    debugPrint('❌ Error initializing XUMA\'A services: $e');
   }
 }
