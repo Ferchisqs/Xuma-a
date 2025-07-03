@@ -302,7 +302,7 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
     final ageText = _ageController.text;
     if (ageText.isEmpty) return false;
     final age = int.tryParse(ageText);
-    return age != null && age < 13;
+    return age != null && age <= 13;
   }
 
   Widget _buildAgeWarning() {
