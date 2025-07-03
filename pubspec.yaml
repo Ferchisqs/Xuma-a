@@ -1,0 +1,81 @@
+name: xuma_a
+description: "Una aplicación móvil de conciencia ambiental"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.1.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Core dependencies
+  cupertino_icons: ^1.0.2
+
+  # State Management
+  flutter_bloc: ^8.1.3
+  bloc: ^8.1.2
+  equatable: ^2.0.5
+
+  # Dependency Injection
+  get_it: ^7.6.4
+  injectable: ^2.3.2
+
+  # Network
+  dio: ^5.3.2
+  pretty_dio_logger: ^1.3.1
+  connectivity_plus: ^5.0.1
+
+  # Local Storage
+  shared_preferences: ^2.2.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Image handling
+  cached_network_image: ^3.3.0
+
+  # UI/UX
+  flutter_staggered_grid_view: ^0.7.0
+  lottie: ^2.7.0
+  shimmer: ^3.0.0
+
+  # Utils
+  json_annotation: ^4.8.1
+  url_launcher: ^6.2.1
+  intl: ^0.18.1
+
+  # Authentication
+  crypto: ^3.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.0
+
+  # Code Generation
+  build_runner: ^2.4.7
+  injectable_generator: ^2.4.1
+  json_serializable: ^6.7.1
+  hive_generator: ^2.0.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
