@@ -9,6 +9,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showDrawerButton;
   final VoidCallback? onBackPressed;
 
+  // ✅ NUEVO parámetro
+  final bool showEcoTip;
+
   const CustomAppBar({
     Key? key,
     required this.title,
@@ -16,6 +19,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.leading,
     this.showDrawerButton = false,
     this.onBackPressed,
+    this.showEcoTip = false, // ✅ Valor por defecto
   }) : super(key: key);
 
   @override
@@ -35,11 +39,10 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        // 🔄 ARREGLAR LEADING - usar automáticamente el drawer del Scaffold
-        automaticallyImplyLeading: showDrawerButton, // 🆕 Esto hace que funcione automáticamente
+        automaticallyImplyLeading: showDrawerButton,
         leading: leading ??
             (showDrawerButton
-                ? null // 🔄 Dejar que Flutter maneje automáticamente el drawer
+                ? null
                 : (Navigator.of(context).canPop()
                     ? IconButton(
                         icon: const Icon(
@@ -56,9 +59,22 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: actions,
+        actions: [
+          if (showEcoTip)
+            IconButton(
+              icon: const Icon(Icons.eco, color: Colors.white),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Tip ecológico: Reduce, reusa, recicla.'),
+                  ),
+                );
+              },
+            ),
+          if (actions != null) ...actions!,
+        ],
         iconTheme: const IconThemeData(
-          color: Colors.white, // 🆕 Asegurar que el ícono del drawer sea blanco
+          color: Colors.white,
         ),
       ),
     );

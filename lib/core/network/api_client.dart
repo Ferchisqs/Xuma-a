@@ -79,25 +79,45 @@ class ApiClient {
     }
   }
 
+// PUT Request
+  Future<Response> put(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      final response = await _dio.put(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+      return response;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
   ServerException _handleDioError(DioException error) {
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
         return const ServerException('Tiempo de conexión agotado');
-      
+
       case DioExceptionType.connectionError:
         return const ServerException('Sin conexión a internet');
-      
+
       case DioExceptionType.badResponse:
         final statusCode = error.response?.statusCode ?? 0;
-        final message = error.response?.data?['error']?['message'] ?? 
-                       'Error del servidor';
+        final message =
+            error.response?.data?['error']?['message'] ?? 'Error del servidor';
         return ServerException('$message (Código: $statusCode)');
-      
+
       case DioExceptionType.cancel:
         return const ServerException('Solicitud cancelada');
-      
+
       default:
         return const ServerException('Error inesperado');
     }

@@ -4,6 +4,7 @@ import '../../../../di/injection.dart';
 import '../cubit/navigation_cubit.dart';
 import '../widgets/side_nav_bar.dart';
 import '../../../home/presentation/pages/home_page.dart';
+import '../../../learning/presentation/pages/learning_main_page.dart';
 // import '../../../shared/pages/placeholder_pages.dart';
 
 class MainWrapperPage extends StatelessWidget {
@@ -38,12 +39,13 @@ class _MainWrapperContent extends StatelessWidget {
       case NavigationTab.home:
         return const HomePage();
       
-       default:
-      return const SizedBox.shrink();
+      case NavigationTab.learn:
+        return const LearningMainPage();
+      
+      default:
+        return const SizedBox.shrink();
       // case NavigationTab.news:
       //   return const NewsPage();
-      // case NavigationTab.learn:
-      //   return const LearnPage();
       // case NavigationTab.projects:
       //   return const ProjectsPage();
       // case NavigationTab.challenges:

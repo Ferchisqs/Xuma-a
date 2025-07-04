@@ -32,6 +32,31 @@ import '../features/home/domain/usecases/get_user_stats_usecase.dart' as _i762;
 import '../features/home/domain/usecases/update_user_activity_usecase.dart'
     as _i604;
 import '../features/home/presentation/cubit/home_cubit.dart' as _i1017;
+import '../features/learning/data/datasources/learning_local_datasource.dart'
+    as _i195;
+import '../features/learning/data/datasources/learning_remote_datasource.dart'
+    as _i506;
+import '../features/learning/data/repositories/learning_repository_impl.dart'
+    as _i378;
+import '../features/learning/domain/repositories/learning_repository.dart'
+    as _i852;
+import '../features/learning/domain/usecases/complete_lesson_usecase.dart'
+    as _i412;
+import '../features/learning/domain/usecases/get_categories_usecase.dart'
+    as _i80;
+import '../features/learning/domain/usecases/get_lesson_content_usecase.dart'
+    as _i391;
+import '../features/learning/domain/usecases/get_lessons_by_category_usecase.dart'
+    as _i194;
+import '../features/learning/domain/usecases/search_lessons_usecase.dart'
+    as _i420;
+import '../features/learning/domain/usecases/update_lesson_progress_usecase.dart'
+    as _i813;
+import '../features/learning/presentation/cubit/learning_cubit.dart' as _i992;
+import '../features/learning/presentation/cubit/lesson_content_cubit.dart'
+    as _i803;
+import '../features/learning/presentation/cubit/lesson_list_cubit.dart'
+    as _i568;
 import '../features/navigation/presentation/cubit/navigation_cubit.dart'
     as _i630;
 import 'modules/external_module.dart' as _i649;
@@ -65,6 +90,8 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i130.AuthRemoteDataSource>(),
           gh<_i182.AuthLocalDataSource>(),
         ));
+    gh.factory<_i195.LearningLocalDataSource>(
+        () => _i195.LearningLocalDataSourceImpl(gh<_i800.CacheService>()));
     gh.lazySingleton<_i6.NetworkInfo>(
         () => _i6.NetworkInfoImpl(gh<_i895.Connectivity>()));
     gh.lazySingleton<_i406.LoginUseCase>(
@@ -90,9 +117,39 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i762.GetUserStatsUseCase(gh<_i66.HomeRepository>()));
     gh.lazySingleton<_i604.UpdateUserActivityUseCase>(
         () => _i604.UpdateUserActivityUseCase(gh<_i66.HomeRepository>()));
+    gh.factory<_i506.LearningRemoteDataSource>(
+        () => _i506.LearningRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i1017.HomeCubit>(() => _i1017.HomeCubit(
           getDailyTipUseCase: gh<_i957.GetDailyTipUseCase>(),
           getUserStatsUseCase: gh<_i762.GetUserStatsUseCase>(),
+        ));
+    gh.factory<_i852.LearningRepository>(() => _i378.LearningRepositoryImpl(
+          remoteDataSource: gh<_i506.LearningRemoteDataSource>(),
+          localDataSource: gh<_i195.LearningLocalDataSource>(),
+          networkInfo: gh<_i6.NetworkInfo>(),
+        ));
+    gh.factory<_i412.CompleteLessonUseCase>(
+        () => _i412.CompleteLessonUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i80.GetCategoriesUseCase>(
+        () => _i80.GetCategoriesUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i194.GetLessonsByCategoryUseCase>(() =>
+        _i194.GetLessonsByCategoryUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i391.GetLessonContentUseCase>(
+        () => _i391.GetLessonContentUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i420.SearchLessonsUseCase>(
+        () => _i420.SearchLessonsUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i813.UpdateLessonProgressUseCase>(() =>
+        _i813.UpdateLessonProgressUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i992.LearningCubit>(() => _i992.LearningCubit(
+        getCategoriesUseCase: gh<_i80.GetCategoriesUseCase>()));
+    gh.factory<_i803.LessonContentCubit>(() => _i803.LessonContentCubit(
+          getLessonContentUseCase: gh<_i391.GetLessonContentUseCase>(),
+          updateLessonProgressUseCase: gh<_i813.UpdateLessonProgressUseCase>(),
+          completeLessonUseCase: gh<_i412.CompleteLessonUseCase>(),
+        ));
+    gh.factory<_i568.LessonListCubit>(() => _i568.LessonListCubit(
+          getLessonsByCategoryUseCase: gh<_i194.GetLessonsByCategoryUseCase>(),
+          searchLessonsUseCase: gh<_i420.SearchLessonsUseCase>(),
         ));
     return this;
   }

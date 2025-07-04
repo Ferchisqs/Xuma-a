@@ -7,21 +7,18 @@ import 'di/injection.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize services
   await _initializeServices();
   
-  // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
   
-  // Set system UI overlay style (modo claro para XUMA'A)
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark, // 🔄 Cambiado a dark
-      systemNavigationBarColor: Color(0xFFF8F9FA), // 🔄 Fondo claro
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Color(0xFFF8F9FA),
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
@@ -32,9 +29,22 @@ void main() async {
 Future<void> _initializeServices() async {
   try {
     configureDependencies();
-    await CacheService().init();
-    debugPrint('✅ XUMA\'A services initialized successfully');
+    
+    setupLearningDependencies();
+    
+    await getIt<CacheService>().init();
+    
+    debugPrint('XUMA\'A services initialized successfully');
+    debugPrint('Learning feature configured successfully');
   } catch (e) {
-    debugPrint('❌ Error initializing XUMA\'A services: $e');
+    debugPrint('Error initializing XUMA\'A services: $e');
+  }
+}
+
+void setupLearningDependencies() {
+  try {
+    debugPrint('Learning dependencies ready');
+  } catch (e) {
+    debugPrint('Error setting up Learning dependencies: $e');
   }
 }
