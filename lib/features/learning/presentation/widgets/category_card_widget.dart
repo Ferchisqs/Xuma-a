@@ -1,3 +1,4 @@
+// lib/features/learning/presentation/widgets/category_card_widget.dart
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
@@ -17,13 +18,28 @@ class CategoryCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap ?? () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => LessonListPage(category: category),
-          ),
-        );
+      onTap: () {
+        // 🚨 NAVEGACIÓN CORREGIDA
+        debugPrint('🎯 Navegando a categoría: ${category.title}');
+        
+        try {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => LessonListPage(category: category),
+            ),
+          );
+        } catch (e) {
+          debugPrint('❌ Error navegando: $e');
+          
+          // Mostrar error al usuario
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al abrir ${category.title}'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       },
       child: Container(
         decoration: BoxDecoration(
@@ -53,23 +69,7 @@ class CategoryCardWidget extends StatelessWidget {
               ),
               child: Stack(
                 children: [
-                  // Patrón de fondo
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(16),
-                          topRight: Radius.circular(16),
-                        ),
-                        image: DecorationImage(
-                          image: NetworkImage(category.imageUrl),
-                          fit: BoxFit.cover,
-                          onError: (exception, stackTrace) {},
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Overlay con icono
+                  // Overlay con gradiente
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: const BorderRadius.only(
@@ -80,9 +80,8 @@ class CategoryCardWidget extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
+                          Colors.black.withOpacity(0.1),
                           Colors.black.withOpacity(0.3),
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.5),
                         ],
                       ),
                     ),
@@ -104,6 +103,28 @@ class CategoryCardWidget extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // Título sobre la imagen
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                    child: Text(
+                      category.title,
+                      style: AppTextStyles.h4.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            offset: const Offset(0, 1),
+                            blurRadius: 3,
+                            color: Colors.black.withOpacity(0.5),
+                          ),
+                        ],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -114,25 +135,13 @@ class CategoryCardWidget extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Título
-                  Text(
-                    category.title,
-                    style: AppTextStyles.h4.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  
                   // Descripción
                   Text(
                     category.description,
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
-                    maxLines: 3,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 12),
@@ -166,11 +175,10 @@ class CategoryCardWidget extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
                   
-                  // Barra de progreso
+                  // Barra de progreso (si hay progreso)
                   if (category.completedLessons > 0) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -199,6 +207,28 @@ class CategoryCardWidget extends StatelessWidget {
                           valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                         ),
                       ],
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 12),
+                    // Botón de empezar
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.primary.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Text(
+                        'Empezar',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ],
                 ],

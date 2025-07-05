@@ -9,7 +9,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showDrawerButton;
   final VoidCallback? onBackPressed;
 
-  // ✅ NUEVO parámetro
   final bool showEcoTip;
 
   const CustomAppBar({
