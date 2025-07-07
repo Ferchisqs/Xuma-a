@@ -30,40 +30,43 @@ class EcoStatsWidget extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         
-        // Stats grid
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.3,
-          children: [
-            _buildStatCard(
-              'Puntos',
-              '${_userStatsData['totalPoints']}',
-              Icons.eco_rounded,
-              AppColors.primary,
-            ),
-            _buildStatCard(
-              'Actividades',
-              '${_userStatsData['completedActivities']}',
-              Icons.check_circle_rounded,
-              AppColors.success,
-            ),
-            _buildStatCard(
-              'Racha',
-              '${_userStatsData['streak']} días',
-              Icons.local_fire_department_rounded,
-              AppColors.warning,
-            ),
-            _buildStatCard(
-              'CO₂ Ahorrado',
-              '${_userStatsData['carbonSaved']} kg',
-              Icons.cloud_rounded,
-              AppColors.info,
-            ),
-          ],
+        // Stats grid - 🔄 ALTURA FIJA para evitar overflow
+        SizedBox(
+          height: 200, // 🔄 Altura fija para el grid
+          child: GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.4, // 🔄 Ratio más amplio para evitar overflow
+            children: [
+              _buildStatCard(
+                'Puntos',
+                '${_userStatsData['totalPoints']}',
+                Icons.eco_rounded,
+                AppColors.primary,
+              ),
+              _buildStatCard(
+                'Actividades',
+                '${_userStatsData['completedActivities']}',
+                Icons.check_circle_rounded,
+                AppColors.success,
+              ),
+              _buildStatCard(
+                'Racha',
+                '${_userStatsData['streak']} días',
+                Icons.local_fire_department_rounded,
+                AppColors.warning,
+              ),
+              _buildStatCard(
+                'CO₂ Ahorrado',
+                '${_userStatsData['carbonSaved']} kg',
+                Icons.cloud_rounded,
+                AppColors.info,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         
@@ -85,6 +88,7 @@ class EcoStatsWidget extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min, // 🔄 Tamaño mínimo
                   children: [
                     Text(
                       'Nivel Actual',
@@ -98,6 +102,8 @@ class EcoStatsWidget extends StatelessWidget {
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -111,7 +117,9 @@ class EcoStatsWidget extends StatelessWidget {
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      // 🔄 ALTURA FIJA para cada card
+      height: 90,
+      padding: const EdgeInsets.all(12), // 🔄 Padding reducido
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -128,35 +136,42 @@ class EcoStatsWidget extends StatelessWidget {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min, // 🔄 Tamaño mínimo
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(6), // 🔄 Padding reducido
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(
               icon,
               color: color,
-              size: 24,
+              size: 20, // 🔄 Ícono más pequeño
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8), // 🔄 Espacio reducido
           Text(
             value,
-            style: AppTextStyles.h4.copyWith(
+            style: AppTextStyles.bodyMedium.copyWith( // 🔄 Texto más pequeño
               color: AppColors.textPrimary,
               fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2), // 🔄 Espacio reducido
           Text(
             title,
             style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textSecondary,
+              fontSize: 11, // 🔄 Texto más pequeño
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

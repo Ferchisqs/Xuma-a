@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../../domain/entities/category_entity.dart';
 import 'category_card_widget.dart';
 
@@ -13,23 +12,20 @@ class CategoryGridWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MasonryGridView.count(
+    // 🔄 Grid normal con altura fija para prevenir overflow
+    return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.75, // 🔄 Ratio ajustado para altura fija
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
       itemCount: categories.length,
       itemBuilder: (context, index) {
         return CategoryCardWidget(
           category: categories[index],
-          onTap: () {
-            Navigator.pushNamed(
-              context,
-              '/lesson-list',
-              arguments: categories[index],
-            );
-          },
         );
       },
     );

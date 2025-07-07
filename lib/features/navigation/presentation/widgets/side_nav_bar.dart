@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../di/injection.dart'; // 🔄 IMPORT PARA GETIT
 import '../cubit/navigation_cubit.dart';
 import 'nav_item_widget.dart';
 import 'user_profile_widget.dart';
@@ -70,7 +71,7 @@ class SideNavBar extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Flexible( // 🔄 Cambiar Column por Flexible
+                        Flexible(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -80,14 +81,14 @@ class SideNavBar extends StatelessWidget {
                                   color: Colors.white,
                                   fontWeight: FontWeight.w500,
                                 ),
-                                overflow: TextOverflow.ellipsis, // 🆕 Evitar desbordamiento
+                                overflow: TextOverflow.ellipsis,
                               ),
                               Text(
                                 'Con Xico tu guía',
                                 style: AppTextStyles.bodySmall.copyWith(
                                   color: Colors.white.withOpacity(0.8),
                                 ),
-                                overflow: TextOverflow.ellipsis, // 🆕 Evitar desbordamiento
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -100,80 +101,81 @@ class SideNavBar extends StatelessWidget {
             ),
           ),
           
-          // Navigation Items
+          // Navigation Items - 🔄 USAR PROVIDER O CREAR CUBIT AQUÍ
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: BlocBuilder<NavigationCubit, NavigationState>(
-                builder: (context, state) {
-                  return Column(
-                    children: [
-                      NavItemWidget(
-                        icon: Icons.home_rounded,
-                        title: 'Inicio',
-                        isSelected: state.currentTab == NavigationTab.home,
-                        onTap: () {
-                          context.read<NavigationCubit>().goToHome();
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      NavItemWidget(
-                        icon: Icons.article_rounded,
-                        title: 'Noticias',
-                        isSelected: state.currentTab == NavigationTab.news,
-                        onTap: () {
-                          context.read<NavigationCubit>().goToNews();
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      NavItemWidget(
-                        icon: Icons.school_rounded,
-                        title: 'Aprendamos',
-                        isSelected: state.currentTab == NavigationTab.learn,
-                        onTap: () {
-                          context.read<NavigationCubit>().goToLearn();
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      NavItemWidget(
-                        icon: Icons.construction_rounded,
-                        title: 'Proyectos',
-                        isSelected: state.currentTab == NavigationTab.projects,
-                        onTap: () {
-                          context.read<NavigationCubit>().goToProjects();
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      NavItemWidget(
-                        icon: Icons.emoji_events_rounded,
-                        title: 'Desafíos',
-                        isSelected: state.currentTab == NavigationTab.challenges,
-                        onTap: () {
-                          context.read<NavigationCubit>().goToChallenges();
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      NavItemWidget(
-                        icon: Icons.groups_rounded,
-                        title: 'Comunidad',
-                        isSelected: state.currentTab == NavigationTab.community,
-                        onTap: () {
-                          context.read<NavigationCubit>().goToCommunity();
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      NavItemWidget(
-                        icon: Icons.help_outline_rounded,
-                        title: 'Contacto', // 🔄 Cambié "Contactanos" por "Contacto"
-                        isSelected: state.currentTab == NavigationTab.contact,
-                        onTap: () {
-                          context.read<NavigationCubit>().goToContact();
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                    ],
-                  );
-                },
+              child: BlocProvider.value(
+                // 🔄 INTENTAR USAR EL CUBIT DEL CONTEXTO EXISTENTE
+                value: context.read<NavigationCubit>(),
+                child: BlocBuilder<NavigationCubit, NavigationState>(
+                  builder: (context, state) {
+                    return Column(
+                      children: [
+                        NavItemWidget(
+                          icon: Icons.home_rounded,
+                          title: 'Inicio',
+                          isSelected: state.currentTab == NavigationTab.home,
+                          onTap: () {
+                            debugPrint('🏠 Navegando a Home...');
+                            context.read<NavigationCubit>().goToHome();
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                        NavItemWidget(
+                          icon: Icons.pets_rounded,
+                          title: 'Compañero',
+                          isSelected: state.currentTab == NavigationTab.companion,
+                          onTap: () {
+                            debugPrint('🐾 Navegando a Compañero...');
+                            context.read<NavigationCubit>().goToCompanion();
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                        NavItemWidget(
+                          icon: Icons.school_rounded,
+                          title: 'Aprendamos',
+                          isSelected: state.currentTab == NavigationTab.learn,
+                          onTap: () {
+                            debugPrint('📚 Navegando a Aprendamos...');
+                            context.read<NavigationCubit>().goToLearn();
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                        NavItemWidget(
+                          icon: Icons.quiz_rounded,
+                          title: 'Trivias',
+                          isSelected: state.currentTab == NavigationTab.trivia,
+                          onTap: () {
+                            debugPrint('🧠 Navegando a Trivias...');
+                            context.read<NavigationCubit>().goToTrivia();
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                        NavItemWidget(
+                          icon: Icons.emoji_events_rounded,
+                          title: 'Desafíos',
+                          isSelected: state.currentTab == NavigationTab.challenges,
+                          onTap: () {
+                            debugPrint('🏆 Navegando a Desafíos...');
+                            context.read<NavigationCubit>().goToChallenges();
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                        NavItemWidget(
+                          icon: Icons.help_outline_rounded,
+                          title: 'Contacto',
+                          isSelected: state.currentTab == NavigationTab.contact,
+                          onTap: () {
+                            debugPrint('📞 Navegando a Contacto...');
+                            context.read<NavigationCubit>().goToContact();
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -183,5 +185,25 @@ class SideNavBar extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// 🔄 ALTERNATIVA: SideNavBar que crea su propio cubit si no encuentra uno
+class SideNavBarWithFallback extends StatelessWidget {
+  const SideNavBarWithFallback({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // 🔄 Intentar usar cubit existente, si no crear uno nuevo
+    final existingCubit = context.read<NavigationCubit?>();
+    
+    if (existingCubit != null) {
+      return const SideNavBar();
+    } else {
+      return BlocProvider(
+        create: (_) => getIt<NavigationCubit>(),
+        child: const SideNavBar(),
+      );
+    }
   }
 }

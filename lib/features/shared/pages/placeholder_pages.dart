@@ -3,60 +3,52 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../navigation/presentation/widgets/custom_app_bar.dart';
 
-class NewsPage extends StatelessWidget {
-  const NewsPage({Key? key}) : super(key: key);
+// 🔄 NUEVAS PÁGINAS
+class CompanionPage extends StatelessWidget {
+  const CompanionPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const CustomAppBar(title: 'Noticias'),
+      drawer: Scaffold.of(context).hasDrawer ? null : Drawer(), // 🔄 Asegurar drawer
+      appBar: const CustomAppBar(
+        title: 'Compañero',
+        showDrawerButton: true, // 🔄 Mostrar botón hamburguesa
+      ),
       body: const _PlaceholderContent(
-        icon: Icons.article_rounded,
-        title: 'Noticias Ambientales',
-        subtitle: 'Próximamente: Últimas noticias sobre medio ambiente',
-        color: AppColors.info,
+        icon: Icons.pets_rounded,
+        title: 'Tu Compañero Xico',
+        subtitle: 'Próximamente: Interactúa con tu guía ecológico',
+        color: AppColors.accent,
       ),
     );
   }
 }
 
-class LearnPage extends StatelessWidget {
-  const LearnPage({Key? key}) : super(key: key);
+class TriviaPage extends StatelessWidget {
+  const TriviaPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const CustomAppBar(title: 'Aprendamos'),
-      body: const _PlaceholderContent(
-        icon: Icons.school_rounded,
-        title: 'Educación Ecológica',
-        subtitle: 'Próximamente: Cursos y contenido educativo',
-        color: AppColors.secondary,
+      drawer: Scaffold.of(context).hasDrawer ? null : Drawer(), // 🔄 Asegurar drawer
+      appBar: const CustomAppBar(
+        title: 'Trivias',
+        showDrawerButton: true, // 🔄 Mostrar botón hamburguesa
       ),
-    );
-  }
-}
-
-class ProjectsPage extends StatelessWidget {
-  const ProjectsPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: const CustomAppBar(title: 'Proyectos'),
       body: const _PlaceholderContent(
-        icon: Icons.construction_rounded,
-        title: 'Proyectos Verdes',
-        subtitle: 'Próximamente: Iniciativas ambientales',
+        icon: Icons.quiz_rounded,
+        title: 'Trivias Ecológicas',
+        subtitle: 'Próximamente: Pon a prueba tus conocimientos',
         color: AppColors.warning,
       ),
     );
   }
 }
 
+// PÁGINAS EXISTENTES ACTUALIZADAS
 class ChallengesPage extends StatelessWidget {
   const ChallengesPage({Key? key}) : super(key: key);
 
@@ -64,29 +56,15 @@ class ChallengesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const CustomAppBar(title: 'Desafíos'),
+      drawer: Scaffold.of(context).hasDrawer ? null : Drawer(), // 🔄 Asegurar drawer
+      appBar: const CustomAppBar(
+        title: 'Desafíos',
+        showDrawerButton: true, // 🔄 Mostrar botón hamburguesa
+      ),
       body: const _PlaceholderContent(
         icon: Icons.emoji_events_rounded,
         title: 'Desafíos Ecológicos',
         subtitle: 'Próximamente: Retos y competencias',
-        color: AppColors.accent,
-      ),
-    );
-  }
-}
-
-class CommunityPage extends StatelessWidget {
-  const CommunityPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: const CustomAppBar(title: 'Comunidad'),
-      body: const _PlaceholderContent(
-        icon: Icons.groups_rounded,
-        title: 'Comunidad Eco',
-        subtitle: 'Próximamente: Red social ambiental',
         color: AppColors.primaryLight,
       ),
     );
@@ -100,7 +78,11 @@ class ContactPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const CustomAppBar(title: 'Contacto'),
+      drawer: Scaffold.of(context).hasDrawer ? null : Drawer(), // 🔄 Asegurar drawer
+      appBar: const CustomAppBar(
+        title: 'Contacto',
+        showDrawerButton: true, // 🔄 Mostrar botón hamburguesa
+      ),
       body: const _PlaceholderContent(
         icon: Icons.support_agent_rounded,
         title: 'Contacto y Soporte',

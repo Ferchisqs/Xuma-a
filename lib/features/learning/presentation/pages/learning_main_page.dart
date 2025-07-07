@@ -9,7 +9,6 @@ import '../cubit/learning_cubit.dart';
 import '../widgets/category_grid_widget.dart';
 import '../../../navigation/presentation/widgets/custom_app_bar.dart';
 
-
 class LearningMainPage extends StatelessWidget {
   const LearningMainPage({Key? key}) : super(key: key);
 
@@ -29,8 +28,12 @@ class _LearningMainContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      // 🔄 DRAWER SIEMPRE DISPONIBLE - igual que en HomePage
+      drawer: Scaffold.of(context).hasDrawer ? null : Drawer(),
+      // 🔄 APP BAR CONSISTENTE con drawer button
       appBar: const CustomAppBar(
         title: 'Aprendamos',
+        showDrawerButton: true, // 🔄 Asegurar botón hamburguesa
         showEcoTip: true,
       ),
       body: RefreshIndicator(

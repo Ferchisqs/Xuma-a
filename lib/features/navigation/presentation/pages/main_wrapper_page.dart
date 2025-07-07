@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../di/injection.dart';
 import '../cubit/navigation_cubit.dart';
-import '../widgets/side_nav_bar.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../learning/presentation/pages/learning_main_page.dart';
-// import '../../../shared/pages/placeholder_pages.dart';
+// import '../../../challenges/presentation/pages/challenges_page.dart'; // 🔄 IMPORT REAL
+import '../../../shared/pages/placeholder_pages.dart';
 
 class MainWrapperPage extends StatelessWidget {
   const MainWrapperPage({Key? key}) : super(key: key);
@@ -27,7 +27,7 @@ class _MainWrapperContent extends StatelessWidget {
     return BlocBuilder<NavigationCubit, NavigationState>(
       builder: (context, state) {
         return Scaffold(
-          drawer: const SideNavBar(),
+          // 🔄 NO DRAWER AQUÍ - cada página maneja su propio drawer
           body: _buildCurrentPage(state.currentTab),
         );
       },
@@ -42,18 +42,20 @@ class _MainWrapperContent extends StatelessWidget {
       case NavigationTab.learn:
         return const LearningMainPage();
       
+      // case NavigationTab.companion: // 🔄 Nuevo tab
+      //   return const CompanionPage();
+        
+      // case NavigationTab.trivia: // 🔄 Nuevo tab
+      //   return const TriviaPage();
+        
+      case NavigationTab.challenges: // 🔄 USAR IMPLEMENTACIÓN REAL
+        return const ChallengesPage();
+        
+      case NavigationTab.contact:
+        return const ContactPage();
+      
       default:
-        return const SizedBox.shrink();
-      // case NavigationTab.news:
-      //   return const NewsPage();
-      // case NavigationTab.projects:
-      //   return const ProjectsPage();
-      // case NavigationTab.challenges:
-      //   return const ChallengesPage();
-      // case NavigationTab.community:
-      //   return const CommunityPage();
-      // case NavigationTab.contact:
-      //   return const ContactPage();
+        return const HomePage();
     }
   }
 }

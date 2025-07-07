@@ -1,4 +1,3 @@
-// lib/features/learning/presentation/widgets/category_card_widget.dart
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
@@ -19,7 +18,6 @@ class CategoryCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // 🚨 NAVEGACIÓN CORREGIDA
         debugPrint('🎯 Navegando a categoría: ${category.title}');
         
         try {
@@ -32,7 +30,6 @@ class CategoryCardWidget extends StatelessWidget {
         } catch (e) {
           debugPrint('❌ Error navegando: $e');
           
-          // Mostrar error al usuario
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error al abrir ${category.title}'),
@@ -42,6 +39,8 @@ class CategoryCardWidget extends StatelessWidget {
         }
       },
       child: Container(
+        // 🔄 ALTURA FIJA para evitar overflow
+        height: 280, // Altura fija que funciona bien
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -56,9 +55,9 @@ class CategoryCardWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Imagen de la categoría
+            // 🔄 IMAGEN DE LA CATEGORÍA - Altura fija
             Container(
-              height: 120,
+              height: 120, // Altura fija
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: const BorderRadius.only(
@@ -88,31 +87,32 @@ class CategoryCardWidget extends StatelessWidget {
                   ),
                   // Icono de la categoría
                   Positioned(
-                    top: 16,
-                    right: 16,
+                    top: 12,
+                    right: 12,
                     child: Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Icon(
                         IconData(category.iconCode, fontFamily: 'MaterialIcons'),
                         color: Colors.white,
-                        size: 24,
+                        size: 20,
                       ),
                     ),
                   ),
                   // Título sobre la imagen
                   Positioned(
-                    bottom: 16,
-                    left: 16,
-                    right: 16,
+                    bottom: 12,
+                    left: 12,
+                    right: 12,
                     child: Text(
                       category.title,
-                      style: AppTextStyles.h4.copyWith(
+                      style: AppTextStyles.bodyMedium.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
+                        fontSize: 14,
                         shadows: [
                           Shadow(
                             offset: const Offset(0, 1),
@@ -129,112 +129,137 @@ class CategoryCardWidget extends StatelessWidget {
               ),
             ),
             
-            // Contenido de la card
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Descripción
-                  Text(
-                    category.description,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
+            // 🔄 CONTENIDO DE LA CARD - Altura restante calculada
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 🔄 DESCRIPCIÓN - Espacio limitado
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        category.description,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                          height: 1.3,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  // Información de lecciones
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${category.lessonsCount} lecciones',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        category.estimatedTime,
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textHint,
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  // Barra de progreso (si hay progreso)
-                  if (category.completedLessons > 0) ...[
-                    const SizedBox(height: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    
+                    const SizedBox(height: 8),
+                    
+                    // 🔄 INFORMACIÓN DE LECCIONES - Compacta
+                    Row(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Progreso',
-                              style: AppTextStyles.caption.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
                             ),
-                            Text(
-                              '${(category.progressPercentage * 100).round()}%',
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '${category.lessonsCount} lecciones',
                               style: AppTextStyles.caption.copyWith(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w600,
+                                fontSize: 9,
                               ),
                             ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        LinearProgressIndicator(
-                          value: category.progressPercentage,
-                          backgroundColor: AppColors.primaryLight.withOpacity(0.2),
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          category.estimatedTime,
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textHint,
+                            fontSize: 9,
+                          ),
                         ),
                       ],
                     ),
-                  ] else ...[
-                    const SizedBox(height: 12),
-                    // Botón de empezar
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppColors.primary.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Text(
-                        'Empezar',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    // 🔄 PROGRESO O BOTÓN EMPEZAR - Altura fija
+                    SizedBox(
+                      height: 24, // Altura fija para evitar overflow
+                      child: category.completedLessons > 0
+                          ? _buildProgressIndicator()
+                          : _buildStartButton(),
                     ),
                   ],
-                ],
+                ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressIndicator() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Progreso',
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textSecondary,
+                fontSize: 9,
+              ),
+            ),
+            Text(
+              '${(category.progressPercentage * 100).round()}%',
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 9,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Expanded(
+          child: LinearProgressIndicator(
+            value: category.progressPercentage,
+            backgroundColor: AppColors.primaryLight.withOpacity(0.2),
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStartButton() {
+    return Container(
+      width: double.infinity,
+      height: 24,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.3),
+        ),
+      ),
+      child: Center(
+        child: Text(
+          'Empezar',
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w600,
+            fontSize: 10,
+          ),
         ),
       ),
     );
