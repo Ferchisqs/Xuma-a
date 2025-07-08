@@ -31,13 +31,15 @@ Future<void> _initializeServices() async {
     configureDependencies();
     
     setupLearningDependencies();
-    setupChallengesDependencies(); // 🆕 Agregar setup de Challenges
+    setupChallengesDependencies();
+    setupTriviaDependencies(); // 🆕 AGREGAR ESTA LÍNEA
     
     await getIt<CacheService>().init();
     
     debugPrint('✅ XUMA\'A services initialized successfully');
     debugPrint('✅ Learning feature configured successfully');
-    debugPrint('✅ Challenges feature configured successfully'); // 🆕
+    debugPrint('✅ Challenges feature configured successfully');
+    debugPrint('✅ Trivia feature configured successfully'); // 🆕
   } catch (e) {
     debugPrint('❌ Error initializing XUMA\'A services: $e');
   }
@@ -51,11 +53,19 @@ void setupLearningDependencies() {
   }
 }
 
-// 🆕 Setup para Challenges
 void setupChallengesDependencies() {
   try {
     debugPrint('✅ Challenges dependencies ready');
   } catch (e) {
     debugPrint('❌ Error setting up Challenges dependencies: $e');
+  }
+}
+
+// 🆕 Agregar método setupTriviaDependencies
+void setupTriviaDependencies() {
+  try {
+    debugPrint('✅ Trivia dependencies ready');
+  } catch (e) {
+    debugPrint('❌ Error setting up Trivia dependencies: $e');
   }
 }

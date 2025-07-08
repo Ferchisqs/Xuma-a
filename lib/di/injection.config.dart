@@ -87,6 +87,25 @@ import '../features/learning/presentation/cubit/lesson_list_cubit.dart'
     as _i568;
 import '../features/navigation/presentation/cubit/navigation_cubit.dart'
     as _i630;
+import '../features/trivia/data/datasources/trivia_local_datasource.dart'
+    as _i430;
+import '../features/trivia/data/datasources/trivia_remote_datasource.dart'
+    as _i614;
+import '../features/trivia/data/repositories/trivia_repository_impl.dart'
+    as _i121;
+import '../features/trivia/domain/repositories/trivia_repository.dart' as _i416;
+import '../features/trivia/domain/usecases/get_trivia_categories_usecase.dart'
+    as _i828;
+import '../features/trivia/domain/usecases/get_trivia_questions_usecase.dart'
+    as _i9;
+import '../features/trivia/domain/usecases/get_user_trivia_history_usecase.dart'
+    as _i919;
+import '../features/trivia/domain/usecases/submit_trivia_answer_usecase.dart'
+    as _i381;
+import '../features/trivia/domain/usecases/submit_trivia_result_usecase.dart'
+    as _i157;
+import '../features/trivia/presentation/cubit/trivia_cubit.dart' as _i993;
+import '../features/trivia/presentation/cubit/trivia_game_cubit.dart' as _i912;
 import 'modules/external_module.dart' as _i649;
 
 extension GetItInjectableX on _i174.GetIt {
@@ -114,6 +133,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i130.AuthRemoteDataSourceImpl());
     gh.lazySingleton<_i182.AuthLocalDataSource>(
         () => _i182.AuthLocalDataSourceImpl(gh<_i460.SharedPreferences>()));
+    gh.factory<_i430.TriviaLocalDataSource>(
+        () => _i430.TriviaLocalDataSourceImpl(gh<_i800.CacheService>()));
     gh.factory<_i422.ChallengesLocalDataSource>(
         () => _i422.ChallengesLocalDataSourceImpl(gh<_i800.CacheService>()));
     gh.lazySingleton<_i869.AuthRepository>(() => _i570.AuthRepositoryImpl(
@@ -132,9 +153,16 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i510.ApiClient(gh<_i6.NetworkInfo>()));
     gh.lazySingleton<_i75.HomeRemoteDataSource>(
         () => _i75.HomeRemoteDataSourceImpl(gh<_i510.ApiClient>()));
+    gh.factory<_i614.TriviaRemoteDataSource>(
+        () => _i614.TriviaRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i70.AuthCubit>(() => _i70.AuthCubit(
           loginUseCase: gh<_i406.LoginUseCase>(),
           registerUseCase: gh<_i819.RegisterUseCase>(),
+        ));
+    gh.factory<_i416.TriviaRepository>(() => _i121.TriviaRepositoryImpl(
+          remoteDataSource: gh<_i614.TriviaRemoteDataSource>(),
+          localDataSource: gh<_i430.TriviaLocalDataSource>(),
+          networkInfo: gh<_i6.NetworkInfo>(),
         ));
     gh.lazySingleton<_i66.HomeRepository>(() => _i6.HomeRepositoryImpl(
           gh<_i75.HomeRemoteDataSource>(),
@@ -147,6 +175,18 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i762.GetUserStatsUseCase(gh<_i66.HomeRepository>()));
     gh.lazySingleton<_i604.UpdateUserActivityUseCase>(
         () => _i604.UpdateUserActivityUseCase(gh<_i66.HomeRepository>()));
+    gh.factory<_i828.GetTriviaCategoriesUseCase>(
+        () => _i828.GetTriviaCategoriesUseCase(gh<_i416.TriviaRepository>()));
+    gh.factory<_i9.GetTriviaQuestionsUseCase>(
+        () => _i9.GetTriviaQuestionsUseCase(gh<_i416.TriviaRepository>()));
+    gh.factory<_i919.GetUserTriviaHistoryUseCase>(
+        () => _i919.GetUserTriviaHistoryUseCase(gh<_i416.TriviaRepository>()));
+    gh.factory<_i381.SubmitTriviaResultUseCase>(
+        () => _i381.SubmitTriviaResultUseCase(gh<_i416.TriviaRepository>()));
+    gh.factory<_i157.SubmitTriviaResultUseCase>(
+        () => _i157.SubmitTriviaResultUseCase(gh<_i416.TriviaRepository>()));
+    gh.factory<_i993.TriviaCubit>(() => _i993.TriviaCubit(
+        getTriviaCategoriesUseCase: gh<_i828.GetTriviaCategoriesUseCase>()));
     gh.factory<_i252.ChallengesRemoteDataSource>(
         () => _i252.ChallengesRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i506.LearningRemoteDataSource>(
@@ -154,6 +194,10 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i1017.HomeCubit>(() => _i1017.HomeCubit(
           getDailyTipUseCase: gh<_i957.GetDailyTipUseCase>(),
           getUserStatsUseCase: gh<_i762.GetUserStatsUseCase>(),
+        ));
+    gh.factory<_i912.TriviaGameCubit>(() => _i912.TriviaGameCubit(
+          getTriviaQuestionsUseCase: gh<_i9.GetTriviaQuestionsUseCase>(),
+          submitTriviaResultUseCase: gh<_i157.SubmitTriviaResultUseCase>(),
         ));
     gh.factory<_i959.ChallengesRepository>(() => _i285.ChallengesRepositoryImpl(
           remoteDataSource: gh<_i252.ChallengesRemoteDataSource>(),

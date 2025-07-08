@@ -5,6 +5,8 @@ import '../../../../di/injection.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../navigation/presentation/widgets/custom_app_bar.dart';
+import '../../../navigation/presentation/widgets/side_nav_bar.dart'; // 🆕 IMPORT EXPLÍCITO
+import '../../../navigation/presentation/cubit/navigation_cubit.dart'; // 🆕 IMPORT CUBIT
 import '../cubit/challenges_cubit.dart';
 import '../widgets/challenges_header_widget.dart';
 import '../widgets/challenge_tabs_widget.dart';
@@ -15,9 +17,14 @@ class ChallengesMainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => getIt<ChallengesCubit>()..loadChallenges(),
-      child: const _ChallengesMainContent(),
+    // 🔄 VERIFICAR SI YA EXISTE NAVIGATION CUBIT EN EL CONTEXTO
+    return BlocProvider.value(
+      // 🔄 USAR EL CUBIT EXISTENTE DEL MAIN WRAPPER
+      value: context.read<NavigationCubit>(),
+      child: BlocProvider(
+        create: (_) => getIt<ChallengesCubit>()..loadChallenges(),
+        child: const _ChallengesMainContent(),
+      ),
     );
   }
 }
@@ -29,7 +36,8 @@ class _ChallengesMainContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      drawer: Scaffold.of(context).hasDrawer ? null : Drawer(),
+      // 🔄 DRAWER DIRECTO - asegurar que está disponible
+      drawer: const SideNavBar(),
       appBar: const CustomAppBar(
         title: 'Desafíos',
         showDrawerButton: true,
