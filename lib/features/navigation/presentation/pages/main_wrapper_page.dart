@@ -4,7 +4,7 @@ import '../../../../di/injection.dart';
 import '../cubit/navigation_cubit.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../learning/presentation/pages/learning_main_page.dart';
-// import '../../../challenges/presentation/pages/challenges_page.dart'; // 🔄 IMPORT REAL
+import '../../../challenges/presentation/pages/challenges_main_page.dart'; // 🆕 IMPORT REAL
 import '../../../shared/pages/placeholder_pages.dart';
 
 class MainWrapperPage extends StatelessWidget {
@@ -27,7 +27,6 @@ class _MainWrapperContent extends StatelessWidget {
     return BlocBuilder<NavigationCubit, NavigationState>(
       builder: (context, state) {
         return Scaffold(
-          // 🔄 NO DRAWER AQUÍ - cada página maneja su propio drawer
           body: _buildCurrentPage(state.currentTab),
         );
       },
@@ -42,14 +41,14 @@ class _MainWrapperContent extends StatelessWidget {
       case NavigationTab.learn:
         return const LearningMainPage();
       
-      // case NavigationTab.companion: // 🔄 Nuevo tab
-      //   return const CompanionPage();
+      case NavigationTab.companion:
+        return const CompanionPage();
         
-      // case NavigationTab.trivia: // 🔄 Nuevo tab
-      //   return const TriviaPage();
+      case NavigationTab.trivia:
+        return const TriviaPage();
         
-      case NavigationTab.challenges: // 🔄 USAR IMPLEMENTACIÓN REAL
-        return const ChallengesPage();
+      case NavigationTab.challenges: // 🆕 USAR IMPLEMENTACIÓN REAL
+        return const ChallengesMainPage();
         
       case NavigationTab.contact:
         return const ContactPage();

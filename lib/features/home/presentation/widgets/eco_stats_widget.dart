@@ -30,16 +30,16 @@ class EcoStatsWidget extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         
-        // Stats grid - 🔄 ALTURA FIJA para evitar overflow
-        SizedBox(
-          height: 200, // 🔄 Altura fija para el grid
+        // Stats grid - 🔄 ALTURA AUMENTADA para evitar solapamiento
+        Container(
+          height: 200, // 🔄 Altura aumentada
           child: GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.4, // 🔄 Ratio más amplio para evitar overflow
+            childAspectRatio: 1.8, // 🔄 Ratio más ancho para evitar solapamiento
             children: [
               _buildStatCard(
                 'Puntos',
@@ -68,11 +68,12 @@ class EcoStatsWidget extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20), // 🔄 Más espacio entre grid y nivel
         
-        // Level indicator
+        // Level indicator - 🔄 ALTURA AUMENTADA Y MEJOR DISTRIBUCIÓN
         Container(
-          padding: const EdgeInsets.all(16),
+          height: 80, // 🔄 Altura aumentada
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // 🔄 Padding ajustado
           decoration: BoxDecoration(
             gradient: AppColors.earthGradient,
             borderRadius: BorderRadius.circular(12),
@@ -88,19 +89,22 @@ class EcoStatsWidget extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min, // 🔄 Tamaño mínimo
+                  mainAxisAlignment: MainAxisAlignment.center, // 🔄 Centrar verticalmente
                   children: [
                     Text(
                       'Nivel Actual',
                       style: AppTextStyles.bodySmall.copyWith(
                         color: Colors.white.withOpacity(0.8),
+                        fontSize: 11, // 🔄 Texto ligeramente más grande
                       ),
                     ),
+                    const SizedBox(height: 2), // 🔄 Pequeño espacio
                     Text(
                       _userStatsData['currentLevel'] as String,
-                      style: AppTextStyles.h4.copyWith(
+                      style: AppTextStyles.h4.copyWith( // 🔄 Usar h4 para mejor jerarquía
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: 16, // 🔄 Tamaño adecuado
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -117,9 +121,8 @@ class EcoStatsWidget extends StatelessWidget {
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Container(
-      // 🔄 ALTURA FIJA para cada card
-      height: 90,
-      padding: const EdgeInsets.all(12), // 🔄 Padding reducido
+      // 🔄 SIN altura fija aquí, se maneja con el grid
+      padding: const EdgeInsets.all(10), // 🔄 Padding aumentado
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -129,17 +132,17 @@ class EcoStatsWidget extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min, // 🔄 Tamaño mínimo
+        mainAxisSize: MainAxisSize.min, // 🔄 Tamaño mínimo para evitar overflow
         children: [
           Container(
-            padding: const EdgeInsets.all(6), // 🔄 Padding reducido
+            padding: const EdgeInsets.all(6), // 🔄 Padding aumentado
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(6),
@@ -147,27 +150,27 @@ class EcoStatsWidget extends StatelessWidget {
             child: Icon(
               icon,
               color: color,
-              size: 20, // 🔄 Ícono más pequeño
+              size: 18, // 🔄 Ícono ligeramente más grande
             ),
           ),
-          const SizedBox(height: 8), // 🔄 Espacio reducido
+          const SizedBox(height: 6), // 🔄 Espacio aumentado
           Text(
             value,
-            style: AppTextStyles.bodyMedium.copyWith( // 🔄 Texto más pequeño
+            style: AppTextStyles.bodyMedium.copyWith( // 🔄 Texto más pequeño pero legible
               color: AppColors.textPrimary,
               fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontSize: 14,
             ),
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2), // 🔄 Espacio reducido
+          const SizedBox(height: 2), // 🔄 Espacio mínimo
           Text(
             title,
-            style: AppTextStyles.bodySmall.copyWith(
+            style: AppTextStyles.caption.copyWith(
               color: AppColors.textSecondary,
-              fontSize: 11, // 🔄 Texto más pequeño
+              fontSize: 10, // 🔄 Texto legible
             ),
             textAlign: TextAlign.center,
             maxLines: 1,

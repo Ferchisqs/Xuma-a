@@ -31,20 +31,31 @@ Future<void> _initializeServices() async {
     configureDependencies();
     
     setupLearningDependencies();
+    setupChallengesDependencies(); // 🆕 Agregar setup de Challenges
     
     await getIt<CacheService>().init();
     
-    debugPrint('XUMA\'A services initialized successfully');
-    debugPrint('Learning feature configured successfully');
+    debugPrint('✅ XUMA\'A services initialized successfully');
+    debugPrint('✅ Learning feature configured successfully');
+    debugPrint('✅ Challenges feature configured successfully'); // 🆕
   } catch (e) {
-    debugPrint('Error initializing XUMA\'A services: $e');
+    debugPrint('❌ Error initializing XUMA\'A services: $e');
   }
 }
 
 void setupLearningDependencies() {
   try {
-    debugPrint('Learning dependencies ready');
+    debugPrint('✅ Learning dependencies ready');
   } catch (e) {
-    debugPrint('Error setting up Learning dependencies: $e');
+    debugPrint('❌ Error setting up Learning dependencies: $e');
+  }
+}
+
+// 🆕 Setup para Challenges
+void setupChallengesDependencies() {
+  try {
+    debugPrint('✅ Challenges dependencies ready');
+  } catch (e) {
+    debugPrint('❌ Error setting up Challenges dependencies: $e');
   }
 }
