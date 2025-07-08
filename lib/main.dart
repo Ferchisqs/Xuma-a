@@ -32,14 +32,16 @@ Future<void> _initializeServices() async {
     
     setupLearningDependencies();
     setupChallengesDependencies();
-    setupTriviaDependencies(); // 🆕 AGREGAR ESTA LÍNEA
+    setupTriviaDependencies();
+    setupCompanionDependencies(); // 🆕 NUEVA LÍNEA PARA MASCOTAS
     
     await getIt<CacheService>().init();
     
     debugPrint('✅ XUMA\'A services initialized successfully');
     debugPrint('✅ Learning feature configured successfully');
     debugPrint('✅ Challenges feature configured successfully');
-    debugPrint('✅ Trivia feature configured successfully'); // 🆕
+    debugPrint('✅ Trivia feature configured successfully');
+    debugPrint('✅ Companion feature configured successfully'); // 🆕
   } catch (e) {
     debugPrint('❌ Error initializing XUMA\'A services: $e');
   }
@@ -61,11 +63,19 @@ void setupChallengesDependencies() {
   }
 }
 
-// 🆕 Agregar método setupTriviaDependencies
 void setupTriviaDependencies() {
   try {
     debugPrint('✅ Trivia dependencies ready');
   } catch (e) {
     debugPrint('❌ Error setting up Trivia dependencies: $e');
+  }
+}
+
+// 🆕 NUEVO MÉTODO PARA CONFIGURAR DEPENDENCIES DE MASCOTAS
+void setupCompanionDependencies() {
+  try {
+    debugPrint('✅ Companion dependencies ready');
+  } catch (e) {
+    debugPrint('❌ Error setting up Companion dependencies: $e');
   }
 }

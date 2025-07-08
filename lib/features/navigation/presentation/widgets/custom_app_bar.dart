@@ -15,9 +15,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.title,
     this.actions,
     this.leading,
-    this.showDrawerButton = true, // 🔄 Por defecto SIEMPRE mostrar drawer
+    this.showDrawerButton = true, 
     this.onBackPressed,
-    this.showEcoTip = true, // 🔄 Por defecto SIEMPRE mostrar eco tip
+    this.showEcoTip = true, 
   }) : super(key: key);
 
   @override

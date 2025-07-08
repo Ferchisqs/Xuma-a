@@ -11,8 +11,8 @@ enum NavigationTab {
   contact    // 🔄 Quité "community"
 }
 
-// Navigation State
-abstract class NavigationState extends Equatable {
+// Navigation State - Simplificada y más consistente
+class NavigationState extends Equatable {
   final NavigationTab currentTab;
   final bool isDrawerOpen;
   
@@ -23,46 +23,43 @@ abstract class NavigationState extends Equatable {
   
   @override
   List<Object> get props => [currentTab, isDrawerOpen];
-}
 
-class NavigationInitial extends NavigationState {
-  const NavigationInitial({
-    required NavigationTab currentTab,
-    bool isDrawerOpen = false,
-  }) : super(currentTab: currentTab, isDrawerOpen: isDrawerOpen);
-}
-
-class NavigationChanged extends NavigationState {
-  const NavigationChanged({
-    required NavigationTab currentTab,
-    bool isDrawerOpen = false,
-  }) : super(currentTab: currentTab, isDrawerOpen: isDrawerOpen);
+  // Helper method para crear copias del estado
+  NavigationState copyWith({
+    NavigationTab? currentTab,
+    bool? isDrawerOpen,
+  }) {
+    return NavigationState(
+      currentTab: currentTab ?? this.currentTab,
+      isDrawerOpen: isDrawerOpen ?? this.isDrawerOpen,
+    );
+  }
 }
 
 // Navigation Cubit
 @injectable
 class NavigationCubit extends Cubit<NavigationState> {
-  NavigationCubit() : super(const NavigationInitial(currentTab: NavigationTab.home));
+  NavigationCubit() : super(const NavigationState(currentTab: NavigationTab.home));
 
   void changeTab(NavigationTab tab) {
     if (state.currentTab != tab) {
-      emit(NavigationChanged(currentTab: tab, isDrawerOpen: false));
+      emit(state.copyWith(currentTab: tab, isDrawerOpen: false));
     }
   }
 
   void toggleDrawer() {
-    emit(NavigationChanged(
-      currentTab: state.currentTab,
-      isDrawerOpen: !state.isDrawerOpen,
-    ));
+    emit(state.copyWith(isDrawerOpen: !state.isDrawerOpen));
   }
 
   void closeDrawer() {
     if (state.isDrawerOpen) {
-      emit(NavigationChanged(
-        currentTab: state.currentTab,
-        isDrawerOpen: false,
-      ));
+      emit(state.copyWith(isDrawerOpen: false));
+    }
+  }
+
+  void openDrawer() {
+    if (!state.isDrawerOpen) {
+      emit(state.copyWith(isDrawerOpen: true));
     }
   }
 
@@ -73,4 +70,19 @@ class NavigationCubit extends Cubit<NavigationState> {
   void goToTrivia() => changeTab(NavigationTab.trivia); // 🔄 Nuevo
   void goToChallenges() => changeTab(NavigationTab.challenges);
   void goToContact() => changeTab(NavigationTab.contact);
+
+  // Helper methods para verificar el estado actual
+  bool get isHome => state.currentTab == NavigationTab.home;
+  bool get isCompanion => state.currentTab == NavigationTab.companion;
+  bool get isLearn => state.currentTab == NavigationTab.learn;
+  bool get isTrivia => state.currentTab == NavigationTab.trivia;
+  bool get isChallenges => state.currentTab == NavigationTab.challenges;
+  bool get isContact => state.currentTab == NavigationTab.contact;
+
+  // Method para debugging
+  void debugCurrentState() {
+    print('📍 Current Navigation State:');
+    print('   - Tab: ${state.currentTab}');
+    print('   - Drawer Open: ${state.isDrawerOpen}');
+  }
 }
