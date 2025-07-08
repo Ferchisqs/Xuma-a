@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../di/injection.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../navigation/presentation/widgets/custom_app_bar.dart'; 
 import '../cubit/companion_cubit.dart';
 import '../widgets/companion_animation_widget.dart';
 import '../widgets/companion_card_widget.dart';
@@ -26,7 +28,11 @@ class _CompanionMainView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.background, // 🔧 USAR COLOR CONSISTENTE
+      appBar: const CustomAppBar( // 🆕 AGREGAR APP BAR
+        title: 'Compañeros',
+        showDrawerButton: true,
+      ),
       body: SafeArea(
         child: BlocBuilder<CompanionCubit, CompanionState>(
           builder: (context, state) {
@@ -135,9 +141,6 @@ class _LoadedView extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomScrollView(
       slivers: [
-        // App Bar personalizado
-        _buildSliverAppBar(context),
-        
         // Estadísticas del usuario
         SliverToBoxAdapter(
           child: Padding(
@@ -157,12 +160,22 @@ class _LoadedView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Tu Compañero Activo',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Tu Compañero Activo',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _navigateToShop(context),
+                        icon: const Icon(Icons.store),
+                        label: const Text('Tienda'),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   _buildActiveCompanionCard(context, state.activeCompanion!),
@@ -205,46 +218,6 @@ class _LoadedView extends StatelessWidget {
     );
   }
   
-  Widget _buildSliverAppBar(BuildContext context) {
-    return SliverAppBar(
-      expandedHeight: 120,
-      floating: false,
-      pinned: true,
-      backgroundColor: Theme.of(context).primaryColor,
-      flexibleSpace: FlexibleSpaceBar(
-        title: const Text(
-          'Compañeros',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Theme.of(context).primaryColor,
-                Theme.of(context).primaryColor.withOpacity(0.8),
-              ],
-            ),
-          ),
-        ),
-      ),
-      actions: [
-        IconButton(
-          onPressed: () => context.read<CompanionCubit>().refreshCompanions(),
-          icon: const Icon(Icons.refresh, color: Colors.white),
-        ),
-        IconButton(
-          onPressed: () => _navigateToShop(context),
-          icon: const Icon(Icons.store, color: Colors.white),
-        ),
-      ],
-    );
-  }
-  
   Widget _buildActiveCompanionCard(BuildContext context, companion) {
     return GestureDetector(
       onTap: () => _navigateToDetail(context, companion),
@@ -255,8 +228,8 @@ class _LoadedView extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Theme.of(context).primaryColor.withOpacity(0.8),
-              Theme.of(context).primaryColor,
+              AppColors.primary.withOpacity(0.8),
+              AppColors.primary,
             ],
           ),
           borderRadius: BorderRadius.circular(20),

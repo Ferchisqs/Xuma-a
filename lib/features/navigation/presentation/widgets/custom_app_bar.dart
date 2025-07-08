@@ -37,29 +37,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        // 🔄 SIEMPRE mostrar drawer button cuando showDrawerButton es true
-        automaticallyImplyLeading: showDrawerButton,
-        leading: leading ??
-            (showDrawerButton
-                ? Builder(
-                    builder: (context) => IconButton(
-                      icon: const Icon(
-                        Icons.menu,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      onPressed: () => Scaffold.of(context).openDrawer(),
-                    ),
-                  )
-                : (Navigator.of(context).canPop()
-                    ? IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back_ios_rounded,
-                          color: Colors.white,
-                        ),
-                        onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
-                      )
-                    : null)),
+        // 🔧 MEJORAR LÓGICA DEL LEADING
+        automaticallyImplyLeading: false, // Desactivar automático
+        leading: _buildLeading(context),
         title: Text(
           title,
           style: AppTextStyles.h3.copyWith(
@@ -67,27 +47,72 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          // 🔄 SIEMPRE mostrar eco tip cuando showEcoTip es true
-          if (showEcoTip)
-            IconButton(
-              icon: const Icon(
-                Icons.lightbulb_outline,
-                color: Colors.white,
-                size: 24,
-              ),
-              onPressed: () {
-                _showEcoTipDialog(context);
-              },
-            ),
-          // 🔄 Agregar acciones adicionales si las hay
-          if (actions != null) ...actions!,
-        ],
+        actions: _buildActions(context),
         iconTheme: const IconThemeData(
           color: Colors.white,
         ),
       ),
     );
+  }
+
+  Widget? _buildLeading(BuildContext context) {
+    // Si hay un leading personalizado, usarlo
+    if (leading != null) return leading;
+    
+    // Si debe mostrar drawer button y hay drawer disponible
+    if (showDrawerButton && Scaffold.of(context).hasDrawer) {
+      return IconButton(
+        icon: const Icon(
+          Icons.menu,
+          color: Colors.white,
+          size: 24,
+        ),
+        onPressed: () {
+          debugPrint('🔧 Abriendo drawer...');
+          Scaffold.of(context).openDrawer();
+        },
+      );
+    }
+    
+    // Si puede hacer pop, mostrar botón de back
+    if (Navigator.of(context).canPop()) {
+      return IconButton(
+        icon: const Icon(
+          Icons.arrow_back_ios_rounded,
+          color: Colors.white,
+        ),
+        onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
+      );
+    }
+    
+    return null;
+  }
+
+  List<Widget> _buildActions(BuildContext context) {
+    List<Widget> actionsList = [];
+    
+    // Agregar eco tip si está habilitado
+    if (showEcoTip) {
+      actionsList.add(
+        IconButton(
+          icon: const Icon(
+            Icons.lightbulb_outline,
+            color: Colors.white,
+            size: 24,
+          ),
+          onPressed: () {
+            _showEcoTipDialog(context);
+          },
+        ),
+      );
+    }
+    
+    // Agregar acciones adicionales si las hay
+    if (actions != null) {
+      actionsList.addAll(actions!);
+    }
+    
+    return actionsList;
   }
 
   void _showEcoTipDialog(BuildContext context) {
@@ -138,7 +163,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               const SizedBox(height: 12),
               
               Text(
-                '💡 Apaga luces y dispositivos que no uses. ¡Pequeños cambios, gran impacto para nuestro planeta!',
+                _getRandomEcoTip(),
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -172,6 +197,21 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
     );
+  }
+
+  String _getRandomEcoTip() {
+    final tips = [
+      '💡 Apaga luces y dispositivos que no uses. ¡Pequeños cambios, gran impacto!',
+      '🚿 Cierra la llave mientras te cepillas los dientes. Ahorras hasta 6 litros por minuto.',
+      '♻️ Separa tu basura: orgánica, inorgánica y reciclables. ¡La Tierra te lo agradece!',
+      '🌱 Planta una semilla hoy. En el futuro será un árbol que purifique el aire.',
+      '🚗 Camina, usa bici o transporte público. ¡Tu planeta y tu salud lo agradecerán!',
+      '📱 Antes de comprar algo nuevo, pregúntate: ¿realmente lo necesito?',
+      '🌊 Usa una botella reutilizable. Evitas comprar 1,460 botellas de plástico al año.',
+      '🍎 Come más frutas y verduras locales. Reducirás tu huella de carbono.',
+    ];
+    
+    return tips[(DateTime.now().millisecond / 100).floor() % tips.length];
   }
 
   @override

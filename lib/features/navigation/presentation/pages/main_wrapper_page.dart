@@ -6,8 +6,10 @@ import '../cubit/navigation_cubit.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../learning/presentation/pages/learning_main_page.dart';
 import '../../../challenges/presentation/pages/challenges_main_page.dart';
-import '../../../trivia/presentation/pages/trivia_main_page.dart'; // 🆕 IMPORT REAL
+import '../../../trivia/presentation/pages/trivia_main_page.dart';
+import '../../../companion/presentation/pages/companion_main_page.dart'; // 🆕 IMPORT CORRECTO
 import '../../../shared/pages/placeholder_pages.dart';
+import '../widgets/side_nav_bar.dart';
 
 class MainWrapperPage extends StatelessWidget {
   const MainWrapperPage({Key? key}) : super(key: key);
@@ -29,6 +31,7 @@ class _MainWrapperContent extends StatelessWidget {
     return BlocBuilder<NavigationCubit, NavigationState>(
       builder: (context, state) {
         return Scaffold(
+          drawer: const SideNavBar(), // 🔧 DRAWER SIEMPRE DISPONIBLE
           body: _buildCurrentPage(state.currentTab),
         );
       },
@@ -43,10 +46,10 @@ class _MainWrapperContent extends StatelessWidget {
       case NavigationTab.learn:
         return const LearningMainPage();
       
-      case NavigationTab.companion:
-        return const CompanionPage();
+      case NavigationTab.companion: // 🔧 USAR PÁGINA REAL DE COMPAÑEROS
+        return const CompanionMainPage();
         
-      case NavigationTab.trivia: // 🔧 USAR IMPLEMENTACIÓN REAL
+      case NavigationTab.trivia:
         return const TriviaMainPage();
         
       case NavigationTab.challenges:

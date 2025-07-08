@@ -3,28 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../navigation/presentation/widgets/custom_app_bar.dart';
 
-// 🆕 NUEVAS PÁGINAS
-class CompanionPage extends StatelessWidget {
-  const CompanionPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      drawer: Scaffold.of(context).hasDrawer ? null : Drawer(),
-      appBar: const CustomAppBar(
-        title: 'Compañero',
-        showDrawerButton: true,
-      ),
-      body: const _PlaceholderContent(
-        icon: Icons.pets_rounded,
-        title: 'Tu Compañero Xico',
-        subtitle: 'Próximamente: Interactúa con tu guía ecológico',
-        color: AppColors.accent,
-      ),
-    );
-  }
-}
+// 🔧 QUITAR CompanionPage - ahora usamos la página real
 
 class TriviaPage extends StatelessWidget {
   const TriviaPage({Key? key}) : super(key: key);
@@ -33,7 +12,6 @@ class TriviaPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      drawer: Scaffold.of(context).hasDrawer ? null : Drawer(),
       appBar: const CustomAppBar(
         title: 'Trivias',
         showDrawerButton: true,
@@ -48,8 +26,6 @@ class TriviaPage extends StatelessWidget {
   }
 }
 
-// 🔄 QUITAR ChallengesPage - ya no es placeholder
-
 class ContactPage extends StatelessWidget {
   const ContactPage({Key? key}) : super(key: key);
 
@@ -57,16 +33,219 @@ class ContactPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      drawer: Scaffold.of(context).hasDrawer ? null : Drawer(),
       appBar: const CustomAppBar(
-        title: 'Contacto',
+        title: 'Contacto y Soporte',
         showDrawerButton: true,
       ),
-      body: const _PlaceholderContent(
-        icon: Icons.support_agent_rounded,
-        title: 'Contacto y Soporte',
-        subtitle: 'Próximamente: Ayuda y contacto',
-        color: AppColors.textSecondary,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: AppColors.earthGradient,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: const Icon(
+                      Icons.support_agent_rounded,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '¿Necesitas ayuda?',
+                          style: AppTextStyles.h4.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Estamos aquí para ayudarte',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 32),
+            
+            // Opciones de contacto
+            _buildContactOption(
+              icon: Icons.email_rounded,
+              title: 'Correo Electrónico',
+              subtitle: 'soporte@xumaa.com',
+              onTap: () {
+                // Implementar envío de email
+              },
+            ),
+            
+            const SizedBox(height: 16),
+            
+            _buildContactOption(
+              icon: Icons.phone_rounded,
+              title: 'Teléfono',
+              subtitle: '+52 961 123 4567',
+              onTap: () {
+                // Implementar llamada telefónica
+              },
+            ),
+            
+            const SizedBox(height: 16),
+            
+            _buildContactOption(
+              icon: Icons.chat_rounded,
+              title: 'Chat en Línea',
+              subtitle: 'Respuesta inmediata',
+              onTap: () {
+                // Implementar chat
+              },
+            ),
+            
+            const SizedBox(height: 32),
+            
+            // FAQ Section
+            Text(
+              'Preguntas Frecuentes',
+              style: AppTextStyles.h4.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            _buildFAQItem(
+              '¿Cómo puedo ganar más puntos?',
+              'Completa lecciones, desafíos y cuida bien a tu compañero Xico.',
+            ),
+            
+            _buildFAQItem(
+              '¿Cómo evoluciono a mi compañero?',
+              'Dale amor y comida regularmente. Cuando gane suficiente experiencia, podrá evolucionar.',
+            ),
+            
+            _buildFAQItem(
+              '¿Qué pasa si pierdo mi progreso?',
+              'Tu progreso se guarda automáticamente. Si tienes problemas, contáctanos.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildContactOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Icon(
+                  icon,
+                  color: AppColors.primary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: AppColors.textHint,
+                size: 16,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildFAQItem(String question, String answer) {
+    return Card(
+      elevation: 1,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ExpansionTile(
+        title: Text(
+          question,
+          style: AppTextStyles.bodyMedium.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Text(
+              answer,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

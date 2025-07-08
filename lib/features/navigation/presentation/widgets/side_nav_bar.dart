@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
-import '../../../../di/injection.dart'; // 🔄 IMPORT PARA GETIT
 import '../cubit/navigation_cubit.dart';
 import 'nav_item_widget.dart';
 import 'user_profile_widget.dart';
@@ -101,11 +100,78 @@ class SideNavBar extends StatelessWidget {
             ),
           ),
           
-          // Navigation Items - 🔄 CREAR PROVIDER SI NO EXISTE
+          // Navigation Items
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: _NavigationItems(),
+              child: BlocBuilder<NavigationCubit, NavigationState>(
+                builder: (context, state) {
+                  return Column(
+                    children: [
+                      NavItemWidget(
+                        icon: Icons.home_rounded,
+                        title: 'Inicio',
+                        isSelected: state.currentTab == NavigationTab.home,
+                        onTap: () {
+                          debugPrint('🏠 Navegando a Home...');
+                          context.read<NavigationCubit>().goToHome();
+                          Navigator.of(context).pop(); // 🔧 CERRAR DRAWER
+                        },
+                      ),
+                      NavItemWidget(
+                        icon: Icons.pets_rounded,
+                        title: 'Compañero',
+                        isSelected: state.currentTab == NavigationTab.companion,
+                        onTap: () {
+                          debugPrint('🐾 Navegando a Compañero...');
+                          context.read<NavigationCubit>().goToCompanion();
+                          Navigator.of(context).pop(); // 🔧 CERRAR DRAWER
+                        },
+                      ),
+                      NavItemWidget(
+                        icon: Icons.school_rounded,
+                        title: 'Aprendamos',
+                        isSelected: state.currentTab == NavigationTab.learn,
+                        onTap: () {
+                          debugPrint('📚 Navegando a Aprendamos...');
+                          context.read<NavigationCubit>().goToLearn();
+                          Navigator.of(context).pop(); // 🔧 CERRAR DRAWER
+                        },
+                      ),
+                      NavItemWidget(
+                        icon: Icons.quiz_rounded,
+                        title: 'Trivias',
+                        isSelected: state.currentTab == NavigationTab.trivia,
+                        onTap: () {
+                          debugPrint('🧠 Navegando a Trivias...');
+                          context.read<NavigationCubit>().goToTrivia();
+                          Navigator.of(context).pop(); // 🔧 CERRAR DRAWER
+                        },
+                      ),
+                      NavItemWidget(
+                        icon: Icons.emoji_events_rounded,
+                        title: 'Desafíos',
+                        isSelected: state.currentTab == NavigationTab.challenges,
+                        onTap: () {
+                          debugPrint('🏆 Navegando a Desafíos...');
+                          context.read<NavigationCubit>().goToChallenges();
+                          Navigator.of(context).pop(); // 🔧 CERRAR DRAWER
+                        },
+                      ),
+                      NavItemWidget(
+                        icon: Icons.help_outline_rounded,
+                        title: 'Contacto',
+                        isSelected: state.currentTab == NavigationTab.contact,
+                        onTap: () {
+                          debugPrint('📞 Navegando a Contacto...');
+                          context.read<NavigationCubit>().goToContact();
+                          Navigator.of(context).pop(); // 🔧 CERRAR DRAWER
+                        },
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
           
@@ -113,86 +179,6 @@ class SideNavBar extends StatelessWidget {
           const UserProfileWidget(),
         ],
       ),
-    );
-  }
-}
-
-// 🔄 WIDGET SEPARADO PARA MANEJAR EL NAVIGATION CUBIT
-class _NavigationItems extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // 🔄 Intentar obtener cubit existente o crear uno nuevo
-    return BlocConsumer<NavigationCubit, NavigationState>(
-      listener: (context, state) {
-        // No action needed for listener in this case
-      },
-      buildWhen: (previous, current) => true,
-      builder: (context, state) {
-        return Column(
-          children: [
-            NavItemWidget(
-              icon: Icons.home_rounded,
-              title: 'Inicio',
-              isSelected: state.currentTab == NavigationTab.home,
-              onTap: () {
-                debugPrint('🏠 Navegando a Home...');
-                context.read<NavigationCubit>().goToHome();
-                Navigator.of(context).pop();
-              },
-            ),
-            NavItemWidget(
-              icon: Icons.pets_rounded,
-              title: 'Compañero',
-              isSelected: state.currentTab == NavigationTab.companion,
-              onTap: () {
-                debugPrint('🐾 Navegando a Compañero...');
-                context.read<NavigationCubit>().goToCompanion();
-                Navigator.of(context).pop();
-              },
-            ),
-            NavItemWidget(
-              icon: Icons.school_rounded,
-              title: 'Aprendamos',
-              isSelected: state.currentTab == NavigationTab.learn,
-              onTap: () {
-                debugPrint('📚 Navegando a Aprendamos...');
-                context.read<NavigationCubit>().goToLearn();
-                Navigator.of(context).pop();
-              },
-            ),
-            NavItemWidget(
-              icon: Icons.quiz_rounded,
-              title: 'Trivias',
-              isSelected: state.currentTab == NavigationTab.trivia,
-              onTap: () {
-                debugPrint('🧠 Navegando a Trivias...');
-                context.read<NavigationCubit>().goToTrivia();
-                Navigator.of(context).pop();
-              },
-            ),
-            NavItemWidget(
-              icon: Icons.emoji_events_rounded,
-              title: 'Desafíos',
-              isSelected: state.currentTab == NavigationTab.challenges,
-              onTap: () {
-                debugPrint('🏆 Navegando a Desafíos...');
-                context.read<NavigationCubit>().goToChallenges();
-                Navigator.of(context).pop();
-              },
-            ),
-            NavItemWidget(
-              icon: Icons.help_outline_rounded,
-              title: 'Contacto',
-              isSelected: state.currentTab == NavigationTab.contact,
-              onTap: () {
-                debugPrint('📞 Navegando a Contacto...');
-                context.read<NavigationCubit>().goToContact();
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 }
