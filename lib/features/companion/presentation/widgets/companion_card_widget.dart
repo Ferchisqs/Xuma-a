@@ -24,7 +24,6 @@ class CompanionCardWidget extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
@@ -43,265 +42,202 @@ class CompanionCardWidget extends StatelessWidget {
             ? Border.all(color: Colors.blue, width: 3)
             : null,
         ),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header con nombre y estado
-              _buildHeader(),
-              
-              const SizedBox(height: 12),
-              
-              // Imagen del compañero con animación
-              CompanionAnimationWidget(
-                companion: companion,
-                size: 120,
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // Información detallada (si showDetails es true)
-              if (showDetails) ...[
-                _buildCompanionInfo(),
-                
-                const SizedBox(height: 8),
-                
-                // Barras de estadísticas (solo si es propiedad del usuario)
-                if (companion.isOwned && !isInShop)
-                  _buildStatsSection(),
-                
-                // Información de precio (solo en tienda)
-                if (isInShop && !companion.isOwned)
-                  _buildPriceSection(),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        // Nombre y tipo
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                companion.displayName,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              Text(
-                '${companion.typeDescription} ${companion.stageDisplayName}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.8),
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        // Estado/Badges
-        Column(
+        child: Stack(
           children: [
-            if (companion.isSelected)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  'ACTIVO',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+            // 🔧 CONTENIDO PRINCIPAL DE LA TARJETA
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header compacto
+                  _buildCompactHeader(),
+                  
+                  // 🔧 ÁREA DE LA MASCOTA CON FONDO
+                  Expanded(
+                    flex: 4,
+                    child: _buildPetWithBackground(),
                   ),
-                ),
+                  
+                  // Información compacta en la parte inferior
+                  if (showDetails)
+                    Expanded(
+                      flex: 1,
+                      child: _buildCompactInfo(),
+                    ),
+                ],
               ),
+            ),
             
-            if (companion.canEvolve)
-              Container(
-                margin: const EdgeInsets.only(top: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.orange,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  '★ EVOLUCIÓN',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+            // Badges flotantes
+            ..._buildFloatingBadges(),
           ],
         ),
-      ],
+      ),
     );
   }
   
-  Widget _buildCompanionInfo() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
+  // 🔧 NUEVO WIDGET PARA MOSTRAR MASCOTA CON FONDO EN LA TIENDA
+  Widget _buildPetWithBackground() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // 🔧 FONDO ESPECÍFICO PARA CADA MASCOTA
+            Container(
+              width: constraints.maxWidth,
+              height: constraints.maxHeight,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  _getBackgroundImagePath(),
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint('🔧 Error loading shop background: ${_getBackgroundImagePath()}');
+                    // Gradiente de respaldo
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: _getDefaultGradient(),
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            
+            // 🔧 MASCOTA SUPERPUESTA
+            Container(
+              width: constraints.maxWidth * 0.8,
+              height: constraints.maxHeight * 0.8,
+              child: Image.asset(
+                _getPetImagePath(),
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  debugPrint('🔧 Error loading shop pet: ${_getPetImagePath()}');
+                  // Placeholder mejorado
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _getCompanionColor().withOpacity(0.5),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _getCompanionIcon(),
+                          size: 30,
+                          color: _getCompanionColor(),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          companion.displayName,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: _getCompanionColor(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  // 🔧 RUTAS DE IMÁGENES PARA LA TIENDA
+  String _getBackgroundImagePath() {
+    switch (companion.type) {
+      case CompanionType.dexter:
+        return 'assets/images/companions/backgrounds/dexter_bg.png';
+      case CompanionType.elly:
+        return 'assets/images/companions/backgrounds/elly_bg.png';
+      case CompanionType.paxolotl:
+        return 'assets/images/companions/backgrounds/paxolotl_bg.png';
+      case CompanionType.yami:
+        return 'assets/images/companions/backgrounds/yami_bg.png';
+    }
+  }
+  
+  String _getPetImagePath() {
+    final name = '${companion.type.name}_${companion.stage.name}';
+    return 'assets/images/companions/$name.png';
+  }
+  
+  Widget _buildCompactHeader() {
+    return SizedBox(
+      height: 30,
+      child: Row(
         children: [
-          Text(
-            companion.description,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.white.withOpacity(0.9),
+          Expanded(
+            child: Text(
+              companion.displayName,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
           
-          if (companion.isOwned) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatItem('Nivel', companion.level.toString()),
-                _buildStatItem('EXP', '${companion.experience}/${companion.experienceNeededForNextStage}'),
-              ],
+          // Badge de etapa
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: _getStageColor(),
+              borderRadius: BorderRadius.circular(8),
             ),
-          ],
+            child: Text(
+              companion.stageDisplayName,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
   
-  Widget _buildStatItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.white.withOpacity(0.7),
-          ),
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildStatsSection() {
-    return Column(
-      children: [
-        // Barra de felicidad
-        _buildStatBar(
-          'Felicidad',
-          companion.happiness,
-          100,
-          Colors.yellow,
-          Icons.sentiment_very_satisfied,
-        ),
-        
-        const SizedBox(height: 4),
-        
-        // Barra de hambre
-        _buildStatBar(
-          'Hambre',
-          companion.hunger,
-          100,
-          Colors.orange,
-          Icons.restaurant,
-        ),
-        
-        const SizedBox(height: 4),
-        
-        // Barra de energía
-        _buildStatBar(
-          'Energía',
-          companion.energy,
-          100,
-          Colors.blue,
-          Icons.bolt,
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildStatBar(String label, int value, int maxValue, Color color, IconData icon) {
-    final percentage = value / maxValue;
+  Widget _buildCompactInfo() {
+    if (isInShop && !companion.isOwned) {
+      return _buildPriceInfo();
+    }
     
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Colors.white),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.white.withOpacity(0.8),
-                ),
-              ),
-              Container(
-                height: 6,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: percentage,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          '$value',
-          style: const TextStyle(
-            fontSize: 10,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
+    if (companion.isOwned) {
+      return _buildOwnerInfo();
+    }
+    
+    return const SizedBox.shrink();
   }
   
-  Widget _buildPriceSection() {
+  Widget _buildPriceInfo() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -309,33 +245,26 @@ class CompanionCardWidget extends StatelessWidget {
           const Text(
             'Precio:',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 10,
               color: Colors.white,
               fontWeight: FontWeight.bold,
             ),
           ),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.star,
                 color: Colors.yellow,
-                size: 16,
+                size: 12,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 2),
               Text(
                 '${companion.purchasePrice}',
                 style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Text(
-                'puntos',
-                style: TextStyle(
                   fontSize: 12,
                   color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
@@ -345,16 +274,177 @@ class CompanionCardWidget extends StatelessWidget {
     );
   }
   
+  Widget _buildOwnerInfo() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _buildStatBadge('Nv${companion.level}', Colors.blue),
+        _buildStatBadge('${companion.happiness}❤️', Colors.red),
+        if (companion.canEvolve)
+          _buildStatBadge('EVO', Colors.orange),
+      ],
+    );
+  }
+  
+  Widget _buildStatBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.5), width: 1),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 8,
+          color: color,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+  
+  List<Widget> _buildFloatingBadges() {
+    List<Widget> badges = [];
+    
+    // Badge "ACTIVO" si está seleccionado
+    if (companion.isSelected) {
+      badges.add(
+        Positioned(
+          top: 8,
+          right: 8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.green,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.green.withOpacity(0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Text(
+              'ACTIVO',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // Indicadores de necesidades en la parte inferior
+    if (companion.isOwned) {
+      if (companion.needsFood || companion.needsLove) {
+        badges.add(
+          Positioned(
+            bottom: 8,
+            left: 8,
+            child: Row(
+              children: [
+                if (companion.needsFood)
+                  _buildNeedIndicator(Icons.restaurant, Colors.orange),
+                if (companion.needsFood && companion.needsLove)
+                  const SizedBox(width: 4),
+                if (companion.needsLove)
+                  _buildNeedIndicator(Icons.favorite, Colors.pink),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+    
+    return badges;
+  }
+  
+  Widget _buildNeedIndicator(IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Icon(
+        icon,
+        color: Colors.white,
+        size: 12,
+      ),
+    );
+  }
+  
+  Color _getStageColor() {
+    switch (companion.stage) {
+      case CompanionStage.baby:
+        return Colors.green;
+      case CompanionStage.young:
+        return Colors.orange;
+      case CompanionStage.adult:
+        return Colors.red;
+    }
+  }
+  
+  Color _getCompanionColor() {
+    switch (companion.type) {
+      case CompanionType.dexter:
+        return Colors.brown;
+      case CompanionType.elly:
+        return Colors.green;
+      case CompanionType.paxolotl:
+        return Colors.cyan;
+      case CompanionType.yami:
+        return Colors.purple;
+    }
+  }
+  
+  IconData _getCompanionIcon() {
+    switch (companion.type) {
+      case CompanionType.dexter:
+        return Icons.pets;
+      case CompanionType.elly:
+        return Icons.forest;
+      case CompanionType.paxolotl:
+        return Icons.water;
+      case CompanionType.yami:
+        return Icons.nature;
+    }
+  }
+  
+  List<Color> _getDefaultGradient() {
+    switch (companion.type) {
+      case CompanionType.dexter:
+        return [Colors.brown[200]!, Colors.brown[400]!];
+      case CompanionType.elly:
+        return [Colors.green[200]!, Colors.green[400]!];
+      case CompanionType.paxolotl:
+        return [Colors.cyan[200]!, Colors.cyan[400]!];
+      case CompanionType.yami:
+        return [Colors.purple[200]!, Colors.purple[400]!];
+    }
+  }
+  
   List<Color> _getGradientColors() {
     if (!companion.isOwned && isInShop) {
-      // Colores para compañeros no adquiridos en tienda
       return [
         Colors.grey[600]!,
         Colors.grey[800]!,
       ];
     }
     
-    // Colores basados en el tipo de compañero
     switch (companion.type) {
       case CompanionType.dexter:
         return [Colors.brown[300]!, Colors.brown[600]!];

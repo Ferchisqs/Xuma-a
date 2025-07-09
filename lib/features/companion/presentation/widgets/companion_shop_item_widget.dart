@@ -47,14 +47,12 @@ class CompanionShopItemWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Badge de etapa
-                  _buildStadgeBadge(),
+                  _buildStageBadge(),
                   
-                  // Imagen del compañero
+                  // 🔧 ÁREA DE IMAGEN CON FONDO + MASCOTA
                   Expanded(
                     flex: 3,
-                    child: Center(
-                      child: _buildCompanionImage(),
-                    ),
+                    child: _buildCompanionImageWithBackground(),
                   ),
                   
                   const SizedBox(height: 8),
@@ -106,7 +104,136 @@ class CompanionShopItemWidget extends StatelessWidget {
     );
   }
   
-  Widget _buildStadgeBadge() {
+  // 🔧 NUEVO WIDGET PARA MOSTRAR FONDO + MASCOTA EN LA TIENDA
+  Widget _buildCompanionImageWithBackground() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // 🔧 FONDO ESPECÍFICO POR TIPO DE MASCOTA
+            Container(
+              width: constraints.maxWidth,
+              height: constraints.maxHeight,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Image.asset(
+                  _getBackgroundImagePath(),
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint('🔧 Error loading shop background: ${_getBackgroundImagePath()}');
+                    debugPrint('🔧 Error details: $error');
+                    // Gradiente de respaldo
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: _getDefaultGradient(),
+                        ),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            
+            // 🔧 MASCOTA SUPERPUESTA
+            Container(
+              width: constraints.maxWidth * 0.8,
+              height: constraints.maxHeight * 0.8,
+              child: Image.asset(
+                _getPetImagePath(),
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  debugPrint('🔧 Error loading shop pet: ${_getPetImagePath()}');
+                  debugPrint('🔧 Error details: $error');
+                  // Placeholder mejorado
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _getCompanionColor().withOpacity(0.5),
+                        width: 2,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: _getCompanionColor().withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: Icon(
+                            _getCompanionIcon(),
+                            size: 30,
+                            color: _getCompanionColor(),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          companion.displayName,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _getCompanionColor(),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Imagen no encontrada',
+                            style: TextStyle(
+                              fontSize: 8,
+                              color: Colors.orange[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  // 🔧 RUTAS DE IMÁGENES PARA LA TIENDA
+  String _getBackgroundImagePath() {
+    switch (companion.type) {
+      case CompanionType.dexter:
+        return 'assets/images/companions/backgrounds/dexter_bg.png';
+      case CompanionType.elly:
+        return 'assets/images/companions/backgrounds/elly_bg.png';
+      case CompanionType.paxolotl:
+        return 'assets/images/companions/backgrounds/paxolotl_bg.png';
+      case CompanionType.yami:
+        return 'assets/images/companions/backgrounds/yami_bg.png';
+    }
+  }
+  
+  String _getPetImagePath() {
+    final name = '${companion.type.name}_${companion.stage.name}';
+    return 'assets/images/companions/$name.png';
+  }
+  
+  Widget _buildStageBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -119,41 +246,6 @@ class CompanionShopItemWidget extends StatelessWidget {
           color: Colors.white,
           fontSize: 10,
           fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildCompanionImage() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(15),
-        child: Image.asset(
-          companion.imagePath,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Icon(
-                Icons.pets,
-                size: 40,
-                color: Colors.grey[600],
-              ),
-            );
-          },
         ),
       ),
     );
@@ -254,6 +346,32 @@ class CompanionShopItemWidget extends StatelessWidget {
         return Colors.cyan;
       case CompanionType.yami:
         return Colors.purple;
+    }
+  }
+  
+  IconData _getCompanionIcon() {
+    switch (companion.type) {
+      case CompanionType.dexter:
+        return Icons.pets;
+      case CompanionType.elly:
+        return Icons.forest;
+      case CompanionType.paxolotl:
+        return Icons.water;
+      case CompanionType.yami:
+        return Icons.nature;
+    }
+  }
+  
+  List<Color> _getDefaultGradient() {
+    switch (companion.type) {
+      case CompanionType.dexter:
+        return [Colors.brown[200]!, Colors.brown[400]!];
+      case CompanionType.elly:
+        return [Colors.green[200]!, Colors.green[400]!];
+      case CompanionType.paxolotl:
+        return [Colors.cyan[200]!, Colors.cyan[400]!];
+      case CompanionType.yami:
+        return [Colors.purple[200]!, Colors.purple[400]!];
     }
   }
   

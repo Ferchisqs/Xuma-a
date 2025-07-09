@@ -49,8 +49,6 @@ dependencies:
   # Authentication
   crypto: ^3.0.3
 
-  
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -67,15 +65,25 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  # 🔧 ASSETS CONFIGURADOS PARA TUS 4 FONDOS
   assets:
+    # Imágenes generales
     - assets/images/
+    # Iconos de la app
     - assets/icons/
+    # Animaciones Lottie
     - assets/animations/
+    # 🔧 COMPAÑEROS - Configuración corregida
+    - assets/images/companions/              # Mascotas en la raíz
+    - assets/images/companions/backgrounds/  # 4 fondos específicos
+    - assets/images/companions/animations/   # Expresiones opcionales
+  
 
   fonts:
     - family: Poppins
       fonts:
         - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
         - asset: assets/fonts/Poppins-Medium.ttf
           weight: 500
         - asset: assets/fonts/Poppins-SemiBold.ttf

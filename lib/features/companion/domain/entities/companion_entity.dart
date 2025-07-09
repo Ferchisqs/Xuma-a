@@ -67,8 +67,23 @@ class CompanionEntity extends Equatable {
     required this.createdAt,
   });
 
-  // Getters útiles
-  String get imagePath => 'assets/images/companions/${type.name}_${stage.name}.png';
+  // 🔧 GETTERS ACTUALIZADOS PARA NUEVA ESTRUCTURA
+  String get imagePath => 'assets/images/companions/pets/${type.name}_${stage.name}.png';
+  
+  String get backgroundPath => 'assets/images/companions/backgrounds/${_getBackgroundName()}.png';
+  
+  String _getBackgroundName() {
+    switch (type) {
+      case CompanionType.dexter:
+        return 'chihuahua_bg';
+      case CompanionType.elly:
+        return 'panda_bg';
+      case CompanionType.paxolotl:
+        return 'axolotl_bg';
+      case CompanionType.yami:
+        return 'jaguar_bg';
+    }
+  }
   
   String get displayName {
     switch (type) {

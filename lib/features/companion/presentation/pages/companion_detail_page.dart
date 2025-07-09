@@ -4,9 +4,8 @@ import  '../../../../di/injection.dart';
 import '../../domain/entities/companion_entity.dart';
 import '../cubit/companion_detail_cubit.dart';
 import '../widgets/companion_animation_widget.dart';
-import '../widgets/companion_actions_widget.dart';
 import '../widgets/companion_evolution_dialog.dart';
-
+import '../widgets/companion_info_dialog.dart';
 class CompanionDetailPage extends StatelessWidget {
   final CompanionEntity companion;
   
@@ -35,6 +34,7 @@ class _CompanionDetailView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: BlocConsumer<CompanionDetailCubit, CompanionDetailState>(
         listener: (context, state) {
           if (state is CompanionDetailError) {
@@ -52,7 +52,6 @@ class _CompanionDetailView extends StatelessWidget {
               ),
             );
             
-            // Mostrar diálogo de evolución si evolucionó
             if (state.message.contains('evolucionado')) {
               _showEvolutionDialog(context, state.companion);
             }
@@ -63,50 +62,286 @@ class _CompanionDetailView extends StatelessWidget {
           final isLoading = state is CompanionDetailUpdating;
           final currentAction = state is CompanionDetailUpdating ? state.action : null;
           
-          return CustomScrollView(
-            slivers: [
-              // App Bar con imagen de fondo
-              _buildSliverAppBar(context, currentCompanion),
+          return Stack(
+            children: [
+              Column(
+                children: [
+                  // 🔧 APP BAR CON BOTÓN DE INFORMACIÓN
+                  _buildCustomAppBar(context, currentCompanion),
+                  
+                  // ÁREA PRINCIPAL DE LA MASCOTA
+                  Expanded(
+                    child: _buildPetMainArea(currentCompanion, isLoading, currentAction),
+                  ),
+                ],
+              ),
               
-              // Contenido principal
-              SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    // Información del compañero
-                    _buildCompanionInfo(currentCompanion),
-                    
-                    // Estadísticas
-                    _buildStatsSection(currentCompanion),
-                    
-                    // Información de evolución
-                    if (currentCompanion.canEvolve)
-                      _buildEvolutionInfo(currentCompanion),
-                    
-                    const SizedBox(height: 100), // Espacio para las acciones flotantes
-                  ],
-                ),
+              // ACCIONES FLOTANTES EN LA PARTE INFERIOR
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: _buildFloatingActions(context, currentCompanion, isLoading, currentAction),
               ),
             ],
           );
         },
       ),
-      // Acciones flotantes en la parte inferior
-      bottomSheet: BlocBuilder<CompanionDetailCubit, CompanionDetailState>(
-        builder: (context, state) {
-          final currentCompanion = _getCurrentCompanion(state);
-          final isLoading = state is CompanionDetailUpdating;
-          final currentAction = state is CompanionDetailUpdating ? state.action : null;
-          
-          return CompanionActionsWidget(
-            companion: currentCompanion,
-            isLoading: isLoading,
-            currentAction: currentAction,
-            onFeed: () => context.read<CompanionDetailCubit>().feedCompanion(currentCompanion),
-            onLove: () => context.read<CompanionDetailCubit>().loveCompanion(currentCompanion),
-            onEvolve: () => context.read<CompanionDetailCubit>().evolveCompanion(currentCompanion),
-          );
-        },
+    );
+  }
+  
+  Widget _buildCustomAppBar(BuildContext context, CompanionEntity currentCompanion) {
+    return Container(
+      height: 100,
+      decoration: const BoxDecoration(
+        color: Colors.white,
       ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              // Botón back
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 18),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+              
+              const Spacer(),
+              
+              // Título
+              Text(
+                'COMPAÑERO',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              
+              const Spacer(),
+              
+              // 🆕 BOTÓN DE INFORMACIÓN CON DATOS CURIOSOS Y DEDICATORIA
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                  onPressed: () => _showCompanionInfo(context, currentCompanion),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildPetMainArea(CompanionEntity currentCompanion, bool isLoading, String? currentAction) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        // 🔧 YA NO HAY GRADIENTE, SE USA TU IMAGEN DE FONDO
+      ),
+      child: Stack(
+        children: [
+          // Badge con nombre en la parte superior
+          Positioned(
+            top: 20,
+            left: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.green,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                currentCompanion.displayName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          
+          // Puntos en la esquina superior derecha
+          Positioned(
+            top: 20,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    '100',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.star, color: Colors.yellow[600], size: 16),
+                ],
+              ),
+            ),
+          ),
+          
+          // 🔧 MASCOTA CON TU FONDO DE IMAGEN
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 80, bottom: 20),
+              child: BlocBuilder<CompanionDetailCubit, CompanionDetailState>(
+                builder: (context, state) {
+                  final isInteracting = state is CompanionDetailUpdating;
+                  final currentAction = state is CompanionDetailUpdating ? state.action : null;
+                  
+                  return CompanionAnimationWidget(
+                    companion: currentCompanion,
+                    size: MediaQuery.of(context).size.width * 0.8,
+                    isInteracting: isInteracting,
+                    currentAction: currentAction,
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildFloatingActions(BuildContext context, CompanionEntity currentCompanion, bool isLoading, String? currentAction) {
+    return Container(
+      margin: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          // Botón Alimentar
+          _buildActionButton(
+            icon: Icons.restaurant,
+            color: Colors.green,
+            onPressed: currentCompanion.needsFood || !isLoading 
+              ? () => context.read<CompanionDetailCubit>().feedCompanion(currentCompanion)
+              : null,
+            isActive: currentAction == 'feeding',
+          ),
+          
+          // Botón Dar Amor
+          _buildActionButton(
+            icon: Icons.favorite,
+            color: Colors.green,
+            onPressed: currentCompanion.needsLove || !isLoading 
+              ? () => context.read<CompanionDetailCubit>().loveCompanion(currentCompanion)
+              : null,
+            isActive: currentAction == 'loving',
+          ),
+          
+          // Botón Evolucionar
+          _buildActionButton(
+            icon: Icons.recycling,
+            color: Colors.green,
+            onPressed: currentCompanion.canEvolve && !isLoading 
+              ? () => context.read<CompanionDetailCubit>().evolveCompanion(currentCompanion)
+              : null,
+            isActive: currentAction == 'evolving',
+            disabled: !currentCompanion.canEvolve,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback? onPressed,
+    bool isActive = false,
+    bool disabled = false,
+  }) {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: disabled 
+          ? Colors.grey[300]
+          : isActive 
+            ? color.withOpacity(0.8)
+            : color,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: isActive
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            )
+          : Icon(
+              icon,
+              color: Colors.white,
+              size: 28,
+            ),
+      ),
+    );
+  }
+  
+  // 🆕 MOSTRAR INFORMACIÓN DE LA MASCOTA
+  void _showCompanionInfo(BuildContext context, CompanionEntity companion) {
+    showDialog(
+      context: context,
+      builder: (context) => CompanionInfoDialog(companion: companion),
     );
   }
   
@@ -118,306 +353,6 @@ class _CompanionDetailView extends StatelessWidget {
     return companion;
   }
   
-  Widget _buildSliverAppBar(BuildContext context, CompanionEntity currentCompanion) {
-    return SliverAppBar(
-      expandedHeight: 300,
-      floating: false,
-      pinned: true,
-      backgroundColor: _getCompanionColor(currentCompanion.type),
-      leading: IconButton(
-        onPressed: () => Navigator.of(context).pop(),
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        title: Text(
-          currentCompanion.displayName,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                _getCompanionColor(currentCompanion.type),
-                _getCompanionColor(currentCompanion.type).withOpacity(0.8),
-              ],
-            ),
-          ),
-          child: Center(
-            child: BlocBuilder<CompanionDetailCubit, CompanionDetailState>(
-              builder: (context, state) {
-                final isInteracting = state is CompanionDetailUpdating;
-                final currentAction = state is CompanionDetailUpdating ? state.action : null;
-                
-                return CompanionAnimationWidget(
-                  companion: currentCompanion,
-                  size: 180,
-                  isInteracting: isInteracting,
-                  currentAction: currentAction,
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildCompanionInfo(CompanionEntity currentCompanion) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    currentCompanion.displayName,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    '${currentCompanion.typeDescription} ${currentCompanion.stageDisplayName}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _getMoodColor(currentCompanion.currentMood),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _getMoodIcon(currentCompanion.currentMood),
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _getMoodText(currentCompanion.currentMood),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          
-          Text(
-            currentCompanion.description,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[700],
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Información de nivel y experiencia
-          Row(
-            children: [
-              _buildInfoChip('Nivel', currentCompanion.level.toString(), Icons.star),
-              const SizedBox(width: 12),
-              _buildInfoChip(
-                'Experiencia', 
-                '${currentCompanion.experience}/${currentCompanion.experienceNeededForNextStage}',
-                Icons.trending_up,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildInfoChip(String label, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: Colors.grey[600]),
-          const SizedBox(width: 6),
-          Text(
-            '$label: $value',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[800],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildStatsSection(CompanionEntity currentCompanion) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Estadísticas',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          _buildStatBar('Felicidad', currentCompanion.happiness, 100, Colors.yellow),
-          const SizedBox(height: 12),
-          _buildStatBar('Hambre', currentCompanion.hunger, 100, Colors.orange),
-          const SizedBox(height: 12),
-          _buildStatBar('Energía', currentCompanion.energy, 100, Colors.blue),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildStatBar(String label, int value, int maxValue, Color color) {
-    final percentage = value / maxValue;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            Text(
-              '$value/$maxValue',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Container(
-          height: 8,
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: percentage,
-            child: Container(
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildEvolutionInfo(CompanionEntity currentCompanion) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.purple[100]!, Colors.purple[50]!],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.purple, width: 2),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(Icons.auto_awesome, color: Colors.purple, size: 24),
-              const SizedBox(width: 8),
-              const Text(
-                '¡Listo para evolucionar!',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.purple,
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 12),
-          
-          Text(
-            'Tu ${currentCompanion.displayName} ha ganado suficiente experiencia y puede evolucionar a ${currentCompanion.nextStage?.name ?? "la siguiente etapa"}.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.purple[700],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
   void _showEvolutionDialog(BuildContext context, CompanionEntity evolvedCompanion) {
     showDialog(
       context: context,
@@ -427,69 +362,5 @@ class _CompanionDetailView extends StatelessWidget {
         onContinue: () => Navigator.of(context).pop(),
       ),
     );
-  }
-  
-  Color _getCompanionColor(CompanionType type) {
-    switch (type) {
-      case CompanionType.dexter:
-        return Colors.brown;
-      case CompanionType.elly:
-        return Colors.green;
-      case CompanionType.paxolotl:
-        return Colors.cyan;
-      case CompanionType.yami:
-        return Colors.purple;
-    }
-  }
-  
-  Color _getMoodColor(CompanionMood mood) {
-    switch (mood) {
-      case CompanionMood.happy:
-        return Colors.green;
-      case CompanionMood.excited:
-        return Colors.orange;
-      case CompanionMood.sad:
-        return Colors.blue;
-      case CompanionMood.hungry:
-        return Colors.red;
-      case CompanionMood.sleepy:
-        return Colors.purple;
-      default:
-        return Colors.grey;
-    }
-  }
-  
-  IconData _getMoodIcon(CompanionMood mood) {
-    switch (mood) {
-      case CompanionMood.happy:
-        return Icons.sentiment_very_satisfied;
-      case CompanionMood.excited:
-        return Icons.celebration;
-      case CompanionMood.sad:
-        return Icons.sentiment_dissatisfied;
-      case CompanionMood.hungry:
-        return Icons.restaurant;
-      case CompanionMood.sleepy:
-        return Icons.bedtime;
-      default:
-        return Icons.sentiment_neutral;
-    }
-  }
-  
-  String _getMoodText(CompanionMood mood) {
-    switch (mood) {
-      case CompanionMood.happy:
-        return 'Feliz';
-      case CompanionMood.excited:
-        return 'Emocionado';
-      case CompanionMood.sad:
-        return 'Triste';
-      case CompanionMood.hungry:
-        return 'Hambriento';
-      case CompanionMood.sleepy:
-        return 'Somnoliento';
-      default:
-        return 'Normal';
-    }
   }
 }

@@ -28,8 +28,8 @@ class _CompanionMainView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background, // 🔧 USAR COLOR CONSISTENTE
-      appBar: const CustomAppBar( // 🆕 AGREGAR APP BAR
+      backgroundColor: AppColors.background,
+      appBar: const CustomAppBar(
         title: 'Compañeros',
         showDrawerButton: true,
       ),
@@ -64,13 +64,15 @@ class _LoadingView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(),
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+          ),
           SizedBox(height: 16),
           Text(
             'Cargando tus compañeros...',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey,
+              color: AppColors.textSecondary,
             ),
           ),
         ],
@@ -100,7 +102,7 @@ class _ErrorView extends StatelessWidget {
             Icon(
               Icons.error_outline,
               size: 64,
-              color: Colors.red[300],
+              color: AppColors.error,
             ),
             const SizedBox(height: 16),
             Text(
@@ -108,7 +110,7 @@ class _ErrorView extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
@@ -117,12 +119,15 @@ class _ErrorView extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey[600],
+                color: AppColors.textSecondary,
               ),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: onRetry,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
               child: const Text('Reintentar'),
             ),
           ],
@@ -152,7 +157,7 @@ class _LoadedView extends StatelessWidget {
           ),
         ),
         
-        // Compañero activo (si existe)
+        // Compañero activo (si existe) - 🔧 ÁREA MÁS GRANDE
         if (state.activeCompanion != null) ...[
           SliverToBoxAdapter(
             child: Padding(
@@ -168,12 +173,16 @@ class _LoadedView extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       TextButton.icon(
                         onPressed: () => _navigateToShop(context),
-                        icon: const Icon(Icons.store),
-                        label: const Text('Tienda'),
+                        icon: const Icon(Icons.store, color: AppColors.primary),
+                        label: const Text(
+                          'Tienda',
+                          style: TextStyle(color: AppColors.primary),
+                        ),
                       ),
                     ],
                   ),
@@ -197,12 +206,16 @@ class _LoadedView extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 TextButton.icon(
                   onPressed: () => _navigateToShop(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Obtener más'),
+                  icon: const Icon(Icons.add, color: AppColors.primary),
+                  label: const Text(
+                    'Obtener más',
+                    style: TextStyle(color: AppColors.primary),
+                  ),
                 ),
               ],
             ),
@@ -218,10 +231,12 @@ class _LoadedView extends StatelessWidget {
     );
   }
   
+  // 🔧 TARJETA DEL COMPAÑERO ACTIVO MÁS GRANDE
   Widget _buildActiveCompanionCard(BuildContext context, companion) {
     return GestureDetector(
       onTap: () => _navigateToDetail(context, companion),
       child: Container(
+        height: 300, // 🔧 ALTURA FIJA MÁS GRANDE
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -241,41 +256,48 @@ class _LoadedView extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
+        child: Stack(
           children: [
-            // Imagen del compañero activo
-            CompanionAnimationWidget(
-              companion: companion,
-              size: 80,
+            // Nombre del compañero en la esquina superior izquierda
+            Positioned(
+              top: 0,
+              left: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Text(
+                  companion.displayName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ),
             
-            const SizedBox(width: 20),
-            
-            // Info del compañero activo
-            Expanded(
+            // Información en la esquina superior derecha
+            Positioned(
+              top: 0,
+              right: 0,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    companion.displayName,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
                   Text(
                     '${companion.typeDescription} ${companion.stageDisplayName}',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       color: Colors.white.withOpacity(0.8),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Text(
                     'Nivel ${companion.level} • ${companion.experience}/${companion.experienceNeededForNextStage} EXP',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 10,
                       color: Colors.white.withOpacity(0.9),
                     ),
                   ),
@@ -283,17 +305,32 @@ class _LoadedView extends StatelessWidget {
               ),
             ),
             
-            // Botón para ir al detalle
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(10),
+            // 🔧 MASCOTA GRANDE EN EL CENTRO - OCUPA CASI TODA LA TARJETA
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 40, bottom: 20),
+                child: CompanionAnimationWidget(
+                  companion: companion,
+                  size: MediaQuery.of(context).size.width * 0.7, // 🔧 70% del ancho
+                ),
               ),
-              child: const Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.white,
-                size: 16,
+            ),
+            
+            // Botón para ir al detalle en la parte inferior derecha
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ),
           ],
@@ -308,9 +345,9 @@ class _LoadedView extends StatelessWidget {
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.8,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
+          childAspectRatio: 0.8, // 🔧 HACER LAS TARJETAS MÁS ALTAS
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) {
@@ -336,7 +373,7 @@ class _LoadedView extends StatelessWidget {
             Icon(
               Icons.pets,
               size: 80,
-              color: Colors.grey[400],
+              color: AppColors.textHint,
             ),
             const SizedBox(height: 16),
             Text(
@@ -344,7 +381,7 @@ class _LoadedView extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey[600],
+                color: AppColors.textSecondary,
               ),
             ),
             const SizedBox(height: 8),
@@ -353,7 +390,7 @@ class _LoadedView extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey[500],
+                color: AppColors.textHint,
               ),
             ),
             const SizedBox(height: 24),
@@ -362,6 +399,7 @@ class _LoadedView extends StatelessWidget {
               icon: const Icon(Icons.store),
               label: const Text('Ir a la Tienda'),
               style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),

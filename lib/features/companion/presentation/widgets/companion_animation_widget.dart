@@ -6,13 +6,13 @@ import '../../domain/entities/companion_entity.dart';
 class CompanionAnimationWidget extends StatefulWidget {
   final CompanionEntity companion;
   final double size;
-  final bool isInteracting; // true cuando se está alimentando o dando amor
-  final String? currentAction; // 'feeding', 'loving', null
+  final bool isInteracting;
+  final String? currentAction;
   
   const CompanionAnimationWidget({
     Key? key,
     required this.companion,
-    this.size = 200,
+    this.size = 300,
     this.isInteracting = false,
     this.currentAction,
   }) : super(key: key);
@@ -33,6 +33,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   Timer? _blinkTimer;
   bool _isBlinking = false;
   bool _showHearts = false;
+  bool _isHappy = false;
   
   @override
   void initState() {
@@ -51,9 +52,9 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
     );
     
-    // Animación de rebote (cuando está feliz o interactuando)
+    // Animación de rebote (solo cuando interactúa)
     _bounceController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 600),
       vsync: this,
     );
     _bounceAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -72,9 +73,9 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   
   void _startBlinkTimer() {
     _blinkTimer = Timer.periodic(
-      Duration(milliseconds: Random().nextInt(3000) + 2000), // 2-5 segundos
+      Duration(milliseconds: Random().nextInt(4000) + 3000), // 3-7 segundos
       (timer) {
-        if (mounted && !_isBlinking) {
+        if (mounted && !_isBlinking && !widget.isInteracting) {
           _blink();
         }
       },
@@ -93,238 +94,272 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   void didUpdateWidget(CompanionAnimationWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     
-    // Reaccionar a interacciones
     if (widget.isInteracting && !oldWidget.isInteracting) {
       _handleInteraction();
-    }
-    
-    // Reaccionar a cambios de humor
-    if (widget.companion.currentMood != oldWidget.companion.currentMood) {
-      _handleMoodChange();
     }
   }
   
   void _handleInteraction() {
+    // Solo rebote cuando interactúa
     _bounceController.forward().then((_) {
       _bounceController.reverse();
     });
     
     if (widget.currentAction == 'loving') {
-      _showHearts = true;
+      setState(() {
+        _showHearts = true;
+        _isHappy = true;
+      });
       _heartController.forward().then((_) {
         _heartController.reverse().then((_) {
-          setState(() => _showHearts = false);
+          setState(() {
+            _showHearts = false;
+            _isHappy = false;
+          });
         });
+      });
+    }
+    
+    if (widget.currentAction == 'feeding') {
+      setState(() => _isHappy = true);
+      Future.delayed(const Duration(milliseconds: 2000), () {
+        if (mounted) setState(() => _isHappy = false);
       });
     }
   }
   
-  void _handleMoodChange() {
-    switch (widget.companion.currentMood) {
-      case CompanionMood.happy:
-      case CompanionMood.excited:
-        _bounceController.forward().then((_) => _bounceController.reverse());
-        break;
-      case CompanionMood.sad:
-        // Parpadeo más lento cuando está triste
-        break;
-      default:
-        break;
-    }
-  }
-  
-  String get _currentImagePath {
-    final basePath = 'assets/images/companions';
+  // 🔧 RUTAS CORREGIDAS PARA MASCOTAS
+  String get _petImagePath {
     final name = '${widget.companion.type.name}_${widget.companion.stage.name}';
     
-    // Si está parpadeando, mostrar imagen con ojos cerrados
+    // Si está parpadeando, mostrar imagen con ojos cerrados (SI EXISTE)
     if (_isBlinking) {
-      return '$basePath/animations/${name}_closed.png';
+      return 'assets/images/companions/animations/${name}_closed.png';
     }
     
-    // Imagen normal con ojos abiertos
-    return '$basePath/${name}.png';
+    // Si está feliz por interacción, mostrar imagen feliz (SI EXISTE)
+    if (_isHappy && widget.isInteracting) {
+      return 'assets/images/companions/animations/${name}_happy.png';
+    }
+    
+    // 🔧 IMAGEN NORMAL DE LA MASCOTA - RUTA ORIGINAL
+    return 'assets/images/companions/${name}.png';
   }
   
-  Color get _moodColor {
-    switch (widget.companion.currentMood) {
-      case CompanionMood.happy:
-        return Colors.yellow;
-      case CompanionMood.excited:
-        return Colors.orange;
-      case CompanionMood.sad:
-        return Colors.blue;
-      case CompanionMood.hungry:
-        return Colors.red;
-      case CompanionMood.sleepy:
-        return Colors.purple;
-      default:
-        return Colors.green;
+  // 🔧 FONDO ESPECÍFICO POR TIPO DE MASCOTA
+  String get _backgroundImagePath {
+    switch (widget.companion.type) {
+      case CompanionType.dexter:
+        return 'assets/images/companions/backgrounds/dexter_bg.png';
+      case CompanionType.elly:
+        return 'assets/images/companions/backgrounds/elly_bg.png';
+      case CompanionType.paxolotl:
+        return 'assets/images/companions/backgrounds/paxolotl_bg.png';
+      case CompanionType.yami:
+        return 'assets/images/companions/backgrounds/yami_bg.png';
     }
   }
   
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        // Aura de humor (sutil)
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 500),
-          width: widget.size + 20,
-          height: widget.size + 20,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: _moodColor.withOpacity(0.3),
-                blurRadius: 20,
-                spreadRadius: 5,
-              ),
-            ],
-          ),
-        ),
-        
-        // Compañero principal con animaciones
-        AnimatedBuilder(
-          animation: Listenable.merge([_blinkAnimation, _bounceAnimation]),
-          builder: (context, child) {
-            return Transform.scale(
-              scale: 1.0 + (_bounceAnimation.value * 0.1),
-              child: Transform.translate(
-                offset: Offset(0, -_bounceAnimation.value * 10),
-                child: Container(
-                  width: widget.size,
-                  height: widget.size,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 🔧 FONDO MÁS GRANDE
+          Container(
+            width: widget.size * 1.1, // 🔧 10% más grande
+            height: widget.size * 3.1, // 🔧 10% más grande
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.asset(
+                _backgroundImagePath,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  debugPrint('🔧 Error loading background: $_backgroundImagePath');
+                  debugPrint('🔧 Error details: $error');
+                  // Gradiente por defecto si no encuentra el fondo
+                  return Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: _getDefaultGradient(),
                       ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Image.asset(
-                      _currentImagePath,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[300],
-                          child: Icon(
-                            Icons.pets,
-                            size: widget.size * 0.5,
-                            color: Colors.grey[600],
-                          ),
-                        );
-                      },
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
-            );
-          },
-        ),
-        
-        // Corazones flotantes (cuando recibe amor)
-        if (_showHearts)
+            ),
+          ),
+          
+          // 🔧 MASCOTA MÁS GRANDE
           AnimatedBuilder(
-            animation: _heartAnimation,
+            animation: Listenable.merge([_bounceAnimation]),
             builder: (context, child) {
-              return Positioned(
-                top: 20 - (_heartAnimation.value * 30),
-                child: Opacity(
-                  opacity: 1.0 - _heartAnimation.value,
-                  child: Row(
-                    children: List.generate(3, (index) {
-                      return Transform.translate(
-                        offset: Offset(
-                          (index - 1) * 20.0,
-                          sin(_heartAnimation.value * pi * 2 + index) * 10,
+              return Transform.scale(
+                scale: 1.0 + (_bounceAnimation.value * 0.05),
+                child: Container(
+                  width: widget.size * 2.85, // 🔧 85% del contenedor (antes era 70%)
+                  height: widget.size * 1.85, // 🔧 85% del contenedor
+                  child: Image.asset(
+                    _petImagePath,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      debugPrint('🔧 Error loading pet: $_petImagePath');
+                      debugPrint('🔧 Error details: $error');
+                      // 🔧 PLACEHOLDER MEJORADO SIN HUELLA
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
+                            color: _getCompanionColor().withOpacity(0.5),
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        child: Icon(
-                          Icons.favorite,
-                          color: Colors.red,
-                          size: 16 + (_heartAnimation.value * 8),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: _getCompanionColor().withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                              child: Icon(
+                                _getCompanionIcon(),
+                                size: 40,
+                                color: _getCompanionColor(),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              widget.companion.displayName,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: _getCompanionColor(),
+                              ),
+                            ),
+                            Text(
+                              widget.companion.typeDescription,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _getCompanionColor().withOpacity(0.7),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Imagen no encontrada',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.orange[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       );
-                    }),
+                    },
                   ),
                 ),
               );
             },
           ),
-        
-        // Indicador de hambre
-        if (widget.companion.needsFood)
-          Positioned(
-            top: 10,
-            right: 10,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.red,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.restaurant,
-                color: Colors.white,
-                size: 16,
-              ),
-            ),
-          ),
-        
-        // Indicador de necesidad de amor
-        if (widget.companion.needsLove)
-          Positioned(
-            top: 10,
-            left: 10,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.pink,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.favorite_border,
-                color: Colors.white,
-                size: 16,
-              ),
-            ),
-          ),
-        
-        // Indicador de evolución disponible
-        if (widget.companion.canEvolve)
-          Positioned(
-            bottom: 10,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.green,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.star, color: Colors.white, size: 16),
-                  SizedBox(width: 4),
-                  Text(
-                    'Puede evolucionar',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+          
+          // Corazones flotantes cuando recibe amor
+          if (_showHearts)
+            AnimatedBuilder(
+              animation: _heartAnimation,
+              builder: (context, child) {
+                return Positioned(
+                  top: 20 - (_heartAnimation.value * 50),
+                  child: Opacity(
+                    opacity: 1.0 - _heartAnimation.value,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(3, (index) {
+                        return Transform.translate(
+                          offset: Offset(
+                            (index - 1) * 25.0,
+                            sin(_heartAnimation.value * pi * 2 + index) * 15,
+                          ),
+                          child: Icon(
+                            Icons.favorite,
+                            color: Colors.red,
+                            size: 20 + (_heartAnimation.value * 10),
+                          ),
+                        );
+                      }),
                     ),
                   ),
-                ],
-              ),
+                );
+              },
             ),
-          ),
-      ],
+        ],
+      ),
     );
+  }
+  
+  // 🔧 GRADIENTES POR DEFECTO SI NO HAY FONDO
+  List<Color> _getDefaultGradient() {
+    switch (widget.companion.type) {
+      case CompanionType.dexter:
+        return [Colors.brown[200]!, Colors.brown[400]!];
+      case CompanionType.elly:
+        return [Colors.green[200]!, Colors.green[400]!];
+      case CompanionType.paxolotl:
+        return [Colors.cyan[200]!, Colors.cyan[400]!];
+      case CompanionType.yami:
+        return [Colors.purple[200]!, Colors.purple[400]!];
+    }
+  }
+  
+  Color _getCompanionColor() {
+    switch (widget.companion.type) {
+      case CompanionType.dexter:
+        return Colors.brown;
+      case CompanionType.elly:
+        return Colors.green;
+      case CompanionType.paxolotl:
+        return Colors.cyan;
+      case CompanionType.yami:
+        return Colors.purple;
+    }
+  }
+  
+  IconData _getCompanionIcon() {
+    switch (widget.companion.type) {
+      case CompanionType.dexter:
+        return Icons.pets; // Perro
+      case CompanionType.elly:
+        return Icons.forest; // Panda (bosque)
+      case CompanionType.paxolotl:
+        return Icons.water; // Ajolote (agua)
+      case CompanionType.yami:
+        return Icons.nature; // Jaguar (naturaleza)
+    }
   }
   
   @override

@@ -9,6 +9,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showDrawerButton;
   final VoidCallback? onBackPressed;
   final bool showEcoTip;
+  final VoidCallback? onInfoPressed; // 🆕 CALLBACK PARA INFORMACIÓN
+  final bool showInfoButton; // 🆕 MOSTRAR BOTÓN DE INFO
 
   const CustomAppBar({
     Key? key,
@@ -17,7 +19,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.leading,
     this.showDrawerButton = true, 
     this.onBackPressed,
-    this.showEcoTip = true, 
+    this.showEcoTip = true,
+    this.onInfoPressed, // 🆕
+    this.showInfoButton = false, // 🆕
   }) : super(key: key);
 
   @override
@@ -37,8 +41,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        // 🔧 MEJORAR LÓGICA DEL LEADING
-        automaticallyImplyLeading: false, // Desactivar automático
+        automaticallyImplyLeading: showDrawerButton,
         leading: _buildLeading(context),
         title: Text(
           title,
@@ -56,42 +59,70 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   Widget? _buildLeading(BuildContext context) {
-    // Si hay un leading personalizado, usarlo
     if (leading != null) return leading;
     
-    // Si debe mostrar drawer button y hay drawer disponible
-    if (showDrawerButton && Scaffold.of(context).hasDrawer) {
-      return IconButton(
-        icon: const Icon(
-          Icons.menu,
-          color: Colors.white,
-          size: 24,
-        ),
-        onPressed: () {
-          debugPrint('🔧 Abriendo drawer...');
-          Scaffold.of(context).openDrawer();
-        },
-      );
+    if (!showDrawerButton) {
+      if (Navigator.of(context).canPop()) {
+        return IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_rounded,
+            color: Colors.white,
+          ),
+          onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
+        );
+      }
+      return null;
     }
     
-    // Si puede hacer pop, mostrar botón de back
-    if (Navigator.of(context).canPop()) {
-      return IconButton(
-        icon: const Icon(
-          Icons.arrow_back_ios_rounded,
-          color: Colors.white,
-        ),
-        onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
-      );
-    }
-    
-    return null;
+    return Builder(
+      builder: (context) {
+        return IconButton(
+          icon: const Icon(
+            Icons.menu,
+            color: Colors.white,
+            size: 24,
+          ),
+          onPressed: () {
+            debugPrint('🔧 Intentando abrir drawer...');
+            final scaffoldState = Scaffold.of(context);
+            if (scaffoldState.hasDrawer) {
+              debugPrint('✅ Drawer encontrado, abriendo...');
+              scaffoldState.openDrawer();
+            } else {
+              debugPrint('❌ No se encontró drawer en el scaffold');
+              Navigator.of(context).pop();
+            }
+          },
+        );
+      },
+    );
   }
 
   List<Widget> _buildActions(BuildContext context) {
     List<Widget> actionsList = [];
     
-    // Agregar eco tip si está habilitado
+    // 🆕 BOTÓN DE INFORMACIÓN ESPECÍFICA (DATOS CURIOSOS + DEDICATORIA)
+    if (showInfoButton && onInfoPressed != null) {
+      actionsList.add(
+        IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.info_outline,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          onPressed: onInfoPressed,
+        ),
+      );
+    }
+    
+    // BOTÓN ECO TIP GENERAL
     if (showEcoTip) {
       actionsList.add(
         IconButton(
@@ -107,7 +138,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       );
     }
     
-    // Agregar acciones adicionales si las hay
     if (actions != null) {
       actionsList.addAll(actions!);
     }
@@ -137,7 +167,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Ícono de Xico
               Container(
                 width: 60,
                 height: 60,
