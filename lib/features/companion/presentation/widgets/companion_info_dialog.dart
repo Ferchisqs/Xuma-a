@@ -352,7 +352,7 @@ class CompanionInfoDialog extends StatelessWidget {
     }
   }
   
-  // 🔧 DEDICATORIAS MÁS CORTAS
+
   Map<String, String> _getDedication(CompanionEntity companion) {
     switch (companion.id) {
       case 'dexter_baby':

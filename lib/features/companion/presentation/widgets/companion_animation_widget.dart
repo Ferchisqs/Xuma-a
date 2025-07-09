@@ -43,16 +43,16 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   }
   
   void _setupAnimations() {
-    // Animación de parpadeo
+    // Animación de parpadeo - MÁS RÁPIDA
     _blinkController = AnimationController(
-      duration: const Duration(milliseconds: 150),
+      duration: const Duration(milliseconds: 100),
       vsync: this,
     );
     _blinkAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
     );
     
-    // Animación de rebote (solo cuando interactúa)
+    // Animación de rebote (cuando interactúa)
     _bounceController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -73,7 +73,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   
   void _startBlinkTimer() {
     _blinkTimer = Timer.periodic(
-      Duration(milliseconds: Random().nextInt(4000) + 3000), // 3-7 segundos
+      Duration(milliseconds: Random().nextInt(2000) + 2000), // 2-4 segundos
       (timer) {
         if (mounted && !_isBlinking && !widget.isInteracting) {
           _blink();
@@ -83,11 +83,14 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   }
   
   void _blink() async {
+    if (!mounted) return;
     setState(() => _isBlinking = true);
     await _blinkController.forward();
-    await Future.delayed(const Duration(milliseconds: 100));
-    await _blinkController.reverse();
-    setState(() => _isBlinking = false);
+    await Future.delayed(const Duration(milliseconds: 80));
+    if (mounted) {
+      await _blinkController.reverse();
+      setState(() => _isBlinking = false);
+    }
   }
   
   @override
@@ -100,7 +103,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   }
   
   void _handleInteraction() {
-    // Solo rebote cuando interactúa
+    // Rebote cuando interactúa
     _bounceController.forward().then((_) {
       _bounceController.reverse();
     });
@@ -112,10 +115,12 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       });
       _heartController.forward().then((_) {
         _heartController.reverse().then((_) {
-          setState(() {
-            _showHearts = false;
-            _isHappy = false;
-          });
+          if (mounted) {
+            setState(() {
+              _showHearts = false;
+              _isHappy = false;
+            });
+          }
         });
       });
     }
@@ -128,22 +133,22 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     }
   }
   
-  // 🔧 RUTAS CORREGIDAS PARA MASCOTAS
+  // 🔧 MÉTODO CORREGIDO PARA OBTENER LA IMAGEN DE LA MASCOTA
   String get _petImagePath {
-    final name = '${widget.companion.type.name}_${widget.companion.stage.name}';
+    final baseName = '${widget.companion.type.name}_${widget.companion.stage.name}';
     
-    // Si está parpadeando, mostrar imagen con ojos cerrados (SI EXISTE)
+    // 🔧 Si está parpadeando, intentar mostrar imagen con ojos cerrados
     if (_isBlinking) {
-      return 'assets/images/companions/animations/${name}_closed.png';
+      return 'assets/images/companions/animations/${baseName}_closed.png';
     }
     
-    // Si está feliz por interacción, mostrar imagen feliz (SI EXISTE)
+    // 🔧 Si está feliz por interacción, mostrar imagen feliz
     if (_isHappy && widget.isInteracting) {
-      return 'assets/images/companions/animations/${name}_happy.png';
+      return 'assets/images/companions/animations/${baseName}_happy.png';
     }
     
-    // 🔧 IMAGEN NORMAL DE LA MASCOTA - RUTA ORIGINAL
-    return 'assets/images/companions/${name}.png';
+    // 🔧 Imagen normal de la mascota
+    return 'assets/images/companions/${baseName}.png';
   }
   
   // 🔧 FONDO ESPECÍFICO POR TIPO DE MASCOTA
@@ -168,119 +173,68 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 🔧 FONDO MÁS GRANDE
-          Container(
-            width: widget.size * 1.1, // 🔧 10% más grande
-            height: widget.size * 3.1, // 🔧 10% más grande
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Image.asset(
-                _backgroundImagePath,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  debugPrint('🔧 Error loading background: $_backgroundImagePath');
-                  debugPrint('🔧 Error details: $error');
-                  // Gradiente por defecto si no encuentra el fondo
-                  return Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: _getDefaultGradient(),
+         
+          Positioned.fill(
+            child: Container(
+              width: double.infinity,
+              height: double.infinity, 
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset(
+                  _backgroundImagePath,
+                  fit: BoxFit.cover, 
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint('🔧 Error loading background: $_backgroundImagePath');
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: _getDefaultGradient(),
+                        ),
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
           ),
           
-          // 🔧 MASCOTA MÁS GRANDE
+          // 🔧 MASCOTA MÁS GRANDE - OCUPA CASI TODO EL ESPACIO
           AnimatedBuilder(
             animation: Listenable.merge([_bounceAnimation]),
             builder: (context, child) {
               return Transform.scale(
                 scale: 1.0 + (_bounceAnimation.value * 0.05),
                 child: Container(
-                  width: widget.size * 2.85, // 🔧 85% del contenedor (antes era 70%)
-                  height: widget.size * 1.85, // 🔧 85% del contenedor
+                  width: widget.size * 1.55, // 🔧 95% del contenedor (era 85%)
+                  height: widget.size * 1.55, // 🔧 95% del contenedor (era 85%)
                   child: Image.asset(
                     _petImagePath,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       debugPrint('🔧 Error loading pet: $_petImagePath');
-                      debugPrint('🔧 Error details: $error');
-                      // 🔧 PLACEHOLDER MEJORADO SIN HUELLA
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(15),
-                          border: Border.all(
-                            color: _getCompanionColor().withOpacity(0.5),
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: _getCompanionColor().withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                              child: Icon(
-                                _getCompanionIcon(),
-                                size: 40,
-                                color: _getCompanionColor(),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              widget.companion.displayName,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: _getCompanionColor(),
-                              ),
-                            ),
-                            Text(
-                              widget.companion.typeDescription,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _getCompanionColor().withOpacity(0.7),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                'Imagen no encontrada',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.orange[700],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
+                      
+                      // 🔧 FALLBACK: Si no encuentra la animación específica, usar la imagen normal
+                      if (_isBlinking || _isHappy) {
+                        final normalPath = 'assets/images/companions/${widget.companion.type.name}_${widget.companion.stage.name}.png';
+                        debugPrint('🔧 Trying fallback image: $normalPath');
+                        
+                        return Image.asset(
+                          normalPath,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error2, stackTrace2) {
+                            debugPrint('🔧 Fallback image also failed: $normalPath');
+                            return _buildPlaceholder();
+                          },
+                        );
+                      }
+                      
+                      return _buildPlaceholder();
                     },
                   ),
                 ),
@@ -288,7 +242,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
             },
           ),
           
-          // Corazones flotantes cuando recibe amor
+          // 🔧 Corazones flotantes cuando recibe amor
           if (_showHearts)
             AnimatedBuilder(
               animation: _heartAnimation,
@@ -322,7 +276,78 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     );
   }
   
-  // 🔧 GRADIENTES POR DEFECTO SI NO HAY FONDO
+  // 🔧 PLACEHOLDER MEJORADO
+  Widget _buildPlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: _getCompanionColor().withOpacity(0.5),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _getCompanionColor().withOpacity(0.1),
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: Icon(
+              _getCompanionIcon(),
+              size: 40,
+              color: _getCompanionColor(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.companion.displayName,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: _getCompanionColor(),
+            ),
+          ),
+          Text(
+            widget.companion.typeDescription,
+            style: TextStyle(
+              fontSize: 12,
+              color: _getCompanionColor().withOpacity(0.7),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _isHappy ? 'Imagen feliz no encontrada' : 
+              _isBlinking ? 'Imagen parpadeo no encontrada' : 'Imagen no encontrada',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.orange[700],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // Métodos auxiliares (sin cambios)
   List<Color> _getDefaultGradient() {
     switch (widget.companion.type) {
       case CompanionType.dexter:
@@ -352,13 +377,13 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   IconData _getCompanionIcon() {
     switch (widget.companion.type) {
       case CompanionType.dexter:
-        return Icons.pets; // Perro
+        return Icons.pets;
       case CompanionType.elly:
-        return Icons.forest; // Panda (bosque)
+        return Icons.forest;
       case CompanionType.paxolotl:
-        return Icons.water; // Ajolote (agua)
+        return Icons.water;
       case CompanionType.yami:
-        return Icons.nature; // Jaguar (naturaleza)
+        return Icons.nature;
     }
   }
   
