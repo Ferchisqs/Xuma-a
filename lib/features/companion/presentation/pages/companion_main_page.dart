@@ -6,7 +6,7 @@ import '../../../navigation/presentation/widgets/custom_app_bar.dart';
 import '../../../navigation/presentation/widgets/side_nav_bar.dart';
 import '../../../navigation/presentation/cubit/navigation_cubit.dart';
 import '../cubit/companion_cubit.dart';
-import '../cubit/companion_shop_cubit.dart'; // 🔧 AGREGAR ESTE IMPORT
+import '../cubit/companion_shop_cubit.dart';
 import '../widgets/companion_animation_widget.dart';
 import '../widgets/companion_card_widget.dart';
 import '../widgets/companion_stats_widget.dart';
@@ -18,14 +18,13 @@ class CompanionMainPage extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    // 🔧 CORREGIDO: Proporcionar ambos cubits necesarios
     return MultiBlocProvider(
       providers: [
         BlocProvider(
           create: (context) => getIt<CompanionCubit>()..loadCompanions(),
         ),
         BlocProvider(
-          create: (context) => getIt<CompanionShopCubit>(), // 🔧 AGREGAR ShopCubit
+          create: (context) => getIt<CompanionShopCubit>(),
         ),
       ],
       child: const _CompanionMainView(),
@@ -40,7 +39,6 @@ class _CompanionMainView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      // 🔧 CORREGIDO: Asegurar que el drawer esté disponible
       drawer: const SideNavBar(),
       appBar: const CustomAppBar(
         title: 'Compañeros',
@@ -170,7 +168,7 @@ class _LoadedView extends StatelessWidget {
           ),
         ),
         
-        // Compañero activo (si existe) - ÁREA MÁS GRANDE
+        // Compañero activo (si existe)
         if (state.activeCompanion != null) ...[
           SliverToBoxAdapter(
             child: Padding(
@@ -244,12 +242,11 @@ class _LoadedView extends StatelessWidget {
     );
   }
   
-  // TARJETA DEL COMPAÑERO ACTIVO MÁS GRANDE
   Widget _buildActiveCompanionCard(BuildContext context, companion) {
     return GestureDetector(
       onTap: () => _navigateToDetail(context, companion),
       child: Container(
-        height: 300, // ALTURA FIJA MÁS GRANDE
+        height: 300,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -318,13 +315,13 @@ class _LoadedView extends StatelessWidget {
               ),
             ),
             
-            // MASCOTA GRANDE EN EL CENTRO - OCUPA CASI TODA LA TARJETA
+            // Mascota grande en el centro
             Positioned.fill(
               child: Padding(
                 padding: const EdgeInsets.only(top: 40, bottom: 20),
                 child: CompanionAnimationWidget(
                   companion: companion,
-                  size: MediaQuery.of(context).size.width * 0.7, // 70% del ancho
+                  size: MediaQuery.of(context).size.width * 0.7,
                 ),
               ),
             ),
@@ -358,7 +355,7 @@ class _LoadedView extends StatelessWidget {
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.8, // HACER LAS TARJETAS MÁS ALTAS
+          childAspectRatio: 0.8,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
@@ -433,16 +430,27 @@ class _LoadedView extends StatelessWidget {
     });
   }
   
-void _navigateToShop(BuildContext context) {
-  debugPrint('🏪 Navegando a la tienda...');
-  Navigator.of(context).push(
-    MaterialPageRoute(
-      builder: (context) => const CompanionShopPage(),
-    ),
-  ).then((_) {
-    // 🔧 REFRESCAR CUANDO REGRESE DE LA TIENDA
-    debugPrint('🔄 Regresando de la tienda, refrescando compañeros...');
-    context.read<CompanionCubit>().refreshCompanions();
-  });
-}
+  // 🔧 MÉTODO MEJORADO PARA NAVEGAR A LA TIENDA CON REFRESH ROBUSTO
+  void _navigateToShop(BuildContext context) {
+    debugPrint('🏪 [MAIN] Navegando a la tienda...');
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const CompanionShopPage(),
+      ),
+    ).then((_) {
+      // 🔧 REFRESH FORZADO AL REGRESAR DE LA TIENDA
+      debugPrint('🔄 [MAIN] Regresando de la tienda - REFRESCANDO TODO...');
+      
+      // Refresh del cubit principal
+      context.read<CompanionCubit>().refreshCompanions();
+      
+      // Pequeña pausa y refresh adicional por si acaso
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (context.mounted) {
+          debugPrint('🔄 [MAIN] Refresh adicional...');
+          context.read<CompanionCubit>().loadCompanions();
+        }
+      });
+    });
+  }
 }

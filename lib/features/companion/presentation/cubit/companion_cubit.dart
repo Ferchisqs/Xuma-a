@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
@@ -57,25 +58,43 @@ class CompanionCubit extends Cubit<CompanionState> {
     required this.getCompanionShopUseCase,
   }) : super(CompanionInitial());
 
+  // 🔧 MÉTODO MEJORADO CON DEBUG COMPLETO
   Future<void> loadCompanions() async {
+    debugPrint('🐾 [COMPANION_CUBIT] === CARGANDO COMPAÑEROS ===');
     emit(CompanionLoading());
-
+    
     final shopResult = await getCompanionShopUseCase(
       const GetCompanionShopParams(userId: _defaultUserId),
     );
 
     shopResult.fold(
-      (failure) => emit(CompanionError(message: failure.message)),
+      (failure) {
+        debugPrint('❌ [COMPANION_CUBIT] Error: ${failure.message}');
+        emit(CompanionError(message: failure.message));
+      },
       (shopData) {
+        debugPrint('✅ [COMPANION_CUBIT] Datos cargados exitosamente');
+        debugPrint('📊 [COMPANION_CUBIT] Stats actualizados:');
+        debugPrint('💰 [COMPANION_CUBIT] Puntos disponibles: ${shopData.userStats.availablePoints}');
+        debugPrint('🐾 [COMPANION_CUBIT] Compañeros poseídos: ${shopData.userStats.ownedCompanions}');
+        
         final ownedCompanions = shopData.availableCompanions
             .where((c) => c.isOwned)
             .toList();
+        
+        debugPrint('🏠 [COMPANION_CUBIT] Compañeros en "Mis Compañeros": ${ownedCompanions.length}');
         
         final activeCompanion = ownedCompanions
             .where((c) => c.isSelected)
             .isNotEmpty 
             ? ownedCompanions.firstWhere((c) => c.isSelected)
             : null;
+            
+        if (activeCompanion != null) {
+          debugPrint('⭐ [COMPANION_CUBIT] Compañero activo: ${activeCompanion.displayName}');
+        } else {
+          debugPrint('⚠️ [COMPANION_CUBIT] No hay compañero activo seleccionado');
+        }
 
         emit(CompanionLoaded(
           allCompanions: shopData.availableCompanions,
@@ -83,9 +102,14 @@ class CompanionCubit extends Cubit<CompanionState> {
           activeCompanion: activeCompanion,
           userStats: shopData.userStats,
         ));
+        
+        debugPrint('🎯 [COMPANION_CUBIT] === CARGA COMPLETADA ===');
       },
     );
   }
 
-  void refreshCompanions() => loadCompanions();
+  void refreshCompanions() {
+    debugPrint('🔄 [COMPANION_CUBIT] REFRESH solicitado');
+    loadCompanions();
+  }
 }
