@@ -7,7 +7,7 @@ import '../../../navigation/presentation/cubit/navigation_cubit.dart';
 class EcoStatsWidget extends StatelessWidget {
   const EcoStatsWidget({Key? key}) : super(key: key);
 
-  // 🆕 Datos estáticos de estadísticas del usuario
+  // Datos estáticos de estadísticas del usuario
   static const Map<String, dynamic> _userStatsData = {
     'totalPoints': 1250,
     'completedActivities': 23,
@@ -32,16 +32,14 @@ class EcoStatsWidget extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         
-        // Stats grid - 🔄 ALTURA FIJA AUMENTADA
-        SizedBox(
-          height: 150, // 🔄 Altura fija aumentada de 120 a 150
-          child: GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+        // 🔧 CORREGIDO: Stats grid con altura ajustada y mejor aspect ratio
+       GridView.count(
+  shrinkWrap: true,
+  physics: NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 2.2, // 🔄 Ratio más ancho para mejor distribución
+            childAspectRatio: 3.0, // 🔧 AUMENTADO de 2.5 a 3.0 para más espacio horizontal
             children: [
               _buildStatCard(
                 'Puntos',
@@ -69,14 +67,13 @@ class EcoStatsWidget extends StatelessWidget {
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 24), // 🔄 Más espacio entre grid y nivel
+       
+        const SizedBox(height: 52), // 🔧 REDUCIDO de 20 a 16
         
-        // Level indicator - 🔄 ALTURA AUMENTADA Y MEJOR DISTRIBUCIÓN
+        // 🔧 CORREGIDO: Level indicator con altura fija y mejor distribución
         Container(
-          width: double.infinity, // 🔄 Asegurar ancho completo
-          height: 70, // 🔄 Altura fija
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // 🔧 REDUCIDO padding
           decoration: BoxDecoration(
             gradient: AppColors.earthGradient,
             borderRadius: BorderRadius.circular(12),
@@ -86,9 +83,9 @@ class EcoStatsWidget extends StatelessWidget {
               const Icon(
                 Icons.military_tech_rounded,
                 color: Colors.white,
-                size: 24,
+                size: 20, 
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10), 
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,16 +95,15 @@ class EcoStatsWidget extends StatelessWidget {
                       'Nivel Actual',
                       style: AppTextStyles.bodySmall.copyWith(
                         color: Colors.white.withOpacity(0.8),
-                        fontSize: 12,
+                        fontSize: 11, // 🔧 REDUCIDO de 12 a 11
                       ),
                     ),
-                    const SizedBox(height: 2),
                     Text(
                       _userStatsData['currentLevel'] as String,
                       style: AppTextStyles.bodyLarge.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: 14, // 
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -124,7 +120,7 @@ class EcoStatsWidget extends StatelessWidget {
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), 
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -139,27 +135,27 @@ class EcoStatsWidget extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start, // 🔄 Alinear a la izquierda
+      child: Row( // 
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
+          Container(
+            padding: const EdgeInsets.all(4), 
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 14, 
+            ),
+          ),
+          const SizedBox(width: 8), 
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
                   value,
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.textPrimary,
@@ -169,18 +165,17 @@ class EcoStatsWidget extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textSecondary,
-              fontSize: 10,
+                Text(
+                  title,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 10, 
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

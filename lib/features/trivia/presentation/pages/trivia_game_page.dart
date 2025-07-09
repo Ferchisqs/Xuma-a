@@ -12,6 +12,7 @@ import '../widgets/trivia_question_widget.dart';
 import '../widgets/trivia_timer_widget.dart';
 import '../widgets/trivia_progress_widget.dart';
 import '../widgets/trivia_completion_dialog.dart';
+ // 🔧 IMPORT CORRECTO
 
 class TriviaGamePage extends StatelessWidget {
   final TriviaCategoryEntity category;
@@ -228,11 +229,12 @@ class _TriviaGameContentState extends State<_TriviaGameContent> {
     );
   }
 
+  // 🔧 MÉTODO CORREGIDO - usar el diálogo correcto
   void _showCompletionDialog(BuildContext context, TriviaGameCompleted state) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => TriviaCompletionDialog(
+      builder: (dialogContext) => TriviaCompletionDialog( 
         result: state.result,
         onContinue: () {
           Navigator.of(dialogContext).pop();

@@ -21,13 +21,14 @@ class QuickActionsGrid extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         
+        // 🔧 CORREGIDO: Grid con mejor aspect ratio para evitar overflow
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: 2,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: 1.1,
+          childAspectRatio: 1.3, // 🔧 AUMENTADO de 1.1 a 1.3 para dar más espacio horizontal
           children: [
             _buildActionCard(
               context,
@@ -69,6 +70,29 @@ class QuickActionsGrid extends StatelessWidget {
                 context.read<NavigationCubit>().goToCompanion();
               },
             ),
+            // 🆕 NUEVO: Botón de Contacto
+            _buildActionCard(
+              context,
+              'Contacto',
+              'Soporte y ayuda',
+              Icons.support_agent_rounded,
+              AppColors.info,
+              () {
+                context.read<NavigationCubit>().goToContact();
+              },
+            ),
+            // 🆕 NUEVO: Botón adicional (puede ser configuración o perfil)
+            _buildActionCard(
+              context,
+              'Mi Progreso',
+              'Ve tu avance completo',
+              Icons.trending_up_rounded,
+              AppColors.success,
+              () {
+                // Por ahora redirige a home, puedes cambiarlo más tarde
+                context.read<NavigationCubit>().goToHome();
+              },
+            ),
           ],
         ),
       ],
@@ -86,7 +110,7 @@ class QuickActionsGrid extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // 🔧 REDUCIDO de 16 a 12
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
@@ -105,7 +129,7 @@ class QuickActionsGrid extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8), // 🔧 REDUCIDO de 12 a 8
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
@@ -113,24 +137,27 @@ class QuickActionsGrid extends StatelessWidget {
               child: Icon(
                 icon,
                 color: color,
-                size: 28,
+                size: 24, // 🔧 REDUCIDO de 28 a 24
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8), // 🔧 REDUCIDO de 12 a 8
             Text(
               title,
               style: AppTextStyles.h4.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
-                fontSize: 16,
+                fontSize: 14, // 🔧 REDUCIDO de 16 a 14
               ),
               textAlign: TextAlign.center,
+              maxLines: 1, // 🔧 LIMITAR A 1 LÍNEA
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2), // 🔧 REDUCIDO de 4 a 2
             Text(
               subtitle,
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
+                fontSize: 11, // 🔧 REDUCIDO para que quepa mejor
               ),
               textAlign: TextAlign.center,
               maxLines: 2,

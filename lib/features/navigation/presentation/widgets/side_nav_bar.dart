@@ -44,11 +44,6 @@ class SideNavBar extends StatelessWidget {
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(
-                            Icons.lightbulb_outline,
-                            color: Colors.white,
-                            size: 20,
-                          ),
                         ),
                       ],
                     ),

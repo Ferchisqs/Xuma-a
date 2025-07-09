@@ -3,7 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../navigation/presentation/widgets/custom_app_bar.dart'; 
+import '../../../navigation/presentation/widgets/side_nav_bar.dart';
+import '../../../navigation/presentation/cubit/navigation_cubit.dart';
 import '../cubit/companion_cubit.dart';
+import '../cubit/companion_shop_cubit.dart'; // 🔧 AGREGAR ESTE IMPORT
 import '../widgets/companion_animation_widget.dart';
 import '../widgets/companion_card_widget.dart';
 import '../widgets/companion_stats_widget.dart';
@@ -15,8 +18,16 @@ class CompanionMainPage extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => getIt<CompanionCubit>()..loadCompanions(),
+    // 🔧 CORREGIDO: Proporcionar ambos cubits necesarios
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => getIt<CompanionCubit>()..loadCompanions(),
+        ),
+        BlocProvider(
+          create: (context) => getIt<CompanionShopCubit>(), // 🔧 AGREGAR ShopCubit
+        ),
+      ],
       child: const _CompanionMainView(),
     );
   }
@@ -29,6 +40,8 @@ class _CompanionMainView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      // 🔧 CORREGIDO: Asegurar que el drawer esté disponible
+      drawer: const SideNavBar(),
       appBar: const CustomAppBar(
         title: 'Compañeros',
         showDrawerButton: true,
@@ -157,7 +170,7 @@ class _LoadedView extends StatelessWidget {
           ),
         ),
         
-        // Compañero activo (si existe) - 🔧 ÁREA MÁS GRANDE
+        // Compañero activo (si existe) - ÁREA MÁS GRANDE
         if (state.activeCompanion != null) ...[
           SliverToBoxAdapter(
             child: Padding(
@@ -231,12 +244,12 @@ class _LoadedView extends StatelessWidget {
     );
   }
   
-  // 🔧 TARJETA DEL COMPAÑERO ACTIVO MÁS GRANDE
+  // TARJETA DEL COMPAÑERO ACTIVO MÁS GRANDE
   Widget _buildActiveCompanionCard(BuildContext context, companion) {
     return GestureDetector(
       onTap: () => _navigateToDetail(context, companion),
       child: Container(
-        height: 300, // 🔧 ALTURA FIJA MÁS GRANDE
+        height: 300, // ALTURA FIJA MÁS GRANDE
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -305,13 +318,13 @@ class _LoadedView extends StatelessWidget {
               ),
             ),
             
-            // 🔧 MASCOTA GRANDE EN EL CENTRO - OCUPA CASI TODA LA TARJETA
+            // MASCOTA GRANDE EN EL CENTRO - OCUPA CASI TODA LA TARJETA
             Positioned.fill(
               child: Padding(
                 padding: const EdgeInsets.only(top: 40, bottom: 20),
                 child: CompanionAnimationWidget(
                   companion: companion,
-                  size: MediaQuery.of(context).size.width * 0.7, // 🔧 70% del ancho
+                  size: MediaQuery.of(context).size.width * 0.7, // 70% del ancho
                 ),
               ),
             ),
@@ -345,7 +358,7 @@ class _LoadedView extends StatelessWidget {
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.8, // 🔧 HACER LAS TARJETAS MÁS ALTAS
+          childAspectRatio: 0.8, // HACER LAS TARJETAS MÁS ALTAS
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),

@@ -1,14 +1,16 @@
-// lib/features/trivia/presentation/widgets/trivia_completion_dialog.dart
+// lib/features/trivia/presentation/widgets/trivia_completion_dialog_enhanced.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../domain/entities/trivia_result_entity.dart';
+import '../../../navigation/presentation/cubit/navigation_cubit.dart';
 
-class TriviaCompletionDialog extends StatelessWidget {
+class TriviaCompletionDialogEnhanced extends StatelessWidget {
   final TriviaResultEntity result;
   final VoidCallback onContinue;
 
-  const TriviaCompletionDialog({
+  const TriviaCompletionDialogEnhanced({
     Key? key,
     required this.result,
     required this.onContinue,
@@ -60,7 +62,7 @@ class TriviaCompletionDialog extends StatelessWidget {
             
             // Título GANASTE
             Text(
-              'GANASTE',
+              '¡EXCELENTE!',
               style: AppTextStyles.h2.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold,
@@ -70,7 +72,7 @@ class TriviaCompletionDialog extends StatelessWidget {
             
             const SizedBox(height: 16),
             
-            // Puntos ganados
+            // Puntos ganados con animación
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
@@ -82,18 +84,29 @@ class TriviaCompletionDialog extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(25),
               ),
-              child: Text(
-                '+ ${result.earnedPoints} pts',
-                style: AppTextStyles.h3.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.eco,
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '+ ${result.earnedPoints} pts',
+                    style: AppTextStyles.h3.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
             
             const SizedBox(height: 20),
             
-            // Mensaje de felicitación
+            // Mensaje de felicitación con información sobre compañeros
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -103,13 +116,26 @@ class TriviaCompletionDialog extends StatelessWidget {
                   color: AppColors.success.withOpacity(0.3),
                 ),
               ),
-              child: Text(
-                'Felicidades, por completar esta trivia',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.4,
-                ),
-                textAlign: TextAlign.center,
+              child: Column(
+                children: [
+                  Text(
+                    '¡Felicidades por completar esta trivia!',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '🐾 Usa tus puntos para comprar nuevos compañeros o alimentar a Xico',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
             
@@ -139,26 +165,64 @@ class TriviaCompletionDialog extends StatelessWidget {
             
             const SizedBox(height: 24),
             
-            // Botón aceptar
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onContinue,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            // Botones de acción
+            Column(
+              children: [
+                // Botón para ir a compañeros
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Cerrar diálogo
+                      onContinue(); // Cerrar página de trivia
+                      // Navegar a compañeros
+                      context.read<NavigationCubit>().goToCompanion();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.pets, color: Colors.white),
+                    label: Text(
+                      'Ver mis Compañeros',
+                      style: AppTextStyles.buttonLarge.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
-                child: Text(
-                  'Aceptar',
-                  style: AppTextStyles.buttonLarge.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
+                
+                const SizedBox(height: 12),
+                
+                // Botón continuar con trivias
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Cerrar diálogo
+                      onContinue(); // Cerrar página de trivia actual
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: AppColors.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Continuar con Trivias',
+                      style: AppTextStyles.buttonLarge.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
