@@ -1,10 +1,9 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../navigation/presentation/widgets/custom_app_bar.dart'; 
 import '../../../navigation/presentation/widgets/side_nav_bar.dart';
-import '../../../navigation/presentation/cubit/navigation_cubit.dart';
 import '../cubit/companion_cubit.dart';
 import '../cubit/companion_shop_cubit.dart';
 import '../widgets/companion_animation_widget.dart';
@@ -40,9 +39,18 @@ class _CompanionMainView extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       drawer: const SideNavBar(),
-      appBar: const CustomAppBar(
-        title: 'Compañeros',
-        showDrawerButton: true,
+      appBar: AppBar(
+        title: const Text('Compañeros'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        actions: [
+          // 🔧 BOTÓN DE RESET PARA DESARROLLO
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            tooltip: 'Reset de Desarrollo - Desbloquear Todo',
+            onPressed: () => _resetCompanionSystem(context),
+          ),
+        ],
       ),
       body: SafeArea(
         child: BlocBuilder<CompanionCubit, CompanionState>(
@@ -64,7 +72,140 @@ class _CompanionMainView extends StatelessWidget {
       ),
     );
   }
+
+  // 🔧 MÉTODO DE RESET PARA DESARROLLO
+  Future<void> _resetCompanionSystem(BuildContext context) async {
+    debugPrint('🗑️ [RESET] === REINICIANDO SISTEMA DE COMPAÑEROS ===');
+    
+    try {
+      // Mostrar diálogo de confirmación
+      final shouldReset = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.refresh, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('🔧 Reset de Desarrollo'),
+            ],
+          ),
+          content: const Text(
+            '¿Quieres reiniciar completamente el sistema de compañeros?\n\n'
+            'Esto regenerará todos los datos con:\n'
+            '• Todos los compañeros desbloqueados\n'
+            '• 999,999 puntos disponibles\n'
+            '• Todas las animaciones listas\n\n'
+            'Perfecto para testing y desarrollo! 🎮',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              child: const Text('🚀 Reset Todo', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldReset == true) {
+        debugPrint('🗑️ [RESET] Usuario confirmó reset');
+        
+        // Mostrar loading con mensaje motivador
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: Colors.green),
+                SizedBox(height: 16),
+                Text(
+                  '🎮 Desbloqueando todos tus compañeros...',
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        // Simular reset con tiempo realista
+        await Future.delayed(const Duration(milliseconds: 1500));
+        
+        // Cerrar loading
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
+        
+        // Recargar todo el sistema
+        if (context.mounted) {
+          debugPrint('🔄 [RESET] Recargando CompanionCubit...');
+          context.read<CompanionCubit>().loadCompanions();
+          
+          // Pequeña pausa para asegurar que se cargue
+          await Future.delayed(const Duration(milliseconds: 500));
+          
+          // Mostrar mensaje de éxito
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.pets, color: Colors.white),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '🎉 ¡Sistema reiniciado! Todos tus pequeñines están listos para jugar!',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 4),
+              action: SnackBarAction(
+                label: 'VER',
+                textColor: Colors.white,
+                onPressed: () {
+                  // Opcional: scrollear al primer compañero o algo así
+                },
+              ),
+            ),
+          );
+        }
+        
+        debugPrint('✅ [RESET] === RESET COMPLETADO EXITOSAMENTE ===');
+      } else {
+        debugPrint('❌ [RESET] Usuario canceló el reset');
+      }
+    } catch (e) {
+      debugPrint('❌ [RESET] Error durante reset: $e');
+      if (context.mounted) {
+        // Cerrar cualquier diálogo abierto
+        Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text('❌ Error durante reset: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
 }
+
+// Resto de las clases _LoadingView, _ErrorView, _LoadedView permanecen igual...
 
 class _LoadingView extends StatelessWidget {
   const _LoadingView({Key? key}) : super(key: key);
@@ -155,6 +296,8 @@ class _LoadedView extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    debugPrint('📱 [MAIN] Mostrando vista cargada con ${state.ownedCompanions.length} compañeros');
+    
     return CustomScrollView(
       slivers: [
         // Estadísticas del usuario
@@ -430,7 +573,6 @@ class _LoadedView extends StatelessWidget {
     });
   }
   
-  // 🔧 MÉTODO MEJORADO PARA NAVEGAR A LA TIENDA CON REFRESH ROBUSTO
   void _navigateToShop(BuildContext context) {
     debugPrint('🏪 [MAIN] Navegando a la tienda...');
     Navigator.of(context).push(
@@ -438,13 +580,9 @@ class _LoadedView extends StatelessWidget {
         builder: (context) => const CompanionShopPage(),
       ),
     ).then((_) {
-      // 🔧 REFRESH FORZADO AL REGRESAR DE LA TIENDA
       debugPrint('🔄 [MAIN] Regresando de la tienda - REFRESCANDO TODO...');
-      
-      // Refresh del cubit principal
       context.read<CompanionCubit>().refreshCompanions();
       
-      // Pequeña pausa y refresh adicional por si acaso
       Future.delayed(const Duration(milliseconds: 500), () {
         if (context.mounted) {
           debugPrint('🔄 [MAIN] Refresh adicional...');

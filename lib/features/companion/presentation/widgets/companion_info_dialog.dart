@@ -292,7 +292,7 @@ class CompanionInfoDialog extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 12), // 🔧 REDUCIR PADDING
+          padding: const EdgeInsets.symmetric(vertical: 12), 
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -367,24 +367,24 @@ class CompanionInfoDialog extends StatelessWidget {
         };
       case 'dexter_adult':
         return {
-          'message': 'Para Dexter adulto, te extraño todos los días',
+          'message': 'Para Dexter , no pude pedir mejor compañero de vida',
           'author': 'Siempre en mi corazón'
         };
         
       case 'elly_baby':
         return {
           'message': 'Para Dianelly, gracias por encontrarme y contarme chistes ',
-          'author': 'Con ternura'
+          'author': 'Con admiración'
         };
       case 'elly_young':
         return {
-          'message': 'A Elly, quien me enseñó que la paciencia y dulzura superan cualquier obstáculo.',
-          'author': 'Tu admirador'
+          'message': 'A Dianelly, que su animal espiritual definitivamente es un panda',
+          'author': 'Con amor'
         };
       case 'elly_adult':
         return {
-          'message': 'Para Elly madura, símbolo de sabiduría y protección. Gracias por cuidar de quienes amas.',
-          'author': 'Con respeto y amor'
+          'message': 'Para Dianelly una persona hermosa a la que esto va dedicado',
+          'author': 'Con un pedacito de mi alma'
         };
         
       case 'paxolotl_baby':
@@ -394,29 +394,29 @@ class CompanionInfoDialog extends StatelessWidget {
         };
       case 'paxolotl_young':
         return {
-          'message': 'A mi querido Paxolotl, que me enseñas que ser diferente es un regalo, no una limitación.',
-          'author': 'Tu amigo fiel'
+          'message': 'A mi querida Pao, gracias por existir y hablarme',
+          'author': 'Con amor'
         };
       case 'paxolotl_adult':
         return {
-          'message': 'Para Paxolotl sabio, guardián de tradiciones ancestrales y símbolo de resistencia.',
-          'author': 'Con orgullo mexicano'
+          'message': 'Para Paola Penagos , te dedico esta parte de mi carrera ',
+          'author': 'Con un pedacito de mi alma'
         };
         
       case 'yami_baby':
         return {
-          'message': 'Para mi poderosa Yami, que desde pequeña mostró la fuerza que la caracteriza.',
-          'author': 'Con respeto'
+          'message': 'Para Yams , eres una hermosa persona',
+          'author': 'Con admiración'
         };
       case 'yami_young':
         return {
-          'message': 'A Yami en crecimiento, recordándome que el poder viene de proteger a quienes amas.',
-          'author': 'Tu protector'
+          'message': 'A Yams gracias por encontrarme',
+          'author': 'Con amor'
         };
       case 'yami_adult':
         return {
-          'message': 'Para Yami majestuosa, reina de la selva y de mi corazón. Tu fuerza me inspira cada día.',
-          'author': 'Con devoción eterna'
+          'message': 'Para Yams gracias por apoyarme y formar parte de esto',
+          'author': 'Con un pedacito de mi alma'
         };
         
       default:

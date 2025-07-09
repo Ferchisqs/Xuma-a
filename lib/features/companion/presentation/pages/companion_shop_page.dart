@@ -1,3 +1,6 @@
+// 🔧 ARREGLO DEL ERROR DEL PROVIDER
+// lib/features/companion/presentation/pages/companion_shop_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../di/injection.dart';
@@ -11,8 +14,13 @@ class CompanionShopPage extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    debugPrint('🏪 [SHOP_PAGE] Creando CompanionShopPage');
+    
     return BlocProvider(
-      create: (context) => getIt<CompanionShopCubit>()..loadShop(),
+      create: (context) {
+        debugPrint('🏪 [SHOP_PAGE] Creando CompanionShopCubit');
+        return getIt<CompanionShopCubit>()..loadShop();
+      },
       child: const _CompanionShopView(),
     );
   }
@@ -33,6 +41,7 @@ class _CompanionShopViewState extends State<_CompanionShopView>
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this); // Todos + 4 tipos
+    debugPrint('🏪 [SHOP_VIEW] TabController inicializado');
   }
   
   @override
@@ -47,7 +56,10 @@ class _CompanionShopViewState extends State<_CompanionShopView>
       backgroundColor: Colors.grey[100],
       body: BlocConsumer<CompanionShopCubit, CompanionShopState>(
         listener: (context, state) {
+          debugPrint('🏪 [SHOP_VIEW] Estado cambió a: ${state.runtimeType}');
+          
           if (state is CompanionShopError) {
+            debugPrint('❌ [SHOP_VIEW] Error: ${state.message}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -55,6 +67,7 @@ class _CompanionShopViewState extends State<_CompanionShopView>
               ),
             );
           } else if (state is CompanionShopPurchaseSuccess) {
+            debugPrint('✅ [SHOP_VIEW] Compra exitosa: ${state.message}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -64,19 +77,26 @@ class _CompanionShopViewState extends State<_CompanionShopView>
           }
         },
         builder: (context, state) {
+          debugPrint('🏪 [SHOP_VIEW] Construyendo UI para estado: ${state.runtimeType}');
+          
           if (state is CompanionShopLoading) {
             return const _LoadingView();
           } else if (state is CompanionShopError) {
             return _ErrorView(
               message: state.message,
-              onRetry: () => context.read<CompanionShopCubit>().loadShop(),
+              onRetry: () {
+                debugPrint('🔄 [SHOP_VIEW] Retry presionado');
+                context.read<CompanionShopCubit>().loadShop();
+              },
             );
           } else if (state is CompanionShopLoaded) {
+            debugPrint('✅ [SHOP_VIEW] Mostrando tienda cargada');
             return _LoadedView(
               state: state,
               tabController: _tabController,
             );
           } else if (state is CompanionShopPurchasing) {
+            debugPrint('⏳ [SHOP_VIEW] Mostrando estado de compra');
             return _PurchasingView(companion: state.companion);
           }
           
@@ -92,6 +112,8 @@ class _LoadingView extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    debugPrint('🔄 [SHOP] Mostrando loading view');
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tienda de Compañeros'),
@@ -116,84 +138,6 @@ class _LoadingView extends StatelessWidget {
       ),
     );
   }
-  void _showPurchaseDialog(
-  BuildContext context,
-  CompanionEntity companion,
-  CompanionShopLoaded state,
-) {
-  debugPrint('🛒 Mostrando diálogo de compra para: ${companion.displayName}');
-  debugPrint('💰 Puntos disponibles: ${state.userStats.availablePoints}');
-  debugPrint('🏷️ Precio del compañero: ${companion.purchasePrice}');
-  
-  showDialog(
-    context: context,
-    builder: (dialogContext) => CompanionPurchaseDialog(
-      companion: companion,
-      userPoints: state.userStats.availablePoints,
-      onConfirm: () {
-        debugPrint('✅ Usuario confirmó compra desde diálogo: ${companion.displayName}');
-        Navigator.of(dialogContext).pop();
-        debugPrint('🚀 Enviando compra al cubit...');
-        context.read<CompanionShopCubit>().purchaseCompanion(companion);
-      },
-    ),
-  );
-}
-
-// 🧪 GRID DE COMPAÑEROS CON DEBUG MEJORADO
-Widget _buildCompanionGrid(
-  BuildContext context,
-  List<CompanionEntity> companions,
-  CompanionShopLoaded state,
-) {
-  debugPrint('🏗️ Construyendo grid con ${companions.length} compañeros');
-  
-  if (companions.isEmpty) {
-    debugPrint('📦 No hay compañeros en esta categoría');
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.pets, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
-          Text(
-            'No hay compañeros disponibles en esta categoría',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  return Padding(
-    padding: const EdgeInsets.all(16),
-    child: GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: companions.length,
-      itemBuilder: (context, index) {
-        final companion = companions[index];
-        debugPrint('🏪 Creando item $index: ${companion.displayName}');
-        
-        return CompanionShopItemWidget(
-          companion: companion,
-          userPoints: state.userStats.availablePoints,
-          onPurchase: () {
-            debugPrint('🎯 onPurchase llamado para: ${companion.displayName}');
-            _showPurchaseDialog(context, companion, state);
-          },
-        );
-      },
-    ),
-  );
-}
 }
 
 class _ErrorView extends StatelessWidget {
@@ -208,6 +152,8 @@ class _ErrorView extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    debugPrint('❌ [SHOP] Mostrando error view: $message');
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tienda de Compañeros'),
@@ -263,6 +209,8 @@ class _PurchasingView extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    debugPrint('⏳ [SHOP] Mostrando purchasing view para: ${companion.displayName}');
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tienda de Compañeros'),
@@ -309,6 +257,10 @@ class _LoadedView extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    debugPrint('✅ [SHOP] Mostrando loaded view');
+    debugPrint('🛍️ [SHOP] Compañeros disponibles: ${state.purchasableCompanions.length}');
+    debugPrint('💰 [SHOP] Puntos usuario: ${state.userStats.availablePoints}');
+    
     return Scaffold(
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -435,7 +387,10 @@ class _LoadedView extends StatelessWidget {
     List<CompanionEntity> companions,
     CompanionShopLoaded state,
   ) {
+    debugPrint('🏗️ [SHOP] Construyendo grid con ${companions.length} compañeros');
+    
     if (companions.isEmpty) {
+      debugPrint('📦 [SHOP] No hay compañeros en esta categoría');
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -466,10 +421,20 @@ class _LoadedView extends StatelessWidget {
         itemCount: companions.length,
         itemBuilder: (context, index) {
           final companion = companions[index];
-          return CompanionShopItemWidget(
-            companion: companion,
-            userPoints: state.userStats.availablePoints,
-            onPurchase: () => _showPurchaseDialog(context, companion, state),
+          debugPrint('🏪 [SHOP] Creando item $index: ${companion.displayName}');
+          
+          return BlocBuilder<CompanionShopCubit, CompanionShopState>(
+            builder: (builderContext, builderState) {
+              // 🔧 USAR EL CONTEXT DEL BUILDER QUE TIENE ACCESO AL CUBIT
+              return CompanionShopItemWidget(
+                companion: companion,
+                userPoints: state.userStats.availablePoints,
+                onPurchase: () {
+                  debugPrint('🎯 [SHOP] onPurchase llamado para: ${companion.displayName}');
+                  _showPurchaseDialog(builderContext, companion, state);
+                },
+              );
+            },
           );
         },
       ),
@@ -481,13 +446,21 @@ class _LoadedView extends StatelessWidget {
     CompanionEntity companion,
     CompanionShopLoaded state,
   ) {
+    debugPrint('🛒 [SHOP] Mostrando diálogo de compra para: ${companion.displayName}');
+    debugPrint('💰 [SHOP] Puntos disponibles: ${state.userStats.availablePoints}');
+    debugPrint('🏷️ [SHOP] Precio del compañero: ${companion.purchasePrice}');
+    
     showDialog(
       context: context,
-      builder: (context) => CompanionPurchaseDialog(
+      builder: (dialogContext) => CompanionPurchaseDialog(
         companion: companion,
         userPoints: state.userStats.availablePoints,
         onConfirm: () {
-          Navigator.of(context).pop();
+          debugPrint('✅ [SHOP] Usuario confirmó compra desde diálogo: ${companion.displayName}');
+          Navigator.of(dialogContext).pop();
+          debugPrint('🚀 [SHOP] Enviando compra al cubit...');
+          
+          // 🔧 USAR EL CONTEXT CORRECTO PARA ACCEDER AL CUBIT
           context.read<CompanionShopCubit>().purchaseCompanion(companion);
         },
       ),

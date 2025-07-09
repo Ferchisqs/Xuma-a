@@ -234,7 +234,7 @@ class CompanionActionsWidget extends StatelessWidget {
         message = '${companion.displayName} está comiendo...';
         break;
       case 'loving':
-        message = '${companion.displayName} se siente amado...';
+        message = '${companion.displayName} se siente feliz...';
         break;
       case 'evolving':
         message = '${companion.displayName} está evolucionando...';
