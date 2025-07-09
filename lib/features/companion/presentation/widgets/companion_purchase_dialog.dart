@@ -18,6 +18,10 @@ class CompanionPurchaseDialog extends StatelessWidget {
     final canAfford = userPoints >= companion.purchasePrice;
     final remainingPoints = userPoints - companion.purchasePrice;
     
+    // 🛒 DEBUG: Log cuando se muestra el diálogo
+    debugPrint('🛒 Mostrando diálogo de compra para: ${companion.displayName}');
+    debugPrint('💰 Puntos usuario: $userPoints, Precio: ${companion.purchasePrice}, Puede comprar: $canAfford');
+    
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -104,7 +108,8 @@ class CompanionPurchaseDialog extends StatelessWidget {
                   width: double.infinity,
                   height: double.infinity,
                   errorBuilder: (context, error, stackTrace) {
-                    debugPrint('🔧 Error cargando imagen: ${_getPetImagePath()}');
+                    debugPrint('🔧 Error cargando imagen en diálogo: ${_getPetImagePath()}');
+                    debugPrint('🔧 Error details: $error');
                     return Container(
                       color: _getCompanionColor().withOpacity(0.2),
                       child: Column(
@@ -152,7 +157,9 @@ class CompanionPurchaseDialog extends StatelessWidget {
   // 🔧 MÉTODO PARA OBTENER LA RUTA CORRECTA DE LA IMAGEN
   String _getPetImagePath() {
     final name = '${companion.type.name}_${companion.stage.name}';
-    return 'assets/images/companions/$name.png';
+    final path = 'assets/images/companions/$name.png';
+    debugPrint('🖼️ Intentando cargar imagen: $path');
+    return path;
   }
   
   Widget _buildCompanionInfo() {
@@ -376,7 +383,10 @@ class CompanionPurchaseDialog extends StatelessWidget {
         // Botón cancelar
         Expanded(
           child: OutlinedButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              debugPrint('❌ Usuario canceló la compra de: ${companion.displayName}');
+              Navigator.of(context).pop();
+            },
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: Colors.grey[400]!),
               shape: RoundedRectangleBorder(
@@ -396,10 +406,16 @@ class CompanionPurchaseDialog extends StatelessWidget {
         
         const SizedBox(width: 12),
         
-        // Botón confirmar
+        // Botón confirmar con DEBUG
         Expanded(
           child: ElevatedButton(
-            onPressed: canAfford ? onConfirm : null,
+            onPressed: canAfford ? () {
+              debugPrint('✅ Usuario CONFIRMÓ compra de: ${companion.displayName}');
+              debugPrint('💰 Ejecutando onConfirm callback...');
+              onConfirm();
+            } : () {
+              debugPrint('❌ Botón adoptar presionado pero no puede comprar: ${companion.displayName}');
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: canAfford ? _getCompanionColor() : Colors.grey,
               foregroundColor: Colors.white,

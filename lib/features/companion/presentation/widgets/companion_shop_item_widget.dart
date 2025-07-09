@@ -17,8 +17,19 @@ class CompanionShopItemWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final canAfford = userPoints >= companion.purchasePrice;
     
+    // 🧪 DEBUG: Log cuando se renderiza cada item
+    debugPrint('🏪 Renderizando item: ${companion.displayName}');
+    debugPrint('💰 Puntos usuario: $userPoints, Precio: ${companion.purchasePrice}, Puede comprar: $canAfford');
+    
     return GestureDetector(
-      onTap: canAfford ? onPurchase : null,
+      onTap: canAfford ? () {
+        debugPrint('👆 Usuario tocó item: ${companion.displayName}');
+        debugPrint('🎯 Ejecutando onPurchase callback...');
+        onPurchase();
+      } : () {
+        debugPrint('❌ Usuario tocó item pero no puede comprarlo: ${companion.displayName}');
+        debugPrint('💸 Necesita ${companion.purchasePrice - userPoints} puntos más');
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
@@ -62,8 +73,8 @@ class CompanionShopItemWidget extends StatelessWidget {
                   
                   const SizedBox(height: 8),
                   
-                  // Precio y botón
-                  _buildPriceSection(canAfford),
+                  // 🧪 BOTÓN DE COMPRA MÁS VISIBLE CON DEBUG
+                  _buildPurchaseButton(canAfford),
                 ],
               ),
             ),
@@ -99,6 +110,46 @@ class CompanionShopItemWidget extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+  
+  // 🧪 BOTÓN DE COMPRA MEJORADO CON DEBUG
+  Widget _buildPurchaseButton(bool canAfford) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: canAfford ? () {
+          debugPrint('🎯 BOTÓN DE COMPRA PRESIONADO: ${companion.displayName}');
+          debugPrint('💰 Precio: ${companion.purchasePrice}, Puntos usuario: $userPoints');
+          debugPrint('🚀 Ejecutando callback onPurchase...');
+          onPurchase();
+        } : () {
+          debugPrint('❌ Botón bloqueado presionado: ${companion.displayName}');
+          debugPrint('💸 Faltan ${companion.purchasePrice - userPoints} puntos');
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: canAfford ? _getCompanionColor() : Colors.grey[400],
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          elevation: canAfford ? 4 : 1,
+        ),
+        icon: Icon(
+          canAfford ? Icons.pets : Icons.lock,
+          size: 16,
+          color: Colors.white,
+        ),
+        label: Text(
+          canAfford ? 'ADOPTAR ${companion.purchasePrice}★' : 'SIN PUNTOS',
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       ),
     );
@@ -216,21 +267,16 @@ class CompanionShopItemWidget extends StatelessWidget {
   
   // 🔧 RUTAS DE IMÁGENES PARA LA TIENDA
   String _getBackgroundImagePath() {
-    switch (companion.type) {
-      case CompanionType.dexter:
-        return 'assets/images/companions/backgrounds/dexter_bg.png';
-      case CompanionType.elly:
-        return 'assets/images/companions/backgrounds/elly_bg.png';
-      case CompanionType.paxolotl:
-        return 'assets/images/companions/backgrounds/paxolotl_bg.png';
-      case CompanionType.yami:
-        return 'assets/images/companions/backgrounds/yami_bg.png';
-    }
+    final path = 'assets/images/companions/backgrounds/${companion.type.name}_bg.png';
+    debugPrint('🏞️ Cargando fondo: $path');
+    return path;
   }
   
   String _getPetImagePath() {
     final name = '${companion.type.name}_${companion.stage.name}';
-    return 'assets/images/companions/$name.png';
+    final path = 'assets/images/companions/$name.png';
+    debugPrint('🐾 Cargando mascota: $path');
+    return path;
   }
   
   Widget _buildStageBadge() {
@@ -271,57 +317,6 @@ class CompanionShopItemWidget extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-  
-  Widget _buildPriceSection(bool canAfford) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Precio
-          Row(
-            children: [
-              Icon(
-                Icons.star,
-                color: Colors.yellow[300],
-                size: 16,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${companion.purchasePrice}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-          
-          // Botón de compra
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: canAfford ? Colors.white : Colors.grey,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              canAfford ? 'COMPRAR' : 'BLOQUEADO',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: canAfford ? _getCompanionColor() : Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
   

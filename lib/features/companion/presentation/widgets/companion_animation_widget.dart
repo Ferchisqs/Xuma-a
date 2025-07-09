@@ -1,3 +1,6 @@
+// 🎨 ANIMACIONES MEJORADAS
+// Actualizar lib/features/companion/presentation/widgets/companion_animation_widget.dart
+
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
@@ -26,54 +29,91 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   late AnimationController _blinkController;
   late AnimationController _bounceController;
   late AnimationController _heartController;
+  late AnimationController _feedController;
+  late AnimationController _happyController;
+  late AnimationController _floatingController;
+  
   late Animation<double> _blinkAnimation;
   late Animation<double> _bounceAnimation;
   late Animation<double> _heartAnimation;
+  late Animation<double> _feedAnimation;
+  late Animation<double> _happyAnimation;
+  late Animation<double> _floatingAnimation;
   
   Timer? _blinkTimer;
+  Timer? _actionTimer;
   bool _isBlinking = false;
   bool _showHearts = false;
   bool _isHappy = false;
+  bool _isFeeding = false;
   
   @override
   void initState() {
     super.initState();
     _setupAnimations();
     _startBlinkTimer();
+    _startFloatingAnimation();
   }
   
   void _setupAnimations() {
-    // Animación de parpadeo - MÁS RÁPIDA
+    // 👁️ Animación de parpadeo
     _blinkController = AnimationController(
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 150),
       vsync: this,
     );
     _blinkAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
     );
     
-    // Animación de rebote (cuando interactúa)
+    // 🦘 Animación de rebote (cuando interactúa)
     _bounceController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     _bounceAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _bounceController, curve: Curves.elasticOut),
     );
     
-    // Animación de corazones
+    // 💕 Animación de corazones (amor)
     _heartController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 2500), // 🔧 MÁS TIEMPO
       vsync: this,
     );
     _heartAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _heartController, curve: Curves.easeOut),
     );
+    
+    // 🍎 Animación de alimentación
+    _feedController = AnimationController(
+      duration: const Duration(milliseconds: 2000), // 🔧 MÁS TIEMPO
+      vsync: this,
+    );
+    _feedAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _feedController, curve: Curves.easeInOut),
+    );
+    
+    // 😊 Animación de felicidad
+    _happyController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _happyAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _happyController, curve: Curves.bounceOut),
+    );
+    
+    // 🌸 Animación flotante sutil
+    _floatingController = AnimationController(
+      duration: const Duration(milliseconds: 3000),
+      vsync: this,
+    );
+    _floatingAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _floatingController, curve: Curves.easeInOut),
+    );
   }
   
   void _startBlinkTimer() {
     _blinkTimer = Timer.periodic(
-      Duration(milliseconds: Random().nextInt(2000) + 2000), // 2-4 segundos
+      Duration(milliseconds: Random().nextInt(3000) + 2000), // 2-5 segundos
       (timer) {
         if (mounted && !_isBlinking && !widget.isInteracting) {
           _blink();
@@ -82,11 +122,15 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     );
   }
   
+  void _startFloatingAnimation() {
+    _floatingController.repeat(reverse: true);
+  }
+  
   void _blink() async {
     if (!mounted) return;
     setState(() => _isBlinking = true);
     await _blinkController.forward();
-    await Future.delayed(const Duration(milliseconds: 80));
+    await Future.delayed(const Duration(milliseconds: 100));
     if (mounted) {
       await _blinkController.reverse();
       setState(() => _isBlinking = false);
@@ -103,55 +147,93 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   }
   
   void _handleInteraction() {
-    // Rebote cuando interactúa
+    // 🦘 Rebote universal
     _bounceController.forward().then((_) {
       _bounceController.reverse();
     });
     
     if (widget.currentAction == 'loving') {
-      setState(() {
-        _showHearts = true;
-        _isHappy = true;
-      });
-      _heartController.forward().then((_) {
-        _heartController.reverse().then((_) {
-          if (mounted) {
-            setState(() {
-              _showHearts = false;
-              _isHappy = false;
-            });
-          }
-        });
-      });
-    }
-    
-    if (widget.currentAction == 'feeding') {
-      setState(() => _isHappy = true);
-      Future.delayed(const Duration(milliseconds: 2000), () {
-        if (mounted) setState(() => _isHappy = false);
-      });
+      _handleLoveAction();
+    } else if (widget.currentAction == 'feeding') {
+      _handleFeedAction();
     }
   }
   
-  // 🔧 MÉTODO CORREGIDO PARA OBTENER LA IMAGEN DE LA MASCOTA
+  void _handleLoveAction() {
+    setState(() {
+      _showHearts = true;
+      _isHappy = true;
+    });
+    
+    // 🎨 Animación de corazones mejorada
+    _heartController.forward().then((_) {
+      _heartController.reverse().then((_) {
+        if (mounted) {
+          setState(() {
+            _showHearts = false;
+          });
+        }
+      });
+    });
+    
+    // 😊 Animación de felicidad
+    _happyController.forward().then((_) {
+      _happyController.reverse();
+    });
+    
+    // ⏰ Mantener feliz por más tiempo
+    _actionTimer?.cancel();
+    _actionTimer = Timer(const Duration(milliseconds: 3000), () {
+      if (mounted) setState(() => _isHappy = false);
+    });
+  }
+  
+  void _handleFeedAction() {
+    setState(() {
+      _isFeeding = true;
+      _isHappy = true;
+    });
+    
+    // 🍎 Animación de alimentación
+    _feedController.forward().then((_) {
+      _feedController.reverse().then((_) {
+        if (mounted) {
+          setState(() => _isFeeding = false);
+        }
+      });
+    });
+    
+    // 😊 Mantener feliz por más tiempo después de comer
+    _actionTimer?.cancel();
+    _actionTimer = Timer(const Duration(milliseconds: 3000), () {
+      if (mounted) setState(() => _isHappy = false);
+    });
+  }
+  
+  // 🔧 MÉTODO PARA OBTENER LA IMAGEN DE LA MASCOTA
   String get _petImagePath {
     final baseName = '${widget.companion.type.name}_${widget.companion.stage.name}';
     
-    // 🔧 Si está parpadeando, intentar mostrar imagen con ojos cerrados
+    // 👁️ Parpadeo
     if (_isBlinking) {
       return 'assets/images/companions/animations/${baseName}_closed.png';
     }
     
-    // 🔧 Si está feliz por interacción, mostrar imagen feliz
+    // 🍎 Comiendo
+    if (_isFeeding && widget.isInteracting) {
+      return 'assets/images/companions/animations/${baseName}_eating.png';
+    }
+    
+    // 😊 Feliz por interacción
     if (_isHappy && widget.isInteracting) {
       return 'assets/images/companions/animations/${baseName}_happy.png';
     }
     
-    // 🔧 Imagen normal de la mascota
+    // 🔧 Imagen normal
     return 'assets/images/companions/${baseName}.png';
   }
   
-  // 🔧 FONDO ESPECÍFICO POR TIPO DE MASCOTA
+  // 🔧 FONDO ESPECÍFICO POR TIPO
   String get _backgroundImagePath {
     switch (widget.companion.type) {
       case CompanionType.dexter:
@@ -173,11 +255,9 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       child: Stack(
         alignment: Alignment.center,
         children: [
-         
+          // 🏞️ FONDO CON IMAGEN
           Positioned.fill(
             child: Container(
-              width: double.infinity,
-              height: double.infinity, 
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -185,9 +265,8 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
                 borderRadius: BorderRadius.circular(20),
                 child: Image.asset(
                   _backgroundImagePath,
-                  fit: BoxFit.cover, 
+                  fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
-                    debugPrint('🔧 Error loading background: $_backgroundImagePath');
                     return Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -204,68 +283,140 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
             ),
           ),
           
-          // 🔧 MASCOTA MÁS GRANDE - OCUPA CASI TODO EL ESPACIO
+          // 🐾 MASCOTA CON ANIMACIONES MEJORADAS
           AnimatedBuilder(
-            animation: Listenable.merge([_bounceAnimation]),
+            animation: Listenable.merge([
+              _bounceAnimation, 
+              _happyAnimation, 
+              _floatingAnimation
+            ]),
             builder: (context, child) {
-              return Transform.scale(
-                scale: 1.0 + (_bounceAnimation.value * 0.05),
-                child: Container(
-                  width: widget.size * 1.55, // 🔧 95% del contenedor (era 85%)
-                  height: widget.size * 1.55, // 🔧 95% del contenedor (era 85%)
-                  child: Image.asset(
-                    _petImagePath,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      debugPrint('🔧 Error loading pet: $_petImagePath');
-                      
-                      // 🔧 FALLBACK: Si no encuentra la animación específica, usar la imagen normal
-                      if (_isBlinking || _isHappy) {
-                        final normalPath = 'assets/images/companions/${widget.companion.type.name}_${widget.companion.stage.name}.png';
-                        debugPrint('🔧 Trying fallback image: $normalPath');
-                        
-                        return Image.asset(
-                          normalPath,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error2, stackTrace2) {
-                            debugPrint('🔧 Fallback image also failed: $normalPath');
-                            return _buildPlaceholder();
-                          },
-                        );
-                      }
-                      
-                      return _buildPlaceholder();
-                    },
+              return Transform.translate(
+                offset: Offset(
+                  0, 
+                  // 🌸 Flotación sutil + rebote
+                  (sin(_floatingAnimation.value * pi * 2) * 3) + 
+                  (_bounceAnimation.value * -8)
+                ),
+                child: Transform.scale(
+                  scale: 1.0 + 
+                         (_bounceAnimation.value * 0.08) + 
+                         (_happyAnimation.value * 0.03),
+                  child: Container(
+                    width: widget.size * 1.2,
+                    height: widget.size * 1.2,
+                    child: Image.asset(
+                      _petImagePath,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        // 🔧 FALLBACK mejorado
+                        if (_isBlinking || _isHappy || _isFeeding) {
+                          final normalPath = 'assets/images/companions/${widget.companion.type.name}_${widget.companion.stage.name}.png';
+                          return Image.asset(
+                            normalPath,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error2, stackTrace2) {
+                              return _buildEnhancedPlaceholder();
+                            },
+                          );
+                        }
+                        return _buildEnhancedPlaceholder();
+                      },
+                    ),
                   ),
                 ),
               );
             },
           ),
           
-          // 🔧 Corazones flotantes cuando recibe amor
+          // 💕 CORAZONES FLOTANTES MEJORADOS
           if (_showHearts)
             AnimatedBuilder(
               animation: _heartAnimation,
               builder: (context, child) {
-                return Positioned(
-                  top: 20 - (_heartAnimation.value * 50),
-                  child: Opacity(
-                    opacity: 1.0 - _heartAnimation.value,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(3, (index) {
-                        return Transform.translate(
-                          offset: Offset(
-                            (index - 1) * 25.0,
-                            sin(_heartAnimation.value * pi * 2 + index) * 15,
-                          ),
+                return Stack(
+                  children: List.generate(5, (index) { // 🔧 MÁS CORAZONES
+                    final angle = (index * pi * 2) / 5;
+                    final radius = 40 + (_heartAnimation.value * 60);
+                    final opacity = (1.0 - _heartAnimation.value).clamp(0.0, 1.0);
+                    
+                    return Positioned(
+                      left: (widget.size / 2) + cos(angle + _heartAnimation.value * pi) * radius,
+                      top: (widget.size / 2) + sin(angle + _heartAnimation.value * pi) * radius - 
+                          (_heartAnimation.value * 80),
+                      child: Transform.scale(
+                        scale: 0.5 + (_heartAnimation.value * 1.0),
+                        child: Opacity(
+                          opacity: opacity,
                           child: Icon(
                             Icons.favorite,
-                            color: Colors.red,
-                            size: 20 + (_heartAnimation.value * 10),
+                            color: Colors.red.withOpacity(0.8),
+                            size: 16 + (_heartAnimation.value * 12),
                           ),
-                        );
-                      }),
+                        ),
+                      ),
+                    );
+                  }),
+                );
+              },
+            ),
+          
+          // 🍎 EFECTOS DE ALIMENTACIÓN
+          if (_isFeeding)
+            AnimatedBuilder(
+              animation: _feedAnimation,
+              builder: (context, child) {
+                return Positioned(
+                  top: 20 - (_feedAnimation.value * 40),
+                  child: Opacity(
+                    opacity: (1.0 - _feedAnimation.value).clamp(0.0, 1.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Transform.scale(
+                          scale: 0.8 + (_feedAnimation.value * 0.4),
+                          child: const Text(
+                            '🍎',
+                            style: TextStyle(fontSize: 24),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Transform.scale(
+                          scale: 0.8 + (_feedAnimation.value * 0.4),
+                          child: const Text(
+                            '🥕',
+                            style: TextStyle(fontSize: 20),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Transform.scale(
+                          scale: 0.8 + (_feedAnimation.value * 0.4),
+                          child: const Text(
+                            '🥬',
+                            style: TextStyle(fontSize: 18),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          
+          // ✨ EFECTOS DE FELICIDAD
+          if (_isHappy && widget.isInteracting)
+            AnimatedBuilder(
+              animation: _happyAnimation,
+              builder: (context, child) {
+                return Positioned(
+                  top: 15 - (_happyAnimation.value * 25),
+                  child: Opacity(
+                    opacity: (1.0 - _happyAnimation.value * 0.7).clamp(0.3, 1.0),
+                    child: Text(
+                      '✨',
+                      style: TextStyle(
+                        fontSize: 20 + (_happyAnimation.value * 10),
+                      ),
                     ),
                   ),
                 );
@@ -277,10 +428,17 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   }
   
   // 🔧 PLACEHOLDER MEJORADO
-  Widget _buildPlaceholder() {
+  Widget _buildEnhancedPlaceholder() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _getCompanionColor().withOpacity(0.3),
+            _getCompanionColor().withOpacity(0.1),
+          ],
+        ),
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
           color: _getCompanionColor().withOpacity(0.5),
@@ -298,9 +456,9 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _getCompanionColor().withOpacity(0.1),
+              color: _getCompanionColor().withOpacity(0.2),
               borderRadius: BorderRadius.circular(50),
             ),
             child: Icon(
@@ -309,11 +467,11 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
               color: _getCompanionColor(),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             widget.companion.displayName,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: _getCompanionColor(),
             ),
@@ -327,19 +485,19 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
           ),
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.orange.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              _isHappy ? 'Imagen feliz no encontrada' : 
-              _isBlinking ? 'Imagen parpadeo no encontrada' : 'Imagen no encontrada',
+              '🎨 Imagen personalizada no encontrada',
               style: TextStyle(
                 fontSize: 10,
                 color: Colors.orange[700],
                 fontWeight: FontWeight.w500,
               ),
+              textAlign: TextAlign.center,
             ),
           ),
         ],
@@ -347,7 +505,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     );
   }
   
-  // Métodos auxiliares (sin cambios)
+  // Métodos auxiliares (sin cambios mayores)
   List<Color> _getDefaultGradient() {
     switch (widget.companion.type) {
       case CompanionType.dexter:
@@ -390,9 +548,13 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   @override
   void dispose() {
     _blinkTimer?.cancel();
+    _actionTimer?.cancel();
     _blinkController.dispose();
     _bounceController.dispose();
     _heartController.dispose();
+    _feedController.dispose();
+    _happyController.dispose();
+    _floatingController.dispose();
     super.dispose();
   }
 }

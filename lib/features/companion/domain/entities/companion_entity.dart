@@ -128,15 +128,15 @@ class CompanionEntity extends Equatable {
   }
 
   int get experienceNeededForNextStage {
-    switch (stage) {
-      case CompanionStage.baby:
-        return 100;
-      case CompanionStage.young:
-        return 250;
-      case CompanionStage.adult:
-        return 0; // Ya está al máximo
-    }
+  switch (stage) {
+    case CompanionStage.baby:
+      return 50; // 🚀 ERA 100, AHORA SOLO 50 EXP (2 comidas + 1 amor)
+    case CompanionStage.young:
+      return 80; // 🚀 ERA 250, AHORA SOLO 80 EXP (3 comidas + 1 amor)
+    case CompanionStage.adult:
+      return 0; // Ya está al máximo
   }
+}
 
   bool get needsFood => hunger < 50;
   bool get needsLove => happiness < 50;

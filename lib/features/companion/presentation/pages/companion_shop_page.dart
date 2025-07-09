@@ -116,6 +116,84 @@ class _LoadingView extends StatelessWidget {
       ),
     );
   }
+  void _showPurchaseDialog(
+  BuildContext context,
+  CompanionEntity companion,
+  CompanionShopLoaded state,
+) {
+  debugPrint('🛒 Mostrando diálogo de compra para: ${companion.displayName}');
+  debugPrint('💰 Puntos disponibles: ${state.userStats.availablePoints}');
+  debugPrint('🏷️ Precio del compañero: ${companion.purchasePrice}');
+  
+  showDialog(
+    context: context,
+    builder: (dialogContext) => CompanionPurchaseDialog(
+      companion: companion,
+      userPoints: state.userStats.availablePoints,
+      onConfirm: () {
+        debugPrint('✅ Usuario confirmó compra desde diálogo: ${companion.displayName}');
+        Navigator.of(dialogContext).pop();
+        debugPrint('🚀 Enviando compra al cubit...');
+        context.read<CompanionShopCubit>().purchaseCompanion(companion);
+      },
+    ),
+  );
+}
+
+// 🧪 GRID DE COMPAÑEROS CON DEBUG MEJORADO
+Widget _buildCompanionGrid(
+  BuildContext context,
+  List<CompanionEntity> companions,
+  CompanionShopLoaded state,
+) {
+  debugPrint('🏗️ Construyendo grid con ${companions.length} compañeros');
+  
+  if (companions.isEmpty) {
+    debugPrint('📦 No hay compañeros en esta categoría');
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.pets, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'No hay compañeros disponibles en esta categoría',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  return Padding(
+    padding: const EdgeInsets.all(16),
+    child: GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.75,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: companions.length,
+      itemBuilder: (context, index) {
+        final companion = companions[index];
+        debugPrint('🏪 Creando item $index: ${companion.displayName}');
+        
+        return CompanionShopItemWidget(
+          companion: companion,
+          userPoints: state.userStats.availablePoints,
+          onPurchase: () {
+            debugPrint('🎯 onPurchase llamado para: ${companion.displayName}');
+            _showPurchaseDialog(context, companion, state);
+          },
+        );
+      },
+    ),
+  );
+}
 }
 
 class _ErrorView extends StatelessWidget {

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/services/cache_service.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -17,7 +18,7 @@ abstract class CompanionLocalDataSource {
 @Injectable(as: CompanionLocalDataSource)
 class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
   final CacheService cacheService;
-  
+
   static const String _companionsPrefix = 'companions_';
   static const String _companionPrefix = 'companion_';
   static const String _statsPrefix = 'companion_stats_';
@@ -69,33 +70,56 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
     }
   }
 
-  @override
-  Future<CompanionStatsModel?> getCachedStats(String userId) async {
-    try {
-      final statsJson = await cacheService.get('$_statsPrefix$userId');
-      if (statsJson == null) {
-        return _getMockStats(userId);
-      }
-      return CompanionStatsModel.fromJson(statsJson);
-    } catch (e) {
+ @override
+Future<CompanionStatsModel?> getCachedStats(String userId) async {
+  try {
+    final statsJson = await cacheService.get('$_statsPrefix$userId');
+    if (statsJson == null) {
+      debugPrint('📊 No hay stats en cache, creando mock stats');
       return _getMockStats(userId);
     }
+    
+    final stats = CompanionStatsModel.fromJson(statsJson);
+    debugPrint('📊 Stats cargados del cache:');
+    debugPrint('💰 Total: ${stats.totalPoints}, Gastados: ${stats.spentPoints}, Disponibles: ${stats.availablePoints}');
+    debugPrint('🐾 Poseídos: ${stats.ownedCompanions}/${stats.totalCompanions}');
+    
+    return stats;
+  } catch (e) {
+    debugPrint('❌ Error leyendo stats del cache: $e');
+    return _getMockStats(userId);
   }
+}
 
-  @override
-  Future<void> cacheStats(CompanionStatsModel stats) async {
-    try {
-      await cacheService.set('$_statsPrefix${stats.userId}', stats.toJson());
-    } catch (e) {
-      throw CacheException('Error caching companion stats: ${e.toString()}');
-    }
+
+ @override
+Future<void> cacheStats(CompanionStatsModel stats) async {
+  try {
+    debugPrint('💾 Guardando stats actualizados:');
+    debugPrint('💰 Total: ${stats.totalPoints}, Gastados: ${stats.spentPoints}, Disponibles: ${stats.availablePoints}');
+    debugPrint('🐾 Poseídos: ${stats.ownedCompanions}');
+    
+    await cacheService.set('$_statsPrefix${stats.userId}', stats.toJson());
+    debugPrint('✅ Stats guardados correctamente en cache');
+  } catch (e) {
+    debugPrint('❌ Error guardando stats: $e');
+    throw CacheException('Error caching companion stats: ${e.toString()}');
   }
+}
+Future<void> clearStatsCache(String userId) async {
+  try {
+    await cacheService.remove('$_statsPrefix$userId');
+    debugPrint('🗑️ Cache de stats limpiado para usuario: $userId');
+  } catch (e) {
+    debugPrint('❌ Error limpiando cache de stats: $e');
+  }
+}
 
-  // 🎨 MOCK DATA - Todos los compañeros con precios realistas
+  // 🎨 MOCK DATA COMPLETO - Todos los compañeros con precios realistas
   List<CompanionModel> _getMockCompanions(String userId) {
     final now = DateTime.now();
     return [
-      // DEXTER - Chihuahua (Starter - más barato)
+      // DEXTER - Chihuahua (Starter - GRATIS)
       CompanionModel(
         id: 'dexter_baby',
         type: CompanionType.dexter,
@@ -111,7 +135,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isSelected: true, // Es el compañero inicial
         purchasedAt: now,
         currentMood: CompanionMood.happy,
-        purchasePrice: 0, // Gratis
+        purchasePrice: 0, // GRATIS
         evolutionPrice: 50,
         unlockedAnimations: ['idle', 'blink'],
         createdAt: now,
@@ -130,8 +154,8 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isOwned: false,
         isSelected: false,
         currentMood: CompanionMood.normal,
-        purchasePrice: 75,
-        evolutionPrice: 100,
+        purchasePrice: 100, // 🔧 Era 75, ahora 100
+        evolutionPrice: 50,
         unlockedAnimations: ['idle', 'blink', 'happy'],
         createdAt: now,
       ),
@@ -149,7 +173,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isOwned: false,
         isSelected: false,
         currentMood: CompanionMood.normal,
-        purchasePrice: 150,
+        purchasePrice: 200, // 🔧 Era 150, ahora 200
         evolutionPrice: 0,
         unlockedAnimations: ['idle', 'blink', 'happy', 'excited'],
         createdAt: now,
@@ -170,8 +194,8 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isOwned: false,
         isSelected: false,
         currentMood: CompanionMood.normal,
-        purchasePrice: 100,
-        evolutionPrice: 75,
+        purchasePrice: 150, // 🔧 Era 100, ahora 150
+        evolutionPrice: 50,
         unlockedAnimations: ['idle', 'blink'],
         createdAt: now,
       ),
@@ -189,8 +213,8 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isOwned: false,
         isSelected: false,
         currentMood: CompanionMood.normal,
-        purchasePrice: 150,
-        evolutionPrice: 125,
+        purchasePrice: 300, // 🔧 Era 150, ahora 300
+        evolutionPrice: 75,
         unlockedAnimations: ['idle', 'blink', 'happy'],
         createdAt: now,
       ),
@@ -208,7 +232,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isOwned: false,
         isSelected: false,
         currentMood: CompanionMood.normal,
-        purchasePrice: 250,
+        purchasePrice: 500, // 🔧 Era 250, ahora 500
         evolutionPrice: 0,
         unlockedAnimations: ['idle', 'blink', 'happy', 'sleeping'],
         createdAt: now,
@@ -229,7 +253,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isOwned: false,
         isSelected: false,
         currentMood: CompanionMood.normal,
-        purchasePrice: 125,
+        purchasePrice: 400, // 🔧 Era 125, ahora 400
         evolutionPrice: 100,
         unlockedAnimations: ['idle', 'blink'],
         createdAt: now,
@@ -248,7 +272,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isOwned: false,
         isSelected: false,
         currentMood: CompanionMood.normal,
-        purchasePrice: 200,
+        purchasePrice: 800, // 🔧 Era 200, ahora 800
         evolutionPrice: 150,
         unlockedAnimations: ['idle', 'blink', 'happy'],
         createdAt: now,
@@ -267,7 +291,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isOwned: false,
         isSelected: false,
         currentMood: CompanionMood.normal,
-        purchasePrice: 350,
+        purchasePrice: 1500, // 🔧 Era 350, ahora 1500
         evolutionPrice: 0,
         unlockedAnimations: ['idle', 'blink', 'happy', 'excited'],
         createdAt: now,
@@ -288,8 +312,8 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isOwned: false,
         isSelected: false,
         currentMood: CompanionMood.normal,
-        purchasePrice: 200,
-        evolutionPrice: 150,
+        purchasePrice: 1000, // 🔧 Era 200, ahora 1000
+        evolutionPrice: 200,
         unlockedAnimations: ['idle', 'blink'],
         createdAt: now,
       ),
@@ -307,8 +331,8 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isOwned: false,
         isSelected: false,
         currentMood: CompanionMood.normal,
-        purchasePrice: 300,
-        evolutionPrice: 200,
+        purchasePrice: 2000, // 🔧 Era 300, ahora 2000
+        evolutionPrice: 300,
         unlockedAnimations: ['idle', 'blink', 'happy'],
         createdAt: now,
       ),
@@ -326,7 +350,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isOwned: false,
         isSelected: false,
         currentMood: CompanionMood.normal,
-        purchasePrice: 500, // La más cara
+        purchasePrice: 3000, // 🔧 Era 500, ahora 3000 (la más cara pero comprables)
         evolutionPrice: 0,
         unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'loving'],
         createdAt: now,
@@ -338,8 +362,8 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
     return CompanionStatsModel(
       userId: userId,
       totalCompanions: 12, // 4 tipos x 3 etapas
-      ownedCompanions: 1, // Solo Dexter baby
-      totalPoints: 100, // Puntos iniciales del usuario
+      ownedCompanions: 1, // Solo Dexter baby inicialmente
+      totalPoints: 10000, // 🚀 ¡10,000 PUNTOS PARA COMPRAR TODO!
       spentPoints: 0,
       activeCompanionId: 'dexter_baby',
       totalFeedCount: 0,

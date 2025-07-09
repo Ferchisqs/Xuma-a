@@ -95,83 +95,111 @@ class CompanionRepositoryImpl implements CompanionRepository {
     }
   }
 
-  @override
-  Future<Either<Failure, CompanionEntity>> purchaseCompanion(String userId, String companionId) async {
-    try {
-      // Verificar si tiene suficientes puntos
-      final statsResult = await getCompanionStats(userId);
-      return statsResult.fold(
-        (failure) => Left(failure),
-        (stats) async {
-          final companions = await localDataSource.getCachedCompanions(userId);
-          final companionToPurchase = companions.firstWhere(
-            (c) => c.id == companionId,
-            orElse: () => throw Exception('Compañero no encontrado'),
-          );
-          
-          if (stats.availablePoints < companionToPurchase.purchasePrice) {
-            return Left(ValidationFailure('No tienes suficientes puntos'));
+@override
+Future<Either<Failure, CompanionEntity>> purchaseCompanion(String userId, String companionId) async {
+  try {
+    debugPrint('🛒 [REPO] Iniciando compra de compañero: $companionId para usuario: $userId');
+    
+    // 🔧 FORZAR RELOAD DE STATS ACTUALES
+    final statsResult = await getCompanionStats(userId);
+    return statsResult.fold(
+      (failure) {
+        debugPrint('❌ [REPO] Error obteniendo stats: ${failure.message}');
+        return Left(failure);
+      },
+      (stats) async {
+        debugPrint('💰 [REPO] Stats actuales - Disponibles: ${stats.availablePoints}');
+        debugPrint('📊 [REPO] Total: ${stats.totalPoints}, Gastados: ${stats.spentPoints}');
+        
+        final companions = await localDataSource.getCachedCompanions(userId);
+        final companionToPurchase = companions.firstWhere(
+          (c) => c.id == companionId,
+          orElse: () => throw Exception('Compañero no encontrado'),
+        );
+        
+        debugPrint('🐾 [REPO] Compañero encontrado: ${companionToPurchase.displayName} - Precio: ${companionToPurchase.purchasePrice}');
+        
+        if (stats.availablePoints < companionToPurchase.purchasePrice) {
+          debugPrint('❌ [REPO] Puntos insuficientes: ${stats.availablePoints} < ${companionToPurchase.purchasePrice}');
+          return Left(ValidationFailure('No tienes suficientes puntos'));
+        }
+
+        // 🔧 CREAR COMPAÑERO COMPRADO
+        final purchasedCompanion = CompanionModel.fromEntity(
+          CompanionEntity(
+            id: companionToPurchase.id,
+            type: companionToPurchase.type,
+            stage: companionToPurchase.stage,
+            name: companionToPurchase.name,
+            description: companionToPurchase.description,
+            level: 1,
+            experience: 0,
+            happiness: 100,
+            hunger: 100,
+            energy: 100,
+            isOwned: true,  // 🎯 MARCAR COMO POSEÍDO
+            isSelected: false,
+            purchasedAt: DateTime.now(),
+            currentMood: CompanionMood.happy,
+            purchasePrice: companionToPurchase.purchasePrice,
+            evolutionPrice: companionToPurchase.evolutionPrice,
+            unlockedAnimations: companionToPurchase.unlockedAnimations,
+            createdAt: companionToPurchase.createdAt,
+          ),
+        );
+
+        debugPrint('✅ [REPO] Compañero creado como comprado');
+
+        // 🔧 ACTUALIZAR LISTA DE COMPAÑEROS
+        final updatedCompanions = companions.map((comp) {
+          if (comp.id == companionId) {
+            debugPrint('🔄 [REPO] Actualizando compañero en lista: ${comp.id}');
+            return purchasedCompanion;
           }
+          return comp;
+        }).toList();
 
-          // Simular compra local
-          final purchasedCompanion = CompanionModel.fromEntity(
-            CompanionEntity(
-              id: companionToPurchase.id,
-              type: companionToPurchase.type,
-              stage: companionToPurchase.stage,
-              name: companionToPurchase.name,
-              description: companionToPurchase.description,
-              level: 1,
-              experience: 0,
-              happiness: 100,
-              hunger: 100,
-              energy: 100,
-              isOwned: true,
-              isSelected: false,
-              purchasedAt: DateTime.now(),
-              currentMood: CompanionMood.happy,
-              purchasePrice: companionToPurchase.purchasePrice,
-              evolutionPrice: companionToPurchase.evolutionPrice,
-              unlockedAnimations: companionToPurchase.unlockedAnimations,
-              createdAt: companionToPurchase.createdAt,
-            ),
-          );
+        // 🔧 GUARDAR COMPAÑEROS ACTUALIZADOS
+        await localDataSource.cacheCompanions(userId, updatedCompanions);
+        await localDataSource.cacheCompanion(purchasedCompanion);
+        
+        debugPrint('💾 [REPO] Compañeros guardados en caché');
 
-          // Actualizar la lista completa de compañeros
-          final updatedCompanions = companions.map((comp) {
-            if (comp.id == companionId) {
-              return purchasedCompanion;
-            }
-            return comp;
-          }).toList();
+        // 🔧 CREAR STATS ACTUALIZADOS
+        final newSpentPoints = stats.spentPoints + companionToPurchase.purchasePrice;
+        final newOwnedCount = stats.ownedCompanions + 1;
+        
+        final updatedStats = CompanionStatsModel.fromEntity(
+          CompanionStatsEntity(
+            userId: stats.userId,
+            totalCompanions: stats.totalCompanions,
+            ownedCompanions: newOwnedCount, // 🔧 INCREMENTAR
+            totalPoints: stats.totalPoints,
+            spentPoints: newSpentPoints, // 🔧 SUMAR PUNTOS GASTADOS
+            activeCompanionId: stats.activeCompanionId,
+            totalFeedCount: stats.totalFeedCount,
+            totalLoveCount: stats.totalLoveCount,
+            totalEvolutions: stats.totalEvolutions,
+            lastActivity: DateTime.now(),
+          ),
+        );
+        
+        // 🔧 GUARDAR STATS ACTUALIZADOS
+        await localDataSource.cacheStats(updatedStats);
+        
+        debugPrint('📊 [REPO] Stats actualizados guardados:');
+        debugPrint('💰 [REPO] Nuevos puntos disponibles: ${updatedStats.availablePoints}');
+        debugPrint('🐾 [REPO] Compañeros poseídos: ${updatedStats.ownedCompanions}');
+        debugPrint('💸 [REPO] Total gastado: ${updatedStats.spentPoints}');
 
-          await localDataSource.cacheCompanions(userId, updatedCompanions);
-          await localDataSource.cacheCompanion(purchasedCompanion);
-
-          // Actualizar stats
-          final updatedStats = CompanionStatsModel.fromEntity(
-            CompanionStatsEntity(
-              userId: stats.userId,
-              totalCompanions: stats.totalCompanions,
-              ownedCompanions: stats.ownedCompanions + 1,
-              totalPoints: stats.totalPoints,
-              spentPoints: stats.spentPoints + companionToPurchase.purchasePrice,
-              activeCompanionId: stats.activeCompanionId,
-              totalFeedCount: stats.totalFeedCount,
-              totalLoveCount: stats.totalLoveCount,
-              totalEvolutions: stats.totalEvolutions,
-              lastActivity: DateTime.now(),
-            ),
-          );
-          await localDataSource.cacheStats(updatedStats);
-
-          return Right(purchasedCompanion);
-        },
-      );
-    } catch (e) {
-      return Left(UnknownFailure('Error en compra: ${e.toString()}'));
-    }
+        return Right(purchasedCompanion);
+      },
+    );
+  } catch (e) {
+    debugPrint('💥 [REPO] Error en compra: ${e.toString()}');
+    return Left(UnknownFailure('Error en compra: ${e.toString()}'));
   }
+}
 
   @override
   Future<Either<Failure, CompanionEntity>> evolveCompanion(String userId, String companionId) async {
@@ -284,17 +312,15 @@ class CompanionRepositoryImpl implements CompanionRepository {
     }
   }
 
-  @override
+ @override
 Future<Either<Failure, CompanionEntity>> feedCompanion(String userId, String companionId) async {
   try {
-    // 🔧 BUSCAR EL COMPAÑERO EN LA LISTA COMPLETA PRIMERO
     final companions = await localDataSource.getCachedCompanions(userId);
     final companionToFeed = companions.firstWhere(
       (c) => c.id == companionId,
       orElse: () => throw Exception('Compañero no encontrado en la lista'),
     );
 
-    // 🔧 Verificar que el compañero está en posesión del usuario
     if (!companionToFeed.isOwned) {
       return Left(ValidationFailure('Este compañero no te pertenece'));
     }
@@ -307,9 +333,9 @@ Future<Either<Failure, CompanionEntity>> feedCompanion(String userId, String com
         name: companionToFeed.name,
         description: companionToFeed.description,
         level: companionToFeed.level,
-        experience: companionToFeed.experience + 5,
-        happiness: (companionToFeed.happiness + 10).clamp(0, 100),
-        hunger: 100, // Lleno después de comer
+        experience: companionToFeed.experience + 25, // 🚀 ERA 5, AHORA 25 EXP!
+        happiness: (companionToFeed.happiness + 15).clamp(0, 100), // 🚀 ERA 10, AHORA 15!
+        hunger: 100,
         energy: companionToFeed.energy,
         isOwned: companionToFeed.isOwned,
         isSelected: companionToFeed.isSelected,
@@ -324,10 +350,8 @@ Future<Either<Failure, CompanionEntity>> feedCompanion(String userId, String com
       ),
     );
 
-    // 🔧 ACTUALIZAR EN CACHÉ INDIVIDUAL
     await localDataSource.cacheCompanion(fedCompanion);
 
-    // 🔧 ACTUALIZAR EN LA LISTA COMPLETA
     final updatedCompanions = companions.map((comp) {
       if (comp.id == companionId) {
         return fedCompanion;
@@ -367,18 +391,15 @@ Future<Either<Failure, CompanionEntity>> feedCompanion(String userId, String com
   }
 }
 
-
-  @override
+@override
 Future<Either<Failure, CompanionEntity>> loveCompanion(String userId, String companionId) async {
   try {
-    // 🔧 BUSCAR EL COMPAÑERO EN LA LISTA COMPLETA PRIMERO
     final companions = await localDataSource.getCachedCompanions(userId);
     final companionToLove = companions.firstWhere(
       (c) => c.id == companionId,
       orElse: () => throw Exception('Compañero no encontrado en la lista'),
     );
 
-    // 🔧 Verificar que el compañero está en posesión del usuario
     if (!companionToLove.isOwned) {
       return Left(ValidationFailure('Este compañero no te pertenece'));
     }
@@ -391,10 +412,10 @@ Future<Either<Failure, CompanionEntity>> loveCompanion(String userId, String com
         name: companionToLove.name,
         description: companionToLove.description,
         level: companionToLove.level,
-        experience: companionToLove.experience + 3,
-        happiness: 100, // Máxima felicidad
+        experience: companionToLove.experience + 20, // 🚀 ERA 3, AHORA 20 EXP!
+        happiness: 100,
         hunger: companionToLove.hunger,
-        energy: (companionToLove.energy + 15).clamp(0, 100),
+        energy: (companionToLove.energy + 20).clamp(0, 100), // 🚀 ERA 15, AHORA 20!
         isOwned: companionToLove.isOwned,
         isSelected: companionToLove.isSelected,
         purchasedAt: companionToLove.purchasedAt,
@@ -408,10 +429,8 @@ Future<Either<Failure, CompanionEntity>> loveCompanion(String userId, String com
       ),
     );
 
-    // 🔧 ACTUALIZAR EN CACHÉ INDIVIDUAL
     await localDataSource.cacheCompanion(lovedCompanion);
 
-    // 🔧 ACTUALIZAR EN LA LISTA COMPLETA
     final updatedCompanions = companions.map((comp) {
       if (comp.id == companionId) {
         return lovedCompanion;

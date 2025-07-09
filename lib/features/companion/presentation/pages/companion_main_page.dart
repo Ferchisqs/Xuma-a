@@ -433,14 +433,16 @@ class _LoadedView extends StatelessWidget {
     });
   }
   
-  void _navigateToShop(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const CompanionShopPage(),
-      ),
-    ).then((_) {
-      // Refrescar cuando regrese de la tienda
-      context.read<CompanionCubit>().refreshCompanions();
-    });
-  }
+void _navigateToShop(BuildContext context) {
+  debugPrint('🏪 Navegando a la tienda...');
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (context) => const CompanionShopPage(),
+    ),
+  ).then((_) {
+    // 🔧 REFRESCAR CUANDO REGRESE DE LA TIENDA
+    debugPrint('🔄 Regresando de la tienda, refrescando compañeros...');
+    context.read<CompanionCubit>().refreshCompanions();
+  });
+}
 }
