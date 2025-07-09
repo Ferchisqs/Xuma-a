@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../navigation/presentation/cubit/navigation_cubit.dart';
 
 class QuickActionsGrid extends StatelessWidget {
   const QuickActionsGrid({Key? key}) : super(key: key);
@@ -28,57 +30,43 @@ class QuickActionsGrid extends StatelessWidget {
           childAspectRatio: 1.1,
           children: [
             _buildActionCard(
-              'Noticias',
-              'Actualidad ambiental',
-              Icons.article_rounded,
-              AppColors.info,
-              () {
-                // Navegar a noticias
-              },
-            ),
-            _buildActionCard(
+              context,
               'Aprendamos',
               'Educación ecológica',
               Icons.school_rounded,
               AppColors.secondary,
               () {
-                // Navegar a aprendamos
+                context.read<NavigationCubit>().goToLearn();
               },
             ),
             _buildActionCard(
-              'Proyectos',
-              'Iniciativas verdes',
-              Icons.construction_rounded,
+              context,
+              'Trivias',
+              'Pon a prueba tus conocimientos',
+              Icons.quiz_rounded,
               AppColors.warning,
               () {
-                // Navegar a proyectos
+                context.read<NavigationCubit>().goToTrivia();
               },
             ),
             _buildActionCard(
+              context,
               'Desafíos',
               'Retos ambientales',
               Icons.emoji_events_rounded,
               AppColors.accent,
               () {
-                // Navegar a desafíos
+                context.read<NavigationCubit>().goToChallenges();
               },
             ),
             _buildActionCard(
-              'Comunidad',
-              'Red de eco-amigos',
-              Icons.groups_rounded,
+              context,
+              'Compañeros',
+              'Cuida a tu mascota virtual',
+              Icons.pets_rounded,
               AppColors.primaryLight,
               () {
-                // Navegar a comunidad
-              },
-            ),
-            _buildActionCard(
-              'Contacto',
-              'Ayuda y soporte',
-              Icons.support_agent_rounded,
-              AppColors.textSecondary,
-              () {
-                // Navegar a contacto
+                context.read<NavigationCubit>().goToCompanion();
               },
             ),
           ],
@@ -88,6 +76,7 @@ class QuickActionsGrid extends StatelessWidget {
   }
 
   Widget _buildActionCard(
+    BuildContext context,
     String title,
     String subtitle,
     IconData icon,

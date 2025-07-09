@@ -357,23 +357,23 @@ class CompanionInfoDialog extends StatelessWidget {
     switch (companion.id) {
       case 'dexter_baby':
         return {
-          'message': 'Para mi hermano Dexter, pequeño en tamaño pero gigante en corazón. Tu lealtad me inspira cada día.',
+          'message': 'Para mi perrito dexter , gracias por los 16 años a mi lado , mamá y yo te extrañamos',
           'author': 'Con amor, tu familia'
         };
       case 'dexter_young':
         return {
-          'message': 'A Dexter en crecimiento, recordándome que siempre debemos mantener esa chispa juguetona.',
+          'message': 'A Dexter , gracias por las noches de desvelo a mi lado pequeñin',
           'author': 'Con cariño'
         };
       case 'dexter_adult':
         return {
-          'message': 'Para Dexter adulto, que me enseñó que la grandeza se mide en amor, no en tamaño.',
+          'message': 'Para Dexter adulto, te extraño todos los días',
           'author': 'Siempre en mi corazón'
         };
         
       case 'elly_baby':
         return {
-          'message': 'Para mi querida Elly, que me recuerdas la importancia de la calma y los pequeños momentos.',
+          'message': 'Para Dianelly, gracias por encontrarme y contarme chistes ',
           'author': 'Con ternura'
         };
       case 'elly_young':
@@ -389,7 +389,7 @@ class CompanionInfoDialog extends StatelessWidget {
         
       case 'paxolotl_baby':
         return {
-          'message': 'Para mi especial Paxolotl, que me recuerdas que la fortaleza está en regenerarse y seguir.',
+          'message': 'Para PaoPao , gracias por ser lo mejor que me dejo la carrera , esto es gracias a ti',
           'author': 'Con admiración'
         };
       case 'paxolotl_young':

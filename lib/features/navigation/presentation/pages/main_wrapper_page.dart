@@ -1,4 +1,3 @@
-// lib/features/navigation/presentation/pages/main_wrapper_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../di/injection.dart';
@@ -7,8 +6,8 @@ import '../../../home/presentation/pages/home_page.dart';
 import '../../../learning/presentation/pages/learning_main_page.dart';
 import '../../../challenges/presentation/pages/challenges_main_page.dart';
 import '../../../trivia/presentation/pages/trivia_main_page.dart';
-import '../../../companion/presentation/pages/companion_main_page.dart'; // 🆕 IMPORT CORRECTO
-import '../../../shared/pages/placeholder_pages.dart';
+import '../../../companion/presentation/pages/companion_main_page.dart';
+import '../../../contact/presentation/pages/contact_main_page.dart'; // 🆕 IMPORT CONTACT
 import '../widgets/side_nav_bar.dart';
 
 class MainWrapperPage extends StatelessWidget {
@@ -31,7 +30,7 @@ class _MainWrapperContent extends StatelessWidget {
     return BlocBuilder<NavigationCubit, NavigationState>(
       builder: (context, state) {
         return Scaffold(
-          drawer: const SideNavBar(), // 🔧 DRAWER SIEMPRE DISPONIBLE
+          drawer: const SideNavBar(),
           body: _buildCurrentPage(state.currentTab),
         );
       },
@@ -46,7 +45,7 @@ class _MainWrapperContent extends StatelessWidget {
       case NavigationTab.learn:
         return const LearningMainPage();
       
-      case NavigationTab.companion: // 🔧 USAR PÁGINA REAL DE COMPAÑEROS
+      case NavigationTab.companion:
         return const CompanionMainPage();
         
       case NavigationTab.trivia:
@@ -55,8 +54,8 @@ class _MainWrapperContent extends StatelessWidget {
       case NavigationTab.challenges:
         return const ChallengesMainPage();
         
-      case NavigationTab.contact:
-        return const ContactPage();
+      case NavigationTab.contact: // 🆕 CONTACT FUNCTIONALITY
+        return const ContactMainPage();
       
       default:
         return const HomePage();

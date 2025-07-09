@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../navigation/presentation/cubit/navigation_cubit.dart';
 
 class EcoStatsWidget extends StatelessWidget {
   const EcoStatsWidget({Key? key}) : super(key: key);
@@ -30,16 +32,16 @@ class EcoStatsWidget extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         
-        // Stats grid - 🔄 ALTURA AUMENTADA para evitar solapamiento
-        Container(
-          height: 200, // 🔄 Altura aumentada
+        // Stats grid - 🔄 ALTURA FIJA AUMENTADA
+        SizedBox(
+          height: 150, // 🔄 Altura fija aumentada de 120 a 150
           child: GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.8, // 🔄 Ratio más ancho para evitar solapamiento
+            childAspectRatio: 2.2, // 🔄 Ratio más ancho para mejor distribución
             children: [
               _buildStatCard(
                 'Puntos',
@@ -68,12 +70,13 @@ class EcoStatsWidget extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 20), // 🔄 Más espacio entre grid y nivel
+        const SizedBox(height: 24), // 🔄 Más espacio entre grid y nivel
         
         // Level indicator - 🔄 ALTURA AUMENTADA Y MEJOR DISTRIBUCIÓN
         Container(
-          height: 80, // 🔄 Altura aumentada
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // 🔄 Padding ajustado
+          width: double.infinity, // 🔄 Asegurar ancho completo
+          height: 70, // 🔄 Altura fija
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
             gradient: AppColors.earthGradient,
             borderRadius: BorderRadius.circular(12),
@@ -89,22 +92,22 @@ class EcoStatsWidget extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center, // 🔄 Centrar verticalmente
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       'Nivel Actual',
                       style: AppTextStyles.bodySmall.copyWith(
                         color: Colors.white.withOpacity(0.8),
-                        fontSize: 11, // 🔄 Texto ligeramente más grande
+                        fontSize: 12,
                       ),
                     ),
-                    const SizedBox(height: 2), // 🔄 Pequeño espacio
+                    const SizedBox(height: 2),
                     Text(
                       _userStatsData['currentLevel'] as String,
-                      style: AppTextStyles.h4.copyWith( // 🔄 Usar h4 para mejor jerarquía
+                      style: AppTextStyles.bodyLarge.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 16, // 🔄 Tamaño adecuado
+                        fontSize: 16,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -121,8 +124,7 @@ class EcoStatsWidget extends StatelessWidget {
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Container(
-      // 🔄 SIN altura fija aquí, se maneja con el grid
-      padding: const EdgeInsets.all(10), // 🔄 Padding aumentado
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -139,40 +141,44 @@ class EcoStatsWidget extends StatelessWidget {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min, // 🔄 Tamaño mínimo para evitar overflow
+        crossAxisAlignment: CrossAxisAlignment.start, // 🔄 Alinear a la izquierda
         children: [
-          Container(
-            padding: const EdgeInsets.all(6), // 🔄 Padding aumentado
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 18, // 🔄 Ícono ligeramente más grande
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  value,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6), // 🔄 Espacio aumentado
-          Text(
-            value,
-            style: AppTextStyles.bodyMedium.copyWith( // 🔄 Texto más pequeño pero legible
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2), // 🔄 Espacio mínimo
+          const SizedBox(height: 4),
           Text(
             title,
             style: AppTextStyles.caption.copyWith(
               color: AppColors.textSecondary,
-              fontSize: 10, // 🔄 Texto legible
+              fontSize: 10,
             ),
-            textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

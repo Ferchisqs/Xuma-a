@@ -12,7 +12,7 @@ class CompanionPurchaseDialog extends StatelessWidget {
     required this.userPoints,
     required this.onConfirm,
   }) : super(key: key);
-  
+
   @override
   Widget build(BuildContext context) {
     final canAfford = userPoints >= companion.purchasePrice;
@@ -64,10 +64,10 @@ class CompanionPurchaseDialog extends StatelessWidget {
   Widget _buildHeader() {
     return Column(
       children: [
-        // Imagen del compañero
+        // 🔧 IMAGEN DEL COMPAÑERO CON FALLBACK MEJORADO
         Container(
-          width: 100,
-          height: 100,
+          width: 120,
+          height: 120,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(15),
             boxShadow: [
@@ -80,19 +80,56 @@ class CompanionPurchaseDialog extends StatelessWidget {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(15),
-            child: Image.asset(
-              companion.imagePath,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.grey[300],
-                  child: Icon(
-                    Icons.pets,
-                    size: 50,
-                    color: Colors.grey[600],
+            child: Stack(
+              children: [
+                // 🔧 FONDO CON GRADIENTE
+                Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        _getCompanionColor().withOpacity(0.8),
+                        _getCompanionColor(),
+                      ],
+                    ),
                   ),
-                );
-              },
+                ),
+                // 🔧 IMAGEN DE LA MASCOTA
+                Image.asset(
+                  _getPetImagePath(),
+                  fit: BoxFit.contain,
+                  width: double.infinity,
+                  height: double.infinity,
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint('🔧 Error cargando imagen: ${_getPetImagePath()}');
+                    return Container(
+                      color: _getCompanionColor().withOpacity(0.2),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _getCompanionIcon(),
+                            size: 40,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            companion.displayName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
         ),
@@ -110,6 +147,12 @@ class CompanionPurchaseDialog extends StatelessWidget {
         ),
       ],
     );
+  }
+  
+  // 🔧 MÉTODO PARA OBTENER LA RUTA CORRECTA DE LA IMAGEN
+  String _getPetImagePath() {
+    final name = '${companion.type.name}_${companion.stage.name}';
+    return 'assets/images/companions/$name.png';
   }
   
   Widget _buildCompanionInfo() {
@@ -399,6 +442,19 @@ class CompanionPurchaseDialog extends StatelessWidget {
         return Colors.orange;
       case CompanionStage.adult:
         return Colors.red;
+    }
+  }
+  
+  IconData _getCompanionIcon() {
+    switch (companion.type) {
+      case CompanionType.dexter:
+        return Icons.pets;
+      case CompanionType.elly:
+        return Icons.forest;
+      case CompanionType.paxolotl:
+        return Icons.water;
+      case CompanionType.yami:
+        return Icons.nature;
     }
   }
 }
