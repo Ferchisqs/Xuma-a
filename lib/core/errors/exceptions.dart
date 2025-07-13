@@ -22,10 +22,9 @@ class NetworkException implements Exception {
   String toString() => 'NetworkException: $message';
 }
 
-class AuthException implements Exception {
-  final String message;
-  const AuthException(this.message);
-  
+class AuthException extends ServerException {
+  const AuthException(String message) : super(message);
+
   @override
   String toString() => 'AuthException: $message';
 }

@@ -33,7 +33,8 @@ Future<void> _initializeServices() async {
     setupLearningDependencies();
     setupChallengesDependencies();
     setupTriviaDependencies();
-    setupCompanionDependencies(); // 🆕 NUEVA LÍNEA PARA MASCOTAS
+    setupCompanionDependencies(); 
+    setupProfileDependencies(); 
     
     await getIt<CacheService>().init();
     
@@ -71,11 +72,18 @@ void setupTriviaDependencies() {
   }
 }
 
-// 🆕 NUEVO MÉTODO PARA CONFIGURAR DEPENDENCIES DE MASCOTAS
 void setupCompanionDependencies() {
   try {
     debugPrint('✅ Companion dependencies ready');
   } catch (e) {
     debugPrint('❌ Error setting up Companion dependencies: $e');
+  }
+}
+
+void setupProfileDependencies() {
+  try {
+    debugPrint('✅ Profile dependencies ready');
+  } catch (e) {
+    debugPrint('❌ Error setting up Profile dependencies: $e');
   }
 }

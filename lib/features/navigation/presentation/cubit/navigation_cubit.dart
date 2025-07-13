@@ -4,11 +4,12 @@ import 'package:injectable/injectable.dart';
 
 enum NavigationTab {
   home,
-  companion, // 🔄 Cambié "news" por "companion" (Compañero)
+  companion,
   learn,
-  trivia,    // 🔄 Cambié "projects" por "trivia" (Trivias)
+  trivia,
   challenges,
-  contact    // 🔄 Quité "community"
+  contact,
+  profile    // 🆕 AGREGADO PERFIL
 }
 
 // Navigation State - Simplificada y más consistente
@@ -65,11 +66,12 @@ class NavigationCubit extends Cubit<NavigationState> {
 
   // Navigation methods actualizados
   void goToHome() => changeTab(NavigationTab.home);
-  void goToCompanion() => changeTab(NavigationTab.companion); // 🔄 Nuevo
+  void goToCompanion() => changeTab(NavigationTab.companion);
   void goToLearn() => changeTab(NavigationTab.learn);
-  void goToTrivia() => changeTab(NavigationTab.trivia); // 🔄 Nuevo
+  void goToTrivia() => changeTab(NavigationTab.trivia);
   void goToChallenges() => changeTab(NavigationTab.challenges);
   void goToContact() => changeTab(NavigationTab.contact);
+  void goToProfile() => changeTab(NavigationTab.profile); // 🆕 NUEVO
 
   // Helper methods para verificar el estado actual
   bool get isHome => state.currentTab == NavigationTab.home;
@@ -78,6 +80,7 @@ class NavigationCubit extends Cubit<NavigationState> {
   bool get isTrivia => state.currentTab == NavigationTab.trivia;
   bool get isChallenges => state.currentTab == NavigationTab.challenges;
   bool get isContact => state.currentTab == NavigationTab.contact;
+  bool get isProfile => state.currentTab == NavigationTab.profile; // 🆕 NUEVO
 
   // Method para debugging
   void debugCurrentState() {

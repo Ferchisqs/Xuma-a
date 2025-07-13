@@ -46,7 +46,7 @@ dependencies:
   url_launcher: ^6.2.1
   intl: ^0.18.1
 
-  # Authentication
+  # Authentication & Security
   crypto: ^3.0.3
 
 dev_dependencies:
@@ -65,7 +65,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # 🔧 ASSETS CONFIGURADOS PARA TUS 4 FONDOS
   assets:
     # Imágenes generales
     - assets/images/

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../domain/entities/trivia_category_entity.dart';
-import '../pages/trivia_game_page.dart';
+import '../pages/trivia_category_detail_page.dart'; // 🔧 CAMBIO: Navegar a detalle en lugar de directamente al juego
 
 class TriviaCategoryCard extends StatelessWidget {
   final TriviaCategoryEntity category;
@@ -16,10 +16,11 @@ class TriviaCategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
+        // 🔧 CAMBIO: Navegar a la página de detalle de categoría
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => TriviaGamePage(category: category),
+            builder: (context) => TriviaCategoryDetailPage(category: category),
           ),
         );
       },
@@ -166,6 +167,18 @@ class TriviaCategoryCard extends StatelessWidget {
       case 'trivia_cat_2':
         return const LinearGradient(
           colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'trivia_cat_3':
+        return const LinearGradient(
+          colors: [Color(0xFFFF9800), Color(0xFFFFB74D)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'trivia_cat_4':
+        return const LinearGradient(
+          colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );

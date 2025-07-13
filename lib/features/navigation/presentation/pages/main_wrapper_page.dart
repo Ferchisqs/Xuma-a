@@ -7,7 +7,8 @@ import '../../../learning/presentation/pages/learning_main_page.dart';
 import '../../../challenges/presentation/pages/challenges_main_page.dart';
 import '../../../trivia/presentation/pages/trivia_main_page.dart';
 import '../../../companion/presentation/pages/companion_main_page.dart';
-import '../../../contact/presentation/pages/contact_main_page.dart'; // 🆕 IMPORT CONTACT
+import '../../../contact/presentation/pages/contact_main_page.dart';
+import '../../../profile/presentation/pages/profile_main_page.dart'; // 🆕 IMPORT PROFILE
 import '../widgets/side_nav_bar.dart';
 
 class MainWrapperPage extends StatelessWidget {
@@ -54,8 +55,11 @@ class _MainWrapperContent extends StatelessWidget {
       case NavigationTab.challenges:
         return const ChallengesMainPage();
         
-      case NavigationTab.contact: // 🆕 CONTACT FUNCTIONALITY
+      case NavigationTab.contact:
         return const ContactMainPage();
+        
+      case NavigationTab.profile: // 🆕 PROFILE FUNCTIONALITY
+        return const ProfileMainPage();
       
       default:
         return const HomePage();

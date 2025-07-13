@@ -1,11 +1,9 @@
-// lib/features/trivia/presentation/pages/trivia_category_detail_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../di/injection.dart';
 import '../../domain/entities/trivia_category_entity.dart';
-import '../../domain/entities/trivia_question_entity.dart';
 import '../cubit/trivia_game_cubit.dart';
 import '../widgets/trivia_difficulty_badge.dart';
 import 'trivia_game_page.dart';
@@ -40,10 +38,25 @@ class _CategoryDetailContent extends StatelessWidget {
         slivers: [
           // App Bar personalizada con imagen de fondo
           SliverAppBar(
-            expandedHeight: 250,
+            expandedHeight: 200,
             floating: false,
             pinned: true,
             backgroundColor: AppColors.primary,
+            leading: IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_ios,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ),
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
                 category.title,
@@ -65,26 +78,39 @@ class _CategoryDetailContent extends StatelessWidget {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black.withOpacity(0.3),
-                            Colors.black.withOpacity(0.7),
+                            Colors.black.withOpacity(0.2),
+                            Colors.black.withOpacity(0.6),
                           ],
                         ),
                       ),
                     ),
-                    // Icono grande
+                    // Icono grande con animación
                     Center(
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(60),
-                        ),
-                        child: Icon(
-                          IconData(category.iconCode, fontFamily: 'MaterialIcons'),
-                          color: Colors.white,
-                          size: 60,
-                        ),
+                      child: TweenAnimationBuilder<double>(
+                        duration: const Duration(seconds: 2),
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: 0.8 + (0.2 * value),
+                            child: Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(50),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 2,
+                                ),
+                              ),
+                              child: Icon(
+                                IconData(category.iconCode, fontFamily: 'MaterialIcons'),
+                                color: Colors.white,
+                                size: 50,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -100,30 +126,23 @@ class _CategoryDetailContent extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Información básica
-                  _buildBasicInfo(),
+                  // Información básica de la categoría
+                  _buildCategoryInfo(),
                   
                   const SizedBox(height: 24),
                   
-                  // Descripción
-                  _buildDescription(),
+                  // Lista de trivias disponibles
+                  Text(
+                    'Trivias Disponibles',
+                    style: AppTextStyles.h4.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   
-                  const SizedBox(height: 24),
-                  
-                  // Estadísticas de la trivia
-                  _buildTriviaStats(),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Preview de preguntas
-                  _buildQuestionsPreview(),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Botón para iniciar
-                  _buildStartButton(context),
-                  
-                  const SizedBox(height: 20),
+                  // Grid de trivias individuales
+                  _buildTriviasList(context),
                 ],
               ),
             ),
@@ -133,62 +152,8 @@ class _CategoryDetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildBasicInfo() {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                category.title,
-                style: AppTextStyles.h3.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  TrivaDifficultyBadge(difficulty: category.difficulty),
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.quiz,
-                          size: 14,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${category.questionsCount} preguntas',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDescription() {
+  Widget _buildCategoryInfo() {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -202,262 +167,23 @@ class _CategoryDetailContent extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.description,
-                color: AppColors.primary,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Descripción',
-                style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            category.description,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTriviaStats() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Detalles de la Trivia',
-          style: AppTextStyles.h4.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                'Puntos por Pregunta',
-                '${category.pointsPerQuestion}',
-                Icons.eco,
-                AppColors.success,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                'Tiempo por Pregunta',
-                '${category.timePerQuestion}s',
-                Icons.timer,
-                AppColors.warning,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                'Total de Puntos',
-                '${category.pointsPerQuestion * category.questionsCount}',
-                Icons.star,
-                AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                'Tiempo Estimado',
-                '${(category.timePerQuestion * category.questionsCount / 60).ceil()} min',
-                Icons.schedule,
-                AppColors.info,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-        ),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 24,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: AppTextStyles.h4.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            title,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuestionsPreview() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Vista Previa',
-          style: AppTextStyles.h4.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.primary.withOpacity(0.2),
-            ),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.lightbulb_outline,
-                    color: AppColors.primary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Ejemplos de preguntas que encontrarás:',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ...(_getPreviewQuestions().map((question) => _buildPreviewQuestion(question))),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPreviewQuestion(String question) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.1),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.help_outline,
-              color: Colors.white,
-              size: 12,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              question,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStartButton(BuildContext context) {
-    return Column(
-      children: [
-        // Información antes de empezar
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.info.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.info.withOpacity(0.3),
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.info_outline,
-                color: AppColors.info,
-                size: 20,
-              ),
-              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '¿Listo para empezar?',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.info,
+                      category.title,
+                      style: AppTextStyles.h3.copyWith(
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 8),
                     Text(
-                      'Responde correctamente para ganar puntos y cuidar mejor a tus compañeros.',
-                      style: AppTextStyles.bodySmall.copyWith(
+                      category.description,
+                      style: AppTextStyles.bodyMedium.copyWith(
                         color: AppColors.textSecondary,
+                        height: 1.4,
                       ),
                     ),
                   ],
@@ -465,70 +191,290 @@ class _CategoryDetailContent extends StatelessWidget {
               ),
             ],
           ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // Botón principal para iniciar
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TriviaGamePage(category: category),
+          const SizedBox(height: 16),
+          
+          // Estadísticas
+          Row(
+            children: [
+              TrivaDifficultyBadge(difficulty: category.difficulty),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    _buildStatChip(
+                      '${category.questionsCount} preguntas',
+                      Icons.quiz,
+                      AppColors.info,
+                    ),
+                    _buildStatChip(
+                      '${category.pointsPerQuestion} pts',
+                      Icons.eco,
+                      AppColors.success,
+                    ),
+                  ],
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
               ),
-              elevation: 4,
-            ),
-            icon: const Icon(
-              Icons.play_arrow,
-              color: Colors.white,
-              size: 24,
-            ),
-            label: Text(
-              'Comenzar Trivia',
-              style: AppTextStyles.buttonLarge.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            ],
           ),
-        ),
-        
-        const SizedBox(height: 12),
-        
-        // Botón secundario para volver
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: AppColors.primary),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              'Volver a Categorías',
-              style: AppTextStyles.buttonLarge.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
+  }
+
+  Widget _buildStatChip(String text, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTriviasList(BuildContext context) {
+    // Generar múltiples trivias para la categoría
+    final trivias = _generateTrivias();
+    
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: trivias.length,
+      itemBuilder: (context, index) {
+        final trivia = trivias[index];
+        return _buildTriviaCard(context, trivia, index);
+      },
+    );
+  }
+
+  Widget _buildTriviaCard(BuildContext context, Map<String, dynamic> trivia, int index) {
+    return GestureDetector(
+      onTap: () {
+        // Navegar al juego de trivia
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TriviaGamePage(category: category),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header con imagen
+            Expanded(
+              flex: 3,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                  gradient: _getCategoryGradient(),
+                ),
+                child: Stack(
+                  children: [
+                    // Overlay
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                        ),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.1),
+                            Colors.black.withOpacity(0.3),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Ícono de compost
+                    const Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Icon(
+                        Icons.compost,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    // Título centrado
+                    Center(
+                      child: Text(
+                        trivia['title'],
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Información
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${trivia['questions']} preguntas',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const Spacer(),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.eco,
+                          color: AppColors.primary,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${trivia['points']} pts',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> _generateTrivias() {
+    switch (category.id) {
+      case 'trivia_cat_1': // Composta en casa
+        return [
+          {
+            'title': 'Composta en casa',
+            'questions': 15,
+            'points': 5,
+          },
+          {
+            'title': 'Composta en casa',
+            'questions': 15,
+            'points': 5,
+          },
+          {
+            'title': 'Composta en casa',
+            'questions': 15,
+            'points': 5,
+          },
+          {
+            'title': 'Composta en casa',
+            'questions': 15,
+            'points': 5,
+          },
+        ];
+      case 'trivia_cat_2': // Reciclaje
+        return [
+          {
+            'title': 'Reciclaje Básico',
+            'questions': 12,
+            'points': 6,
+          },
+          {
+            'title': 'Separación de Residuos',
+            'questions': 10,
+            'points': 5,
+          },
+          {
+            'title': 'Plásticos y Reutilización',
+            'questions': 8,
+            'points': 4,
+          },
+        ];
+      case 'trivia_cat_3': // Energía
+        return [
+          {
+            'title': 'Ahorro Energético',
+            'questions': 10,
+            'points': 8,
+          },
+          {
+            'title': 'Energías Renovables',
+            'questions': 12,
+            'points': 9,
+          },
+        ];
+      case 'trivia_cat_4': // Agua
+        return [
+          {
+            'title': 'Conservación del Agua',
+            'questions': 8,
+            'points': 7,
+          },
+          {
+            'title': 'Ciclo del Agua',
+            'questions': 10,
+            'points': 8,
+          },
+        ];
+      default:
+        return [
+          {
+            'title': 'Trivia General',
+            'questions': 10,
+            'points': 5,
+          },
+        ];
+    }
   }
 
   LinearGradient _getCategoryGradient() {
@@ -559,40 +505,6 @@ class _CategoryDetailContent extends StatelessWidget {
         );
       default:
         return AppColors.primaryGradient;
-    }
-  }
-
-  List<String> _getPreviewQuestions() {
-    switch (category.id) {
-      case 'trivia_cat_1': // Composta
-        return [
-          '¿Para qué sirve el realizar composta en casa?',
-          '¿Cuáles materiales NO deben ir en la composta?',
-          '¿Cuánto tiempo tarda en estar lista una composta casera?',
-        ];
-      case 'trivia_cat_2': // Reciclaje
-        return [
-          '¿En qué contenedor se depositan las botellas de plástico?',
-          '¿Cuál es el símbolo del reciclaje?',
-          '¿Qué materiales se pueden reciclar fácilmente?',
-        ];
-      case 'trivia_cat_3': // Energía
-        return [
-          '¿Qué tipo de bombillas consumen menos energía?',
-          '¿Cuál es la mejor temperatura para el aire acondicionado?',
-          '¿Qué electrodomésticos consumen más energía?',
-        ];
-      case 'trivia_cat_4': // Agua
-        return [
-          '¿Cuánta agua se gasta en una ducha de 5 minutos?',
-          '¿Cómo podemos ahorrar agua en casa?',
-          '¿Qué porcentaje del planeta es agua dulce?',
-        ];
-      default:
-        return [
-          '¿Cuál es una acción importante para cuidar el medio ambiente?',
-          '¿Qué podemos hacer para reducir nuestra huella de carbono?',
-        ];
     }
   }
 }

@@ -11,8 +11,7 @@ import '../cubit/trivia_game_cubit.dart';
 import '../widgets/trivia_question_widget.dart';
 import '../widgets/trivia_timer_widget.dart';
 import '../widgets/trivia_progress_widget.dart';
-import '../widgets/trivia_completion_dialog.dart';
- // 🔧 IMPORT CORRECTO
+import '../widgets/animated_trivia_completion_dialog.dart'; // 🆕 IMPORT CORRECTO
 
 class TriviaGamePage extends StatelessWidget {
   final TriviaCategoryEntity category;
@@ -93,7 +92,7 @@ class _TriviaGameContentState extends State<_TriviaGameContent> {
             _timer?.cancel();
           } else if (state is TriviaGameCompleted) {
             _timer?.cancel();
-            _showCompletionDialog(context, state);
+            _showAnimatedCompletionDialog(context, state); // 🔧 USAR NUEVO DIÁLOGO
           }
         },
         builder: (context, state) {
@@ -210,35 +209,70 @@ class _TriviaGameContentState extends State<_TriviaGameContent> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('¿Salir de la trivia?'),
-        content: const Text('Perderás todo tu progreso actual.'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: AppColors.warning,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '¿Salir de la trivia?',
+              style: AppTextStyles.h4.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Perderás todo tu progreso actual. ¿Estás seguro?',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
               Navigator.of(context).pop();
             },
-            child: const Text('Salir'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.warning,
+            ),
+            child: Text(
+              'Salir',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // 🔧 MÉTODO CORREGIDO - usar el diálogo correcto
-  void _showCompletionDialog(BuildContext context, TriviaGameCompleted state) {
+  // 🆕 MÉTODO ACTUALIZADO - usar el diálogo animado
+  void _showAnimatedCompletionDialog(BuildContext context, TriviaGameCompleted state) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => TriviaCompletionDialog( 
+      builder: (dialogContext) => AnimatedTriviaCompletionDialog(
         result: state.result,
         onContinue: () {
-          Navigator.of(dialogContext).pop();
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(); // Cerrar la página de trivia
         },
       ),
     );

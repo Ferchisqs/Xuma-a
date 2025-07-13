@@ -5,12 +5,14 @@ import 'package:xuma_a/features/auth/domain/usecases/register_usecase.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../di/injection.dart';
+import '../../../navigation/presentation/pages/main_wrapper_page.dart'; // 🆕 Para navegación
 import '../cubit/auth_cubit.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/logo_header.dart';
 import '../widgets/parental_info_form.dart';
 import '../widgets/parental_consent_dialog.dart';
+import '../widgets/email_verification_page.dart'; // 🆕 Widget para verificación
 import '../../domain/entities/parental_info.dart';
 
 class RegisterPage extends StatelessWidget {
@@ -86,13 +88,23 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
             } else if (state is AuthAuthenticated) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('¡Registro exitoso! Bienvenido a Xuma\'a!'),
+                  content: Text('¡Registro exitoso! Bienvenido a XUMA\'A!'),
                   backgroundColor: AppColors.success,
                 ),
               );
-              Navigator.of(context).pop();
-            } else if (state is AuthParentalConsentRequired) {
-              _showParentalConsentDialog(context, state.user);
+              // 🆕 Navegar al home después del registro exitoso
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => const MainWrapperPage(),
+                ),
+                (route) => false,
+              );
+            } else if (state is AuthParentalConsentPending) { // 🔄 Cambio de nombre
+              _showParentalConsentDialog(context, state.user, state.parentEmail);
+            } else if (state is AuthEmailVerificationRequired) { // 🆕 Nuevo estado
+              _showEmailVerificationDialog(context, state.user);
+            } else if (state is AuthEmailVerificationSent) { // 🆕 Nuevo estado
+              _showEmailSentMessage(context, state.email);
             }
           },
           child: BlocBuilder<AuthCubit, AuthState>(
@@ -110,6 +122,33 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                 );
               }
 
+              // 🆕 Mostrar pantalla de verificación de email
+              if (state is AuthEmailVerificationRequired) {
+                return EmailVerificationPage(
+                  user: state.user,
+                  onResendEmail: () {
+                    context.read<AuthCubit>().sendEmailVerification(state.user.id);
+                  },
+                  onCheckStatus: () {
+                    context.read<AuthCubit>().checkEmailVerificationStatus(state.user.id);
+                  },
+                );
+              }
+
+              // 🆕 Mostrar pantalla de email enviado
+              if (state is AuthEmailVerificationSent) {
+                return EmailVerificationSentPage(
+                  user: state.user,
+                  email: state.email,
+                  onResendEmail: () {
+                    context.read<AuthCubit>().resendEmailVerification(state.email);
+                  },
+                  onCheckStatus: () {
+                    context.read<AuthCubit>().checkEmailVerificationStatus(state.user.id);
+                  },
+                );
+              }
+
               // Formulario de registro normal
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
@@ -123,7 +162,7 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                       // Logo y header
                       const LogoHeader(
                         title: 'Registrarse',
-                        subtitle: 'Únete a la comunidad verde de Xuma\'a',
+                        subtitle: 'Únete a la comunidad verde de XUMA\'A',
                       ),
                       
                       const SizedBox(height: 40),
@@ -362,7 +401,8 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
     }
   }
 
-  void _showParentalConsentDialog(BuildContext context, dynamic user) {
+  // 🔄 Método actualizado con nuevo parámetro
+  void _showParentalConsentDialog(BuildContext context, dynamic user, String parentEmail) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -373,6 +413,47 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
           context.read<AuthCubit>().acknowledgeParentalConsent();
           Navigator.of(context).pop(); // Volver al login
         },
+      ),
+    );
+  }
+
+  // 🆕 Método para mostrar diálogo de verificación de email
+  void _showEmailVerificationDialog(BuildContext context, dynamic user) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('📧 Verificación de Email'),
+        content: Text(
+          'Hemos enviado un email de verificación a ${user.email}. Por favor revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.read<AuthCubit>().sendEmailVerification(user.id);
+            },
+            child: const Text('Reenviar Email'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.read<AuthCubit>().checkEmailVerificationStatus(user.id);
+            },
+            child: const Text('Ya Verifiqué'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 🆕 Método para mostrar mensaje de email enviado
+  void _showEmailSentMessage(BuildContext context, String email) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('📧 Email de verificación enviado a $email'),
+        backgroundColor: AppColors.success,
+        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -415,7 +496,8 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
     if (value == null || value.isEmpty) {
       return 'El email es requerido';
     }
-    if (!value.contains('@') || !value.contains('.')) {
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value)) {
       return 'Ingresa un email válido';
     }
     return null;
@@ -427,6 +509,13 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
     }
     if (value.length < 6) {
       return 'La contraseña debe tener al menos 6 caracteres';
+    }
+    // 🆕 Validación mejorada de contraseña
+    if (!value.contains(RegExp(r'[A-Z]'))) {
+      return 'La contraseña debe contener al menos una mayúscula';
+    }
+    if (!value.contains(RegExp(r'[0-9]'))) {
+      return 'La contraseña debe contener al menos un número';
     }
     return null;
   }
@@ -440,4 +529,4 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
     }
     return null;
   }
-} 
+}
