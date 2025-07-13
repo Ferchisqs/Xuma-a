@@ -8,7 +8,7 @@ import '../../../challenges/presentation/pages/challenges_main_page.dart';
 import '../../../trivia/presentation/pages/trivia_main_page.dart';
 import '../../../companion/presentation/pages/companion_main_page.dart';
 import '../../../contact/presentation/pages/contact_main_page.dart';
-import '../../../profile/presentation/pages/profile_main_page.dart'; // 🆕 IMPORT PROFILE
+import '../../../profile/presentation/pages/profile_main_page.dart';
 import '../widgets/side_nav_bar.dart';
 
 class MainWrapperPage extends StatelessWidget {
@@ -32,13 +32,13 @@ class _MainWrapperContent extends StatelessWidget {
       builder: (context, state) {
         return Scaffold(
           drawer: const SideNavBar(),
-          body: _buildCurrentPage(state.currentTab),
+          body: _buildCurrentPage(context, state.currentTab),
         );
       },
     );
   }
 
-  Widget _buildCurrentPage(NavigationTab currentTab) {
+  Widget _buildCurrentPage(BuildContext context, NavigationTab currentTab) {
     switch (currentTab) {
       case NavigationTab.home:
         return const HomePage();
@@ -58,7 +58,7 @@ class _MainWrapperContent extends StatelessWidget {
       case NavigationTab.contact:
         return const ContactMainPage();
         
-      case NavigationTab.profile: // 🆕 PROFILE FUNCTIONALITY
+      case NavigationTab.profile:
         return const ProfileMainPage();
       
       default:

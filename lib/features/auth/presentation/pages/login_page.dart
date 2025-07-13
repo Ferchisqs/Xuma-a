@@ -145,24 +145,7 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                   ),
 
                   // Botón temporal para testing (solo en desarrollo)
-                  if (_isDevelopment()) ...[
-                    const SizedBox(height: 16),
-                    OutlinedButton(
-                      onPressed: () {
-                        _navigateToHome(context);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textSecondary,
-                        side: BorderSide(color: AppColors.textSecondary.withOpacity(0.5)),
-                      ),
-                      child: Text(
-                        'Skip Login (Solo Testing)',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ],
+                  
 
                   const SizedBox(height: 24),
 
@@ -338,9 +321,7 @@ class _LoginPageContentState extends State<_LoginPageContent> {
     }
   }
 
-  bool _isDevelopment() {
-    return const bool.fromEnvironment('dart.vm.product') == false;
-  }
+
 
   void _navigateToHome(BuildContext context) {
     Navigator.of(context).pushAndRemoveUntil(
