@@ -4,15 +4,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:xuma_a/features/auth/domain/usecases/register_usecase.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../core/utils/validation_utils.dart';
 import '../../../../di/injection.dart';
-import '../../../navigation/presentation/pages/main_wrapper_page.dart'; // 🆕 Para navegación
+import '../../../navigation/presentation/pages/main_wrapper_page.dart';
 import '../cubit/auth_cubit.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/logo_header.dart';
 import '../widgets/parental_info_form.dart';
 import '../widgets/parental_consent_dialog.dart';
-import '../widgets/email_verification_page.dart'; // 🆕 Widget para verificación
+import '../widgets/email_verification_page.dart';
 import '../../domain/entities/parental_info.dart';
 
 class RegisterPage extends StatelessWidget {
@@ -42,8 +43,18 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
   final _confirmPasswordController = TextEditingController();
   final _ageController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listener para actualizar indicador de fuerza de contraseña
+    _passwordController.addListener(() {
+      setState(() {}); // Actualizar UI cuando cambie la contraseña
+    });
+  }
 
   @override
   void dispose() {
@@ -79,31 +90,15 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
         child: BlocListener<AuthCubit, AuthState>(
           listener: (context, state) {
             if (state is AuthError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: AppColors.error,
-                ),
-              );
+              _showErrorSnackBar(context, state.message);
             } else if (state is AuthAuthenticated) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('¡Registro exitoso! Bienvenido a XUMA\'A!'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-              // 🆕 Navegar al home después del registro exitoso
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (context) => const MainWrapperPage(),
-                ),
-                (route) => false,
-              );
-            } else if (state is AuthParentalConsentPending) { // 🔄 Cambio de nombre
+              _showSuccessSnackBar(context, '¡Registro exitoso! Bienvenido a XUMA\'A!');
+              _navigateToHome(context);
+            } else if (state is AuthParentalConsentPending) {
               _showParentalConsentDialog(context, state.user, state.parentEmail);
-            } else if (state is AuthEmailVerificationRequired) { // 🆕 Nuevo estado
+            } else if (state is AuthEmailVerificationRequired) {
               _showEmailVerificationDialog(context, state.user);
-            } else if (state is AuthEmailVerificationSent) { // 🆕 Nuevo estado
+            } else if (state is AuthEmailVerificationSent) {
               _showEmailSentMessage(context, state.email);
             }
           },
@@ -122,7 +117,7 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                 );
               }
 
-              // 🆕 Mostrar pantalla de verificación de email
+              // Mostrar pantalla de verificación de email
               if (state is AuthEmailVerificationRequired) {
                 return EmailVerificationPage(
                   user: state.user,
@@ -135,7 +130,7 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                 );
               }
 
-              // 🆕 Mostrar pantalla de email enviado
+              // Mostrar pantalla de email enviado
               if (state is AuthEmailVerificationSent) {
                 return EmailVerificationSentPage(
                   user: state.user,
@@ -173,7 +168,7 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                         label: 'Nombre',
                         hint: 'Ingresa tu nombre',
                         keyboardType: TextInputType.name,
-                        validator: _validateFirstName,
+                        validator: (value) => ValidationUtils.validateName(value, 'El nombre'),
                       ),
                       
                       const SizedBox(height: 16),
@@ -184,7 +179,7 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                         label: 'Apellido',
                         hint: 'Ingresa tu apellido',
                         keyboardType: TextInputType.name,
-                        validator: _validateLastName,
+                        validator: (value) => ValidationUtils.validateName(value, 'El apellido'),
                       ),
                       
                       const SizedBox(height: 16),
@@ -195,7 +190,7 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                         label: 'Edad',
                         hint: 'Ingresa tu edad',
                         keyboardType: TextInputType.number,
-                        validator: _validateAge,
+                        validator: ValidationUtils.validateAge,
                       ),
                       
                       const SizedBox(height: 16),
@@ -206,12 +201,12 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                         label: 'Correo Electrónico',
                         hint: 'Ingresa tu email',
                         keyboardType: TextInputType.emailAddress,
-                        validator: _validateEmail,
+                        validator: ValidationUtils.validateEmail,
                       ),
                       
                       const SizedBox(height: 16),
                       
-                      // Password field
+                      // Password field con indicador de fuerza
                       AuthTextField(
                         controller: _passwordController,
                         label: 'Contraseña',
@@ -228,8 +223,12 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                             });
                           },
                         ),
-                        validator: _validatePassword,
+                        validator: ValidationUtils.validatePassword,
                       ),
+                      
+                      // Mostrar indicador de fuerza de contraseña
+                      if (_passwordController.text.isNotEmpty)
+                        _buildPasswordStrengthIndicator(),
                       
                       const SizedBox(height: 16),
                       
@@ -250,7 +249,7 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                             });
                           },
                         ),
-                        validator: _validateConfirmPassword,
+                        validator: (value) => ValidationUtils.validateConfirmPassword(value, _passwordController.text),
                       ),
                       
                       const SizedBox(height: 24),
@@ -337,6 +336,121 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
     );
   }
 
+  // Widget para mostrar fuerza de contraseña en tiempo real
+  Widget _buildPasswordStrengthIndicator() {
+    final password = _passwordController.text;
+    final strength = ValidationUtils.calculatePasswordStrength(password);
+    final strengthText = ValidationUtils.getPasswordStrengthText(password);
+    
+    Color strengthColor;
+    if (strength < 2) {
+      strengthColor = AppColors.error;
+    } else if (strength < 3) {
+      strengthColor = AppColors.warning;
+    } else if (strength < 4) {
+      strengthColor = AppColors.info;
+    } else {
+      strengthColor = AppColors.success;
+    }
+    
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: strengthColor.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Barra de fuerza
+          Row(
+            children: [
+              Text(
+                'Fuerza: ',
+                style: AppTextStyles.bodySmall.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Text(
+                strengthText,
+                style: AppTextStyles.bodySmall.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: strengthColor,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                width: 60,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textHint.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: (strength / 4).clamp(0.0, 1.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: strengthColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 8),
+          const Divider(height: 1),
+          const SizedBox(height: 8),
+          
+          // Requisitos
+          Text(
+            'Requisitos:',
+            style: AppTextStyles.bodySmall.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          _buildRequirement('Mínimo 6 caracteres', password.length >= 6),
+          _buildRequirement('Al menos una mayúscula', password.contains(RegExp(r'[A-Z]'))),
+          _buildRequirement('Al menos una minúscula', password.contains(RegExp(r'[a-z]'))),
+          _buildRequirement('Al menos un número', password.contains(RegExp(r'[0-9]'))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequirement(String text, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 16,
+            color: isMet ? AppColors.success : AppColors.textHint,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: isMet ? AppColors.success : AppColors.textHint,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   bool _showAgeWarning() {
     final ageText = _ageController.text;
     if (ageText.isEmpty) return false;
@@ -398,16 +512,18 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
         confirmPassword: _confirmPasswordController.text,
         age: int.parse(_ageController.text),
       );
+    } else {
+      _showErrorSnackBar(context, 'Por favor corrige los errores en el formulario');
     }
   }
 
-  // 🔄 Método actualizado con nuevo parámetro
   void _showParentalConsentDialog(BuildContext context, dynamic user, String parentEmail) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => ParentalConsentDialog(
         user: user,
+        parentEmail: parentEmail,
         onAccept: () {
           Navigator.of(context).pop();
           context.read<AuthCubit>().acknowledgeParentalConsent();
@@ -417,12 +533,14 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
     );
   }
 
-  // 🆕 Método para mostrar diálogo de verificación de email
   void _showEmailVerificationDialog(BuildContext context, dynamic user) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         title: const Text('📧 Verificación de Email'),
         content: Text(
           'Hemos enviado un email de verificación a ${user.email}. Por favor revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.',
@@ -447,86 +565,46 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
     );
   }
 
-  // 🆕 Método para mostrar mensaje de email enviado
   void _showEmailSentMessage(BuildContext context, String email) {
+    _showSuccessSnackBar(context, '📧 Email de verificación enviado a $email');
+  }
+
+  void _navigateToHome(BuildContext context) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (context) => const MainWrapperPage(),
+      ),
+      (route) => false,
+    );
+  }
+
+  void _showErrorSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('📧 Email de verificación enviado a $email'),
-        backgroundColor: AppColors.success,
-        duration: const Duration(seconds: 3),
+        content: Text(message),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        duration: const Duration(seconds: 4),
       ),
     );
   }
 
-  String? _validateFirstName(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'El nombre es requerido';
-    }
-    if (value.trim().length < 2) {
-      return 'El nombre debe tener al menos 2 caracteres';
-    }
-    return null;
-  }
-
-  String? _validateLastName(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'El apellido es requerido';
-    }
-    if (value.trim().length < 2) {
-      return 'El apellido debe tener al menos 2 caracteres';
-    }
-    return null;
-  }
-
-  String? _validateAge(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'La edad es requerida';
-    }
-    final age = int.tryParse(value);
-    if (age == null) {
-      return 'Ingresa una edad válida';
-    }
-    if (age < 1 || age > 120) {
-      return 'Ingresa una edad válida (1-120)';
-    }
-    return null;
-  }
-
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'El email es requerido';
-    }
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value)) {
-      return 'Ingresa un email válido';
-    }
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'La contraseña es requerida';
-    }
-    if (value.length < 6) {
-      return 'La contraseña debe tener al menos 6 caracteres';
-    }
-    // 🆕 Validación mejorada de contraseña
-    if (!value.contains(RegExp(r'[A-Z]'))) {
-      return 'La contraseña debe contener al menos una mayúscula';
-    }
-    if (!value.contains(RegExp(r'[0-9]'))) {
-      return 'La contraseña debe contener al menos un número';
-    }
-    return null;
-  }
-
-  String? _validateConfirmPassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Confirma tu contraseña';
-    }
-    if (value != _passwordController.text) {
-      return 'Las contraseñas no coinciden';
-    }
-    return null;
+  void _showSuccessSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 }

@@ -44,6 +44,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   // ==================== AUTENTICACIÓN BÁSICA ====================
   
+ // lib/features/auth/data/datasources/auth_remote_datasource.dart
+// MÉTODOS ACTUALIZADOS PARA MANEJAR REGISTER Y LOGIN CORRECTAMENTE:
+
   @override
   Future<UserModel> login(String email, String password) async {
     try {
@@ -55,13 +58,49 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         },
       );
 
+      print('🔍 Login Response Status: ${response.statusCode}');
+      print('🔍 Login Response Data: ${response.data}');
+
       if (response.statusCode == 200) {
-        final userData = response.data['user'] ?? response.data;
-        return UserModel.fromJson(userData);
+        final responseData = response.data;
+        
+        // Verificar que la respuesta sea exitosa
+        if (responseData['success'] != true) {
+          throw ServerException('Login no exitoso: ${responseData['message'] ?? 'Error desconocido'}');
+        }
+        
+        // Extraer datos del usuario para LOGIN
+        Map<String, dynamic> userData = {};
+        
+        if (responseData['data'] != null) {
+          final data = responseData['data'];
+          
+          // Para LOGIN: combinar user info con datos adicionales
+          if (data['user'] != null) {
+            userData = Map<String, dynamic>.from(data['user']);
+            // Agregar el userId desde data
+            userData['userId'] = data['userId'];
+            userData['id'] = data['userId'];
+            
+            // Para login, si no viene age, usar un valor por defecto basado en email/perfil
+            if (userData['age'] == null) {
+              userData['age'] = 25; // Valor razonable para login existente
+            }
+          } else {
+            userData = Map<String, dynamic>.from(data);
+          }
+        } else {
+          throw ServerException('Datos de usuario no encontrados en la respuesta');
+        }
+        
+        print('🔍 Final user data for LOGIN model: $userData');
+        
+        return _createUserModelFromApiData(userData, isLogin: true);
       } else {
-        throw ServerException('Error en el login: ${response.data['message'] ?? 'Error desconocido'}');
+        throw ServerException('Error en el login: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
       }
     } catch (e) {
+      print('❌ Login Error Details: $e');
       if (e is ServerException) rethrow;
       throw ServerException('Error de conexión en login: $e');
     }
@@ -76,21 +115,174 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           'email': params.email,
           'password': params.password,
           'confirmPassword': params.confirmPassword,
-          'age': params.age,
+          'age': params.age, // IMPORTANTE: En register SÍ enviamos age
           'firstName': params.firstName,
           'lastName': params.lastName,
         },
       );
 
+      print('🔍 Register Response Status: ${response.statusCode}');
+      print('🔍 Register Response Data: ${response.data}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final userData = response.data['user'] ?? response.data;
-        return UserModel.fromJson(userData);
+        final responseData = response.data;
+        
+        // Verificar que la respuesta sea exitosa
+        if (responseData['success'] != true) {
+          throw ServerException('Registro no exitoso: ${responseData['message'] ?? 'Error desconocido'}');
+        }
+        
+        // Extraer datos del usuario para REGISTER
+        Map<String, dynamic> userData = {};
+        
+        if (responseData['data'] != null) {
+          final data = responseData['data'];
+          
+          // Para REGISTER: puede venir diferente estructura
+          if (data['user'] != null) {
+            userData = Map<String, dynamic>.from(data['user']);
+            userData['userId'] = data['userId'];
+            userData['id'] = data['userId'];
+          } else {
+            userData = Map<String, dynamic>.from(data);
+          }
+          
+          // Para register, agregar la edad que enviamos
+          if (userData['age'] == null) {
+            userData['age'] = params.age;
+          }
+          
+          // Agregar campos del registro
+          userData['firstName'] = userData['firstName'] ?? params.firstName;
+          userData['lastName'] = userData['lastName'] ?? params.lastName;
+          userData['email'] = userData['email'] ?? params.email;
+          
+        } else {
+          throw ServerException('Datos de usuario no encontrados en la respuesta de registro');
+        }
+        
+        print('🔍 Final user data for REGISTER model: $userData');
+        
+        return _createUserModelFromApiData(userData, isLogin: false);
       } else {
-        throw ServerException('Error en el registro: ${response.data['message'] ?? 'Error desconocido'}');
+        throw ServerException('Error en el registro: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
       }
     } catch (e) {
+      print('❌ Register Error Details: $e');
       if (e is ServerException) rethrow;
       throw ServerException('Error de conexión en registro: $e');
+    }
+  }
+
+  // MÉTODO HELPER ACTUALIZADO PARA MANEJAR AMBOS CASOS:
+  UserModel _createUserModelFromApiData(Map<String, dynamic> data, {bool isLogin = false}) {
+    try {
+      print('🔍 Creating UserModel from data (isLogin: $isLogin): $data');
+      
+      // IDs - manejar diferentes formatos
+      final String userId = (data['userId'] ?? data['id'] ?? 'temp_id').toString();
+      
+      // Campos básicos - siempre requeridos
+      final String email = (data['email'] ?? '').toString();
+      final String firstName = (data['firstName'] ?? data['first_name'] ?? '').toString();
+      final String lastName = (data['lastName'] ?? data['last_name'] ?? '').toString();
+      
+      // Age - manejar según contexto
+      int age;
+      if (data['age'] != null) {
+        age = int.tryParse(data['age'].toString()) ?? 18;
+      } else {
+        // Valores por defecto según contexto
+        age = isLogin ? 25 : 18; // Login: usuario existente (25), Register: nuevo usuario (18)
+      }
+      
+      // Campos opcionales
+      final String? profilePicture = data['profilePicture']?.toString() ?? 
+                                    data['profile_picture']?.toString();
+      
+      // Verificación de email - diferentes nombres de campo
+      final bool isVerified = data['isVerified'] ?? 
+                             data['is_verified'] ?? 
+                             data['emailVerified'] ?? 
+                             data['email_verified'] ??
+                             (isLogin ? true : false); // Login: verificado, Register: no verificado
+      
+      // Fechas con manejo de errores
+      DateTime createdAt;
+      try {
+        if (data['createdAt'] != null) {
+          createdAt = DateTime.parse(data['createdAt'].toString());
+        } else if (data['created_at'] != null) {
+          createdAt = DateTime.parse(data['created_at'].toString());
+        } else {
+          createdAt = DateTime.now();
+        }
+      } catch (e) {
+        print('⚠️ Error parsing createdAt: $e');
+        createdAt = DateTime.now();
+      }
+      
+      DateTime? lastLogin;
+      try {
+        if (data['lastLogin'] != null) {
+          lastLogin = DateTime.parse(data['lastLogin'].toString());
+        } else if (data['last_login'] != null) {
+          lastLogin = DateTime.parse(data['last_login'].toString());
+        } else if (isLogin) {
+          lastLogin = DateTime.now(); // Solo para login
+        }
+        // Para register, lastLogin queda como null
+      } catch (e) {
+        print('⚠️ Error parsing lastLogin: $e');
+        lastLogin = isLogin ? DateTime.now() : null;
+      }
+      
+      // Consentimiento parental
+      final bool needsParentalConsent = data['requiresParentalConsent'] ?? 
+                                       data['requires_parental_consent'] ?? 
+                                       data['needsParentalConsent'] ??
+                                       (age < 13);
+
+      print('🔍 UserModel data summary:');
+      print('  - Context: ${isLogin ? "LOGIN" : "REGISTER"}');
+      print('  - ID: $userId');
+      print('  - Email: $email');
+      print('  - Name: $firstName $lastName');
+      print('  - Age: $age');
+      print('  - Verified: $isVerified');
+      print('  - Needs parental consent: $needsParentalConsent');
+      
+      final userModel = UserModel(
+        id: userId,
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        age: age,
+        profilePicture: profilePicture,
+        createdAt: createdAt,
+        lastLogin: lastLogin,
+        needsParentalConsent: needsParentalConsent,
+      );
+      
+      print('✅ UserModel created successfully: $userModel');
+      return userModel;
+      
+    } catch (e) {
+      print('❌ Error creating UserModel: $e');
+      print('📄 Original data: $data');
+      
+      // Crear modelo básico para no fallar completamente
+      return UserModel(
+        id: (data['userId'] ?? data['id'] ?? 'error_id').toString(),
+        email: (data['email'] ?? 'unknown@email.com').toString(),
+        firstName: (data['firstName'] ?? 'Usuario').toString(),
+        lastName: (data['lastName'] ?? '').toString(),
+        age: isLogin ? 25 : 18,
+        profilePicture: null,
+        createdAt: DateTime.now(),
+        lastLogin: isLogin ? DateTime.now() : null,
+        needsParentalConsent: false,
+      );
     }
   }
 
@@ -144,21 +336,50 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
   }
 
+
   @override
   Future<void> logout() async {
     try {
+      print('🔍 Sending logout request...'); // Para debug
+      
       final response = await _apiClient.post(
         ApiEndpoints.logout,
         data: {
-          'logoutFromAllDevices': false,
+          'logoutFromAllDevices': false, // Según tu documentación
         },
       );
 
-      if (response.statusCode != 200) {
-        throw ServerException('Error al cerrar sesión: ${response.data['message'] ?? 'Error desconocido'}');
+      print('🔍 Logout Response Status: ${response.statusCode}');
+      print('🔍 Logout Response Data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final responseData = response.data;
+        
+        // Verificar que la respuesta sea exitosa según tu API
+        if (responseData['success'] == true) {
+          print('✅ Logout successful: ${responseData['message']}');
+        } else {
+          print('⚠️ Logout response not marked as success but status 200');
+        }
+      } else if (response.statusCode == 401) {
+        // Token inválido o expirado - esto está bien para logout
+        print('⚠️ Token already invalid/expired during logout - proceeding anyway');
+      } else {
+        throw ServerException('Error al cerrar sesión: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
       }
     } catch (e) {
-      if (e is ServerException) rethrow;
+      print('❌ Logout Error: $e');
+      
+      // Para logout, si hay error de red o servidor, no fallamos
+      // porque el objetivo es limpiar la sesión local
+      if (e is ServerException) {
+        // Si es error 401 (token inválido), está bien
+        if (e.message.contains('401') || e.message.contains('inválido') || e.message.contains('expirado')) {
+          print('✅ Token already invalid, logout successful locally');
+          return;
+        }
+        rethrow;
+      }
       throw ServerException('Error de conexión en logout: $e');
     }
   }
@@ -378,4 +599,5 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       throw ServerException('Error de conexión obteniendo estado: $e');
     }
   }
+  
 }
