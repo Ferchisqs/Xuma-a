@@ -1,4 +1,4 @@
-// lib/features/profile/presentation/pages/profile_main_page.dart - LAYOUT CORREGIDO
+// lib/features/profile/presentation/pages/profile_main_page.dart - VERSIÓN COMPLETA CORREGIDA
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -9,6 +9,7 @@ import '../../../auth/presentation/pages/login_page.dart';
 import '../../../navigation/presentation/widgets/custom_app_bar.dart';
 import '../../../navigation/presentation/widgets/side_nav_bar.dart';
 import '../../../navigation/presentation/cubit/navigation_cubit.dart';
+import '../../../shared/widgets/loading_widget.dart';
 import '../cubit/profile_cubit.dart';
 
 class ProfileMainPage extends StatelessWidget {
@@ -51,8 +52,13 @@ class _ProfileMainContent extends StatelessWidget {
         } else if (state is AuthError) {
           _showErrorSnackBar(context, state.message);
         } else if (state is AuthAuthenticated) {
-          print('🔍 Usuario autenticado, cargando perfil completo para: ${state.user.id}');
-          context.read<ProfileCubit>().loadUserProfile(state.user.id);
+          print('🔍 Usuario autenticado, verificando si necesita cargar perfil completo');
+          
+          // 🆕 SOLO CARGAR PERFIL SI NO ESTÁ CARGANDO Y NO TIENE PERFIL COMPLETO
+          if (!state.isProfileLoading && state.fullProfile == null) {
+            print('🔍 Cargando perfil completo para: ${state.user.id}');
+            context.read<ProfileCubit>().loadUserProfile(state.user.id);
+          }
         }
       },
       builder: (context, authState) {
@@ -72,10 +78,11 @@ class _ProfileMainContent extends StatelessWidget {
   }
 
   Widget _buildBody(BuildContext context, AuthState authState) {
+    // 🆕 MANEJO MEJORADO DE ESTADOS DE CARGA
     if (authState is AuthLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+      return Center(
+        child: EcoLoadingWidget(
+          message: authState.message ?? 'Cargando perfil...',
         ),
       );
     }
@@ -83,10 +90,11 @@ class _ProfileMainContent extends StatelessWidget {
     if (authState is AuthAuthenticated) {
       return BlocBuilder<ProfileCubit, ProfileState>(
         builder: (context, profileState) {
-          if (profileState is ProfileLoading) {
+          // 🆕 SI EL PERFIL ESTÁ CARGANDO EN AUTH O PROFILE CUBIT
+          if (authState.isProfileLoading || profileState is ProfileLoading) {
             return const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              child: EcoLoadingWidget(
+                message: 'Cargando información del perfil...',
               ),
             );
           }
@@ -99,24 +107,37 @@ class _ProfileMainContent extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: AppColors.error,
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(60),
+                      ),
+                      child: Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: AppColors.error,
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     Text(
                       'Error cargando perfil',
-                      style: AppTextStyles.h4.copyWith(color: AppColors.error),
+                      style: AppTextStyles.h4.copyWith(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.bold,
+                      ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Text(
                       profileState.message,
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     ElevatedButton.icon(
                       onPressed: () {
                         context.read<ProfileCubit>().loadUserProfile(authState.user.id);
@@ -125,6 +146,10 @@ class _ProfileMainContent extends StatelessWidget {
                       label: const Text('Reintentar'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -133,15 +158,25 @@ class _ProfileMainContent extends StatelessWidget {
             );
           }
 
+          // 🆕 DETERMINAR QUÉ PERFIL MOSTRAR
+          dynamic profileToShow;
+          bool isBasicData = false;
+
           if (profileState is ProfileLoaded || profileState is ProfileUpdated) {
-            final profile = profileState is ProfileLoaded 
+            // Usar perfil del ProfileCubit
+            profileToShow = profileState is ProfileLoaded 
                 ? profileState.profile 
                 : (profileState as ProfileUpdated).profile;
-            
-            return _buildProfileContent(context, profile);
+          } else if (authState.fullProfile != null) {
+            // Usar perfil completo del AuthCubit
+            profileToShow = authState.fullProfile;
+          } else {
+            // Usar datos básicos del usuario
+            profileToShow = authState.user;
+            isBasicData = true;
           }
-
-          return _buildProfileContent(context, authState.user, isBasicData: true);
+          
+          return _buildProfileContent(context, profileToShow, isBasicData: isBasicData);
         },
       );
     }
@@ -160,25 +195,65 @@ class _ProfileMainContent extends StatelessWidget {
             ),
             child: Column(
               children: [
-                // Banner informativo si usamos datos básicos
+                // 🆕 BANNER INFORMATIVO MEJORADO PARA DATOS BÁSICOS
                 if (isBasicData) 
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(16),
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.info.withOpacity(0.1),
+                          AppColors.primary.withOpacity(0.1),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppColors.info.withOpacity(0.3)),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline, color: AppColors.info, size: 20),
-                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.info.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            Icons.info_outline,
+                            color: AppColors.info,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: Text(
-                            'Cargando información completa del perfil...',
-                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.info),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Perfil Básico',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.info,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                'Estamos cargando tu información completa...',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.info),
                           ),
                         ),
                       ],
@@ -209,7 +284,7 @@ class _ProfileMainContent extends StatelessWidget {
                       const SizedBox(height: 16),
                       
                       // User Info
-                      _buildUserInfoSection(user),
+                      _buildUserInfoSection(user, isBasicData),
                       
                       const SizedBox(height: 12),
                       
@@ -227,12 +302,12 @@ class _ProfileMainContent extends StatelessWidget {
                 const SizedBox(height: 20),
                 
                 // Stats Cards
-                _buildStatsSection(user),
+                _buildStatsSection(user, isBasicData),
                 
                 const SizedBox(height: 20),
                 
                 // Account Information Section
-                _buildAccountInfoSection(context, user),
+                _buildAccountInfoSection(context, user, isBasicData),
                 
                 const SizedBox(height: 20),
                 
@@ -253,49 +328,8 @@ class _ProfileMainContent extends StatelessWidget {
     );
   }
 
-  // 🆕 HELPER PARA MOSTRAR AVATAR - CORREGIDO Y SEGURO
-  Widget _buildUserAvatar(String? avatarUrl) {
-    if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Image.network(
-          avatarUrl,
-          fit: BoxFit.cover,
-          width: 36,
-          height: 36,
-          errorBuilder: (context, error, stackTrace) {
-            print('❌ Error loading avatar: $error');
-            return const Icon(
-              Icons.person_rounded,
-              color: Colors.white,
-              size: 24,
-            );
-          },
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ),
-            );
-          },
-        ),
-      );
-    }
-    
-    return const Icon(
-      Icons.person_rounded,
-      color: Colors.white,
-      size: 24,
-    );
-  }
+  // 🆕 MÉTODOS MEJORADOS PARA CONSTRUCCIÓN DE UI
 
-  // 🆕 MÉTODOS SEPARADOS PARA MEJOR ORGANIZACIÓN
   Widget _buildProfilePictureSection(BuildContext context, dynamic user) {
     return GestureDetector(
       onTap: () => _showProfilePictureOptions(context),
@@ -335,7 +369,7 @@ class _ProfileMainContent extends StatelessWidget {
     );
   }
 
-  Widget _buildUserInfoSection(dynamic user) {
+  Widget _buildUserInfoSection(dynamic user, bool isBasicData) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -393,7 +427,7 @@ class _ProfileMainContent extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsSection(dynamic user) {
+  Widget _buildStatsSection(dynamic user, bool isBasicData) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -444,7 +478,7 @@ class _ProfileMainContent extends StatelessWidget {
     );
   }
 
-  Widget _buildAccountInfoSection(BuildContext context, dynamic user) {
+  Widget _buildAccountInfoSection(BuildContext context, dynamic user, bool isBasicData) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -584,6 +618,48 @@ class _ProfileMainContent extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  // 🆕 HELPER PARA MOSTRAR AVATAR - CORREGIDO Y SEGURO
+  Widget _buildUserAvatar(String? avatarUrl) {
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Image.network(
+          avatarUrl,
+          fit: BoxFit.cover,
+          width: 36,
+          height: 36,
+          errorBuilder: (context, error, stackTrace) {
+            print('❌ Error loading avatar: $error');
+            return const Icon(
+              Icons.person_rounded,
+              color: Colors.white,
+              size: 24,
+            );
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+    
+    return const Icon(
+      Icons.person_rounded,
+      color: Colors.white,
+      size: 24,
     );
   }
 

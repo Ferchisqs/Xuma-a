@@ -1,4 +1,4 @@
-// lib/features/navigation/presentation/widgets/user_profile_widget.dart
+// lib/features/navigation/presentation/widgets/user_profile_widget.dart - VERSIÓN MEJORADA
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -25,16 +25,16 @@ class UserProfileWidget extends StatelessWidget {
         onTap: () {
           debugPrint('👤 Navegando a Perfil...');
           context.read<NavigationCubit>().goToProfile();
-          Navigator.of(context).pop(); // 🔧 CERRAR DRAWER
+          Navigator.of(context).pop();
         },
         borderRadius: BorderRadius.circular(12),
         child: BlocBuilder<AuthCubit, AuthState>(
           builder: (context, authState) {
-            // 🆕 MOSTRAR DATOS REALES DEL USUARIO AUTENTICADO
+            // 🆕 MANEJO MEJORADO DE ESTADOS
             if (authState is AuthAuthenticated) {
               return _buildAuthenticatedUserProfile(authState);
-            } else if (authState is AuthLoadingFullProfile) {
-              return _buildLoadingProfile(authState.user);
+            } else if (authState is AuthLoading) {
+              return _buildLoadingProfile(authState.message);
             } else {
               return _buildGuestProfile();
             }
@@ -44,10 +44,11 @@ class UserProfileWidget extends StatelessWidget {
     );
   }
 
-  // 🆕 MOSTRAR PERFIL DE USUARIO AUTENTICADO
+  // 🆕 MOSTRAR PERFIL DE USUARIO AUTENTICADO MEJORADO
   Widget _buildAuthenticatedUserProfile(AuthAuthenticated authState) {
     final user = authState.user;
     final fullProfile = authState.fullProfile;
+    final isLoadingProfile = authState.isProfileLoading;
     
     // Usar datos del perfil completo si está disponible, sino usar datos básicos
     final displayName = fullProfile?.fullName ?? user.fullName;
@@ -57,7 +58,7 @@ class UserProfileWidget extends StatelessWidget {
     
     return Row(
       children: [
-        // User avatar
+        // User avatar con indicador de estado
         Container(
           width: 40,
           height: 40,
@@ -65,11 +66,24 @@ class UserProfileWidget extends StatelessWidget {
             gradient: AppColors.primaryGradient,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: AppColors.primary.withOpacity(0.3),
+              color: isLoadingProfile 
+                ? AppColors.warning.withOpacity(0.5)
+                : AppColors.primary.withOpacity(0.3),
               width: 2,
             ),
           ),
-          child: _buildUserAvatar(avatarUrl),
+          child: isLoadingProfile 
+            ? const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+              )
+            : _buildUserAvatar(avatarUrl),
         ),
         const SizedBox(width: 12),
         
@@ -97,16 +111,18 @@ class UserProfileWidget extends StatelessWidget {
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
-                      userLevel,
+                      isLoadingProfile ? 'Cargando...' : userLevel,
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.primary,
+                        color: isLoadingProfile 
+                          ? AppColors.textHint 
+                          : AppColors.primary,
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (fullProfile != null) ...[
+                  if (fullProfile != null && !isLoadingProfile) ...[
                     const SizedBox(width: 8),
                     Icon(
                       Icons.stars_rounded,
@@ -131,12 +147,12 @@ class UserProfileWidget extends StatelessWidget {
         // Status indicator and arrow
         Column(
           children: [
-            // Indicador de estado del perfil
+            // 🆕 INDICADOR DE ESTADO MEJORADO
             Container(
               width: 8,
               height: 8,
               decoration: BoxDecoration(
-                color: fullProfile != null ? AppColors.success : AppColors.warning,
+                color: _getStatusColor(fullProfile, isLoadingProfile),
                 shape: BoxShape.circle,
               ),
             ),
@@ -152,8 +168,15 @@ class UserProfileWidget extends StatelessWidget {
     );
   }
 
-  // 🆕 MOSTRAR ESTADO DE CARGA
-  Widget _buildLoadingProfile(dynamic user) {
+  // 🆕 OBTENER COLOR DE ESTADO
+  Color _getStatusColor(dynamic fullProfile, bool isLoadingProfile) {
+    if (isLoadingProfile) return AppColors.warning;
+    if (fullProfile != null) return AppColors.success;
+    return AppColors.info; // Perfil básico disponible
+  }
+
+  // 🆕 MOSTRAR ESTADO DE CARGA MEJORADO
+  Widget _buildLoadingProfile(String? message) {
     return Row(
       children: [
         // Loading avatar
@@ -183,7 +206,7 @@ class UserProfileWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                user.fullName.isNotEmpty ? user.fullName : 'Usuario',
+                message ?? 'Cargando...',
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600,
@@ -203,7 +226,7 @@ class UserProfileWidget extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    'Cargando perfil...',
+                    'Preparando perfil...',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),

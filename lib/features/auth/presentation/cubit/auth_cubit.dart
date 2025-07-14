@@ -1,4 +1,4 @@
-// lib/features/auth/presentation/cubit/auth_cubit.dart
+// lib/features/auth/presentation/cubit/auth_cubit.dart - VERSIÓN COMPLETA
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
@@ -8,11 +8,10 @@ import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/register_usecase.dart';
 import '../../domain/services/auth_service.dart';
 import '../../../../core/utils/error_handler.dart';
-// 🆕 IMPORTAR PROFILE SERVICE
 import '../../../profile/domain/services/profile_service.dart';
 import '../../../profile/domain/entities/user_profile_entity.dart';
 
-// ==================== ESTADOS ====================
+// ==================== ESTADOS MEJORADOS ====================
 abstract class AuthState extends Equatable {
   const AuthState();
 
@@ -22,23 +21,32 @@ abstract class AuthState extends Equatable {
 
 class AuthInitial extends AuthState {}
 
-class AuthLoading extends AuthState {}
+class AuthLoading extends AuthState {
+  final String? message;
+  
+  const AuthLoading({this.message});
+  
+  @override
+  List<Object?> get props => [message];
+}
 
 class AuthAuthenticated extends AuthState {
   final UserEntity user;
   final bool emailVerified;
   final bool parentalConsentApproved;
-  final UserProfileEntity? fullProfile; // 🆕 AGREGAR PERFIL COMPLETO
+  final UserProfileEntity? fullProfile;
+  final bool isProfileLoading; // 🆕 INDICADOR DE CARGA DE PERFIL
 
   const AuthAuthenticated(
     this.user, {
     this.emailVerified = true,
     this.parentalConsentApproved = true,
-    this.fullProfile, // 🆕 PERFIL OPCIONAL
+    this.fullProfile,
+    this.isProfileLoading = false, // 🆕 DEFAULT FALSE
   });
 
   @override
-  List<Object?> get props => [user, emailVerified, parentalConsentApproved, fullProfile];
+  List<Object?> get props => [user, emailVerified, parentalConsentApproved, fullProfile, isProfileLoading];
 }
 
 class AuthError extends AuthState {
@@ -98,37 +106,27 @@ class AuthTokenRefreshed extends AuthState {
   List<Object> get props => [user];
 }
 
-// 🆕 NUEVO ESTADO PARA CUANDO SE ESTÁ CARGANDO EL PERFIL COMPLETO
-class AuthLoadingFullProfile extends AuthState {
-  final UserEntity user;
-
-  const AuthLoadingFullProfile(this.user);
-
-  @override
-  List<Object> get props => [user];
-}
-
-// ==================== CUBIT ====================
+// ==================== CUBIT MEJORADO ====================
 @injectable
 class AuthCubit extends Cubit<AuthState> {
   final LoginUseCase _loginUseCase;
   final RegisterUseCase _registerUseCase;
   final AuthService _authService;
-  final ProfileService _profileService; // 🆕 AGREGAR PROFILE SERVICE
+  final ProfileService _profileService;
 
   AuthCubit({
     required LoginUseCase loginUseCase,
     required RegisterUseCase registerUseCase,
     required AuthService authService,
-    required ProfileService profileService, // 🆕 INYECTAR PROFILE SERVICE
+    required ProfileService profileService,
   }) : _loginUseCase = loginUseCase,
        _registerUseCase = registerUseCase,
        _authService = authService,
-       _profileService = profileService, // 🆕 ASIGNAR PROFILE SERVICE
+       _profileService = profileService,
        super(AuthInitial());
 
   Future<void> login(String email, String password) async {
-    emit(AuthLoading());
+    emit(const AuthLoading(message: 'Iniciando sesión...'));
 
     try {
       final params = LoginParams(email: email, password: password);
@@ -160,7 +158,7 @@ class AuthCubit extends Cubit<AuthState> {
     required String confirmPassword,
     required int age,
   }) async {
-    emit(AuthLoading());
+    emit(const AuthLoading(message: 'Creando tu cuenta...'));
 
     try {
       final baseParams = RegisterParams(
@@ -204,7 +202,7 @@ class AuthCubit extends Cubit<AuthState> {
     required RegisterParams baseParams,
     required ParentalInfo parentalInfo,
   }) async {
-    emit(AuthLoading());
+    emit(const AuthLoading(message: 'Registrando con consentimiento parental...'));
 
     try {
       final completeParams = RegisterParams(
@@ -235,7 +233,7 @@ class AuthCubit extends Cubit<AuthState> {
   }
 
   Future<void> logout() async {
-    emit(AuthLoading());
+    emit(const AuthLoading(message: 'Cerrando sesión...'));
     
     try {
       print('🔍 Starting logout process...');
@@ -263,6 +261,7 @@ class AuthCubit extends Cubit<AuthState> {
   // ==================== GESTIÓN DE TOKENS ====================
 
   Future<void> validateCurrentToken() async {
+    // 🆕 NO EMITIR LOADING PARA VALIDACIÓN SILENCIOSA
     try {
       final currentUserResult = await _authService.getCurrentUser();
       
@@ -272,7 +271,7 @@ class AuthCubit extends Cubit<AuthState> {
         },
         (user) async {
           if (user != null) {
-            await _handleSuccessfulAuth(user);
+            await _handleSuccessfulAuth(user, silent: true);
           } else {
             emit(AuthInitial());
           }
@@ -308,7 +307,7 @@ class AuthCubit extends Cubit<AuthState> {
     final currentState = state;
     if (currentState is! AuthEmailVerificationRequired) return;
 
-    emit(AuthLoading());
+    emit(const AuthLoading(message: 'Enviando verificación...'));
 
     try {
       final result = await _authService.sendEmailVerification(userId);
@@ -334,7 +333,7 @@ class AuthCubit extends Cubit<AuthState> {
     if (currentState is! AuthEmailVerificationSent &&
         currentState is! AuthEmailVerificationRequired) return;
 
-    emit(AuthLoading());
+    emit(const AuthLoading(message: 'Reenviando verificación...'));
 
     try {
       final result = await _authService.resendEmailVerification(email);
@@ -398,62 +397,66 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  // ==================== MÉTODOS HELPER ====================
+  // ==================== MÉTODO PRINCIPAL MEJORADO ====================
 
-  // 🆕 MÉTODO PRINCIPAL ACTUALIZADO PARA CARGAR PERFIL COMPLETO
-  Future<void> _handleSuccessfulAuth(UserEntity user) async {
+  Future<void> _handleSuccessfulAuth(UserEntity user, {bool silent = false}) async {
     try {
       print('🔍 [AUTH] Handling successful auth for user: ${user.email}');
       
-      // Primero emitir que tenemos autenticación básica
-      emit(AuthAuthenticated(user));
+      // 🆕 EMITIR ESTADO AUTENTICADO INMEDIATAMENTE CON INDICADOR DE CARGA
+      emit(AuthAuthenticated(user, isProfileLoading: true));
       
-      // Luego intentar cargar el perfil completo
+      // 🆕 INTENTAR CARGAR PERFIL COMPLETO SIN CAMBIAR EL ESTADO PRINCIPAL
       print('🔍 [AUTH] Loading full profile for user: ${user.id}');
-      emit(AuthLoadingFullProfile(user));
       
       final profileResult = await _profileService.getUserProfile(user.id);
       
       await profileResult.fold(
         (failure) async {
           print('⚠️ [AUTH] Could not load full profile: ${failure.message}');
-          // Si no se puede cargar el perfil completo, mantener autenticación básica
-          emit(AuthAuthenticated(user));
+          // 🆕 MANTENER AUTENTICACIÓN BÁSICA PERO SIN INDICADOR DE CARGA
+          emit(AuthAuthenticated(user, isProfileLoading: false));
         },
         (fullProfile) async {
           print('✅ [AUTH] Full profile loaded successfully');
-          // Emitir con perfil completo
-          emit(AuthAuthenticated(user, fullProfile: fullProfile));
+          // 🆕 EMITIR CON PERFIL COMPLETO Y SIN INDICADOR DE CARGA
+          emit(AuthAuthenticated(user, fullProfile: fullProfile, isProfileLoading: false));
         },
       );
       
     } catch (e) {
       print('❌ [AUTH] Error in _handleSuccessfulAuth: $e');
       // Si hay cualquier error, mantener autenticación básica
-      emit(AuthAuthenticated(user));
+      emit(AuthAuthenticated(user, isProfileLoading: false));
     }
   }
 
   // ==================== MÉTODO PARA RECARGAR PERFIL ====================
   
-  // 🆕 MÉTODO PARA RECARGAR SOLO EL PERFIL SIN AFECTAR LA AUTENTICACIÓN
   Future<void> refreshUserProfile() async {
     final currentState = state;
     if (currentState is! AuthAuthenticated) return;
     
     try {
       print('🔍 [AUTH] Refreshing user profile...');
-      emit(AuthLoadingFullProfile(currentState.user));
+      
+      // 🆕 INDICAR QUE EL PERFIL SE ESTÁ CARGANDO
+      emit(AuthAuthenticated(
+        currentState.user,
+        fullProfile: currentState.fullProfile,
+        isProfileLoading: true,
+      ));
       
       final profileResult = await _profileService.getUserProfile(currentState.user.id);
       
       await profileResult.fold(
         (failure) async {
           print('⚠️ [AUTH] Could not refresh profile: ${failure.message}');
-          // Volver al estado anterior si había perfil, sino autenticación básica
+          // Volver al estado anterior sin indicador de carga
           emit(AuthAuthenticated(
             currentState.user,
             fullProfile: currentState.fullProfile,
+            isProfileLoading: false,
           ));
         },
         (fullProfile) async {
@@ -461,6 +464,7 @@ class AuthCubit extends Cubit<AuthState> {
           emit(AuthAuthenticated(
             currentState.user,
             fullProfile: fullProfile,
+            isProfileLoading: false,
           ));
         },
       );
@@ -470,6 +474,7 @@ class AuthCubit extends Cubit<AuthState> {
       emit(AuthAuthenticated(
         currentState.user,
         fullProfile: currentState.fullProfile,
+        isProfileLoading: false,
       ));
     }
   }
@@ -510,7 +515,7 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  // ==================== GETTERS ====================
+  // ==================== GETTERS MEJORADOS ====================
   
   UserEntity? get currentUser {
     final currentState = state;
@@ -520,7 +525,6 @@ class AuthCubit extends Cubit<AuthState> {
     return null;
   }
 
-  // 🆕 GETTER PARA EL PERFIL COMPLETO
   UserProfileEntity? get currentUserProfile {
     final currentState = state;
     if (currentState is AuthAuthenticated) {
@@ -531,12 +535,26 @@ class AuthCubit extends Cubit<AuthState> {
 
   bool get isAuthenticated => state is AuthAuthenticated;
   
-  bool get isLoading => state is AuthLoading || state is AuthLoadingFullProfile;
+  bool get isLoading => state is AuthLoading;
 
-  bool get isLoadingProfile => state is AuthLoadingFullProfile;
+  // 🆕 GETTER MEJORADO PARA ESTADO DE CARGA DE PERFIL
+  bool get isLoadingProfile {
+    final currentState = state;
+    return currentState is AuthAuthenticated && currentState.isProfileLoading;
+  }
 
   bool get hasFullProfile {
     final currentState = state;
-    return currentState is AuthAuthenticated && currentState.fullProfile != null;
+    return currentState is AuthAuthenticated && 
+           currentState.fullProfile != null && 
+           !currentState.isProfileLoading;
+  }
+
+  // 🆕 GETTER PARA SABER SI EL USUARIO ESTÁ AUTENTICADO PERO SIN PERFIL COMPLETO
+  bool get needsProfileLoad {
+    final currentState = state;
+    return currentState is AuthAuthenticated && 
+           currentState.fullProfile == null && 
+           !currentState.isProfileLoading;
   }
 }

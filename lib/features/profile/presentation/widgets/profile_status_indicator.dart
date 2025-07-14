@@ -1,4 +1,4 @@
-// lib/features/profile/presentation/widgets/profile_status_indicator.dart
+// lib/features/profile/presentation/widgets/profile_status_indicator.dart - CORREGIDO
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -21,13 +21,14 @@ class ProfileStatusIndicator extends StatelessWidget {
       builder: (context, authState) {
         if (authState is AuthAuthenticated) {
           final hasFullProfile = authState.fullProfile != null;
+          final isLoadingProfile = authState.isProfileLoading;
           
           if (compact) {
-            return _buildCompactIndicator(hasFullProfile);
+            return _buildCompactIndicator(hasFullProfile, isLoadingProfile);
           } else {
-            return _buildFullIndicator(authState, hasFullProfile);
+            return _buildFullIndicator(authState, hasFullProfile, isLoadingProfile);
           }
-        } else if (authState is AuthLoadingFullProfile) {
+        } else if (authState is AuthLoading) {
           return _buildLoadingIndicator();
         } else {
           return _buildNotAuthenticatedIndicator();
@@ -36,7 +37,18 @@ class ProfileStatusIndicator extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactIndicator(bool hasFullProfile) {
+  Widget _buildCompactIndicator(bool hasFullProfile, bool isLoadingProfile) {
+    if (isLoadingProfile) {
+      return SizedBox(
+        width: 8,
+        height: 8,
+        child: CircularProgressIndicator(
+          strokeWidth: 1.5,
+          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+        ),
+      );
+    }
+    
     return Container(
       width: 8,
       height: 8,
@@ -47,19 +59,43 @@ class ProfileStatusIndicator extends StatelessWidget {
     );
   }
 
-  Widget _buildFullIndicator(AuthAuthenticated authState, bool hasFullProfile) {
-    final iconData = hasFullProfile ? Icons.check_circle : Icons.schedule;
-    final color = hasFullProfile ? AppColors.success : AppColors.warning;
-    final text = hasFullProfile ? 'Perfil completo' : 'Cargando perfil...';
+  Widget _buildFullIndicator(AuthAuthenticated authState, bool hasFullProfile, bool isLoadingProfile) {
+    IconData iconData;
+    Color color;
+    String text;
+
+    if (isLoadingProfile) {
+      iconData = Icons.schedule;
+      color = AppColors.primary;
+      text = 'Cargando perfil...';
+    } else if (hasFullProfile) {
+      iconData = Icons.check_circle;
+      color = AppColors.success;
+      text = 'Perfil completo';
+    } else {
+      iconData = Icons.info_outline;
+      color = AppColors.warning;
+      text = 'Perfil básico';
+    }
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          iconData,
-          color: color,
-          size: 16,
-        ),
+        if (isLoadingProfile) 
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          )
+        else
+          Icon(
+            iconData,
+            color: color,
+            size: 16,
+          ),
         if (showText) ...[
           const SizedBox(width: 6),
           Text(

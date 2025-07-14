@@ -1,4 +1,4 @@
-// lib/features/navigation/presentation/widgets/side_nav_bar.dart
+// lib/features/navigation/presentation/widgets/side_nav_bar.dart - VERSIÓN MEJORADA
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -46,11 +46,16 @@ class SideNavBar extends StatelessWidget {
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
+                          child: const Icon(
+                            Icons.eco_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ],
                     ),
                     const Spacer(),
-                    // 🆕 SALUDO DINÁMICO BASADO EN EL USUARIO AUTENTICADO
+                    // 🆕 SALUDO DINÁMICO MEJORADO
                     BlocBuilder<AuthCubit, AuthState>(
                       builder: (context, authState) {
                         return _buildDynamicGreeting(authState);
@@ -137,7 +142,7 @@ class SideNavBar extends StatelessWidget {
             ),
           ),
           
-          // User Profile at bottom - 🆕 CON ACCESO AL AUTHCUBIT
+          // User Profile at bottom
           BlocBuilder<AuthCubit, AuthState>(
             builder: (context, authState) {
               return const UserProfileWidget();
@@ -148,11 +153,12 @@ class SideNavBar extends StatelessWidget {
     );
   }
 
-  // 🆕 MÉTODO PARA CONSTRUIR SALUDO DINÁMICO
+  // 🆕 MÉTODO MEJORADO PARA CONSTRUIR SALUDO DINÁMICO
   Widget _buildDynamicGreeting(AuthState authState) {
     if (authState is AuthAuthenticated) {
       final user = authState.user;
       final fullProfile = authState.fullProfile;
+      final isLoadingProfile = authState.isProfileLoading;
       
       // Usar nombre del perfil completo si está disponible
       final firstName = fullProfile?.firstName ?? user.firstName;
@@ -167,11 +173,11 @@ class SideNavBar extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(20),
-              border: authState is AuthLoadingFullProfile 
+              border: isLoadingProfile 
                 ? Border.all(color: Colors.white.withOpacity(0.5), width: 2)
                 : null,
             ),
-            child: authState is AuthLoadingFullProfile
+            child: isLoadingProfile
               ? const Center(
                   child: SizedBox(
                     width: 20,
@@ -211,13 +217,35 @@ class SideNavBar extends StatelessWidget {
                     const SizedBox(width: 4),
                     Flexible(
                       child: Text(
-                        userLevel,
+                        isLoadingProfile ? 'Cargando nivel...' : userLevel,
                         style: AppTextStyles.bodySmall.copyWith(
                           color: Colors.white.withOpacity(0.8),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    // 🆕 INDICADOR DE PERFIL COMPLETO
+                    if (fullProfile != null) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ] else if (isLoadingProfile) ...[
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 6,
+                        height: 6,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -225,15 +253,15 @@ class SideNavBar extends StatelessWidget {
           ),
         ],
       );
-    } else if (authState is AuthLoading || authState is AuthLoadingFullProfile) {
-      return _buildLoadingGreeting();
+    } else if (authState is AuthLoading) {
+      return _buildLoadingGreeting(authState.message);
     } else {
       return _buildGuestGreeting();
     }
   }
 
-  // 🆕 SALUDO DE CARGA
-  Widget _buildLoadingGreeting() {
+  // 🆕 SALUDO DE CARGA MEJORADO
+  Widget _buildLoadingGreeting(String? message) {
     return Row(
       children: [
         Container(
@@ -260,7 +288,7 @@ class SideNavBar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Cargando...',
+                message ?? 'Cargando...',
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w500,
@@ -332,4 +360,4 @@ class SideNavBar extends StatelessWidget {
     if (age < 25) return 'Eco Warrior';
     return 'Eco Master';
   }
-} 
+}
