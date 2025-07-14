@@ -204,10 +204,13 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i75.HomeRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i115.CompanionRemoteDataSource>(
         () => _i115.CompanionRemoteDataSourceImpl(gh<_i510.ApiClient>()));
-    gh.lazySingleton<_i850.ProfileRemoteDataSource>(
-        () => _i850.ProfileRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i614.TriviaRemoteDataSource>(
         () => _i614.TriviaRemoteDataSourceImpl(gh<_i510.ApiClient>()));
+    gh.lazySingleton<_i850.ProfileRemoteDataSource>(
+        () => _i850.ProfileRemoteDataSourceImpl(
+              gh<_i510.ApiClient>(),
+              gh<_i497.TokenManager>(),
+            ));
     gh.factory<_i416.TriviaRepository>(() => _i121.TriviaRepositoryImpl(
           remoteDataSource: gh<_i614.TriviaRemoteDataSource>(),
           localDataSource: gh<_i430.TriviaLocalDataSource>(),

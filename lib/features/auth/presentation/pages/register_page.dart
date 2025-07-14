@@ -1,4 +1,3 @@
-// lib/features/auth/presentation/pages/register_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:xuma_a/features/auth/domain/usecases/register_usecase.dart';
@@ -6,7 +5,6 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/utils/validation_utils.dart';
 import '../../../../di/injection.dart';
-import '../../../navigation/presentation/pages/main_wrapper_page.dart';
 import '../cubit/auth_cubit.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/custom_button.dart';
@@ -15,6 +13,7 @@ import '../widgets/parental_info_form.dart';
 import '../widgets/parental_consent_dialog.dart';
 import '../widgets/email_verification_page.dart';
 import '../../domain/entities/parental_info.dart';
+import 'login_page.dart';
 
 class RegisterPage extends StatelessWidget {
   const RegisterPage({Key? key}) : super(key: key);
@@ -46,13 +45,13 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
   
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _showingSuccessDialog = false; // 🆕 NUEVO FLAG
 
   @override
   void initState() {
     super.initState();
-    // Listener para actualizar indicador de fuerza de contraseña
     _passwordController.addListener(() {
-      setState(() {}); // Actualizar UI cuando cambie la contraseña
+      setState(() {});
     });
   }
 
@@ -92,8 +91,9 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
             if (state is AuthError) {
               _showErrorSnackBar(context, state.message);
             } else if (state is AuthAuthenticated) {
-              _showSuccessSnackBar(context, '¡Registro exitoso! Bienvenido a XUMA\'A!');
-              _navigateToHome(context);
+              // 🆕 ACTIVAR FLAG ANTES DE MOSTRAR EL DIÁLOGO
+              _showingSuccessDialog = true;
+              _showRegistrationSuccessDialog(context, state.user);
             } else if (state is AuthParentalConsentPending) {
               _showParentalConsentDialog(context, state.user, state.parentEmail);
             } else if (state is AuthEmailVerificationRequired) {
@@ -104,6 +104,26 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
           },
           child: BlocBuilder<AuthCubit, AuthState>(
             builder: (context, state) {
+              // 🆕 SI SE ESTÁ MOSTRANDO EL DIÁLOGO DE ÉXITO, MOSTRAR PANTALLA DE CARGA
+              if (_showingSuccessDialog || state is AuthAuthenticated) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text(
+                        'Finalizando registro...',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
               // Mostrar formulario de información parental
               if (state is AuthParentalInfoRequired) {
                 return SingleChildScrollView(
@@ -336,6 +356,164 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
     );
   }
 
+  // 🆕 DIÁLOGO DE ÉXITO MEJORADO
+  void _showRegistrationSuccessDialog(BuildContext context, dynamic user) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => WillPopScope(
+        onWillPop: () async => false, // 🆕 PREVENIR CIERRE CON BACK BUTTON
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icono de éxito animado
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 800),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          gradient: AppColors.earthGradient,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check_circle_rounded,
+                          color: Colors.white,
+                          size: 40,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Título
+                Text(
+                  '¡Registro Exitoso! 🎉',
+                  style: AppTextStyles.h3.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Mensaje de bienvenida personalizado
+                Text(
+                  '¡Hola ${user.firstName}!',
+                  style: AppTextStyles.h4.copyWith(
+                    color: AppColors.primary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Información
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.success.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.account_circle_rounded,
+                        color: AppColors.success,
+                        size: 24,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tu cuenta ha sido creada exitosamente. Ahora puedes iniciar sesión con tu email y contraseña.',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Botón para ir al login
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop(); // Cerrar diálogo
+                      _navigateToLogin(context); // Ir al login
+                    },
+                    icon: const Icon(Icons.login_rounded),
+                    label: const Text('Iniciar Sesión'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Mensaje adicional
+                Text(
+                  'Bienvenido a la comunidad XUMA\'A 🌱',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textHint,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 🆕 MÉTODO PARA NAVEGAR AL LOGIN MEJORADO
+  void _navigateToLogin(BuildContext context) {
+    // Limpiar el estado del AuthCubit antes de navegar
+    context.read<AuthCubit>().reset();
+    
+    // Navegar al login reemplazando toda la pila de navegación
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (context) => const LoginPage(),
+      ),
+      (route) => false,
+    );
+  }
+
   // Widget para mostrar fuerza de contraseña en tiempo real
   Widget _buildPasswordStrengthIndicator() {
     final password = _passwordController.text;
@@ -504,6 +682,12 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
 
   void _handleRegister() {
     if (_formKey.currentState?.validate() ?? false) {
+      print('🔍 [REGISTER] Registering user with data:');
+      print('   - FirstName: ${_firstNameController.text.trim()}');
+      print('   - LastName: ${_lastNameController.text.trim()}');
+      print('   - Email: ${_emailController.text.trim()}');
+      print('   - Age: ${_ageController.text}');
+      
       context.read<AuthCubit>().register(
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
@@ -527,7 +711,7 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
         onAccept: () {
           Navigator.of(context).pop();
           context.read<AuthCubit>().acknowledgeParentalConsent();
-          Navigator.of(context).pop(); // Volver al login
+          _navigateToLogin(context);
         },
       ),
     );
@@ -567,15 +751,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
 
   void _showEmailSentMessage(BuildContext context, String email) {
     _showSuccessSnackBar(context, '📧 Email de verificación enviado a $email');
-  }
-
-  void _navigateToHome(BuildContext context) {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => const MainWrapperPage(),
-      ),
-      (route) => false,
-    );
   }
 
   void _showErrorSnackBar(BuildContext context, String message) {

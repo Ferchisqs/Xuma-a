@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
-import '../../../navigation/presentation/cubit/navigation_cubit.dart';
 
 class EcoStatsWidget extends StatelessWidget {
   const EcoStatsWidget({Key? key}) : super(key: key);
