@@ -1,3 +1,4 @@
+// lib/features/trivia/presentation/pages/trivia_game_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,7 +12,7 @@ import '../cubit/trivia_game_cubit.dart';
 import '../widgets/trivia_question_widget.dart';
 import '../widgets/trivia_timer_widget.dart';
 import '../widgets/trivia_progress_widget.dart';
-import '../widgets/animated_trivia_completion_dialog.dart'; // 🆕 IMPORT CORRECTO
+import '../widgets/animated_trivia_completion_dialog.dart'; // 🔧 IMPORT CORRECTO
 
 class TriviaGamePage extends StatelessWidget {
   final TriviaCategoryEntity category;
@@ -156,7 +157,7 @@ class _TriviaGameContentState extends State<_TriviaGameContent> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '100',
+                                  '${state.currentQuestion.points}',
                                   style: AppTextStyles.bodyMedium.copyWith(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -264,7 +265,7 @@ class _TriviaGameContentState extends State<_TriviaGameContent> {
     );
   }
 
-  // 🆕 MÉTODO ACTUALIZADO - usar el diálogo animado
+  // 🔧 MÉTODO CORREGIDO - usar el diálogo animado con navegación arreglada
   void _showAnimatedCompletionDialog(BuildContext context, TriviaGameCompleted state) {
     showDialog(
       context: context,
@@ -272,6 +273,8 @@ class _TriviaGameContentState extends State<_TriviaGameContent> {
       builder: (dialogContext) => AnimatedTriviaCompletionDialog(
         result: state.result,
         onContinue: () {
+          // 🔧 ESTA FUNCIÓN SE EJECUTA CUANDO EL USUARIO PRESIONA "CONTINUAR TRIVIAS"
+          // Solo cierra la página actual del juego, no navega a otra sección
           Navigator.of(context).pop(); // Cerrar la página de trivia
         },
       ),

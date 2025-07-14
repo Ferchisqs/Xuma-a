@@ -248,100 +248,130 @@ class _CompanionEvolutionDialogState extends State<CompanionEvolutionDialog>
       ),
     );
   }
-  
-  Widget _buildEvolutionInfo() {
+    Widget _buildEvolutionInfo() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12), // 🔧 REDUCIR PADDING
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(12), // 🔧 REDUCIR RADIO
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min, // 🔧 TAMAÑO MÍNIMO
         children: [
-          // Nombre y etapa
+          // Nombre y etapa - MÁS COMPACTO
           Text(
             '${widget.companion.displayName} ${widget.companion.stageDisplayName}',
             style: const TextStyle(
-              fontSize: 20,
+              fontSize: 18, // 🔧 REDUCIR FUENTE
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
+            textAlign: TextAlign.center,
           ),
           
-          const SizedBox(height: 8),
+          const SizedBox(height: 4), // 🔧 REDUCIR ESPACIO
           
           Text(
             widget.companion.typeDescription,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12, // 🔧 REDUCIR FUENTE
               color: Colors.white.withOpacity(0.8),
             ),
+            textAlign: TextAlign.center,
           ),
           
-          const SizedBox(height: 12),
+          const SizedBox(height: 8), // 🔧 REDUCIR ESPACIO
           
-          // Nuevas habilidades desbloqueadas
+          // Nuevas habilidades - VERSIÓN COMPACTA Y SIN OVERFLOW
           Container(
-            padding: const EdgeInsets.all(12),
+            width: double.infinity, // 🔧 ANCHO COMPLETO
+            padding: const EdgeInsets.all(8), // 🔧 REDUCIR PADDING
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8), // 🔧 REDUCIR RADIO
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min, // 🔧 TAMAÑO MÍNIMO
               children: [
+                // Header más compacto
                 Row(
+                  mainAxisSize: MainAxisSize.min, // 🔧 TAMAÑO MÍNIMO
                   children: [
                     Icon(
                       Icons.new_releases,
                       color: Colors.yellow[300],
-                      size: 16,
+                      size: 14, // 🔧 REDUCIR ÍCONO
                     ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'Nuevas habilidades desbloqueadas:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(width: 4), // 🔧 REDUCIR ESPACIO
+                    Flexible( // 🔧 HACER FLEXIBLE PARA EVITAR OVERFLOW
+                      child: Text(
+                        'Nuevas habilidades:',
+                        style: const TextStyle(
+                          fontSize: 11, // 🔧 REDUCIR FUENTE
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis, // 🔧 TRUNCAR SI ES NECESARIO
                       ),
                     ),
                   ],
                 ),
                 
-                const SizedBox(height: 8),
+                const SizedBox(height: 6), // 🔧 REDUCIR ESPACIO
                 
-                Wrap(
-                  spacing: 6,
-                  children: _getNewAbilities().map((ability) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        ability,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.white.withOpacity(0.9),
+                // Chips de habilidades - CON LÍMITE DE ANCHO
+                Container(
+                  width: double.infinity,
+                  child: Wrap(
+                    spacing: 4, // 🔧 REDUCIR ESPACIADO
+                    runSpacing: 4, // 🔧 AGREGAR ESPACIADO VERTICAL
+                    alignment: WrapAlignment.center, // 🔧 CENTRAR
+                    children: _getNewAbilities().map((ability) {
+                      return Container(
+                        constraints: const BoxConstraints(
+                          maxWidth: 80, // 🔧 LIMITAR ANCHO MÁXIMO
                         ),
-                      ),
-                    );
-                  }).toList(),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6, // 🔧 REDUCIR PADDING
+                          vertical: 2,   // 🔧 REDUCIR PADDING
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(6), // 🔧 REDUCIR RADIO
+                        ),
+                        child: Text(
+                          ability,
+                          style: TextStyle(
+                            fontSize: 9, // 🔧 REDUCIR FUENTE AÚN MÁS
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis, // 🔧 TRUNCAR SI ES NECESARIO
+                          maxLines: 1, // 🔧 SOLO UNA LÍNEA
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
               ],
             ),
           ),
           
-          const SizedBox(height: 12),
+          const SizedBox(height: 8), // 🔧 REDUCIR ESPACIO
           
-          // Estadísticas mejoradas
-          Text(
-            '¡${widget.companion.displayName} ahora es más fuerte y tiene nuevas animaciones!',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.white.withOpacity(0.9),
+          // Mensaje final - MÁS COMPACTO
+          Container(
+            width: double.infinity,
+            child: Text(
+              '¡${widget.companion.displayName} ahora es más fuerte!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11, // 🔧 REDUCIR FUENTE
+                color: Colors.white.withOpacity(0.9),
+              ),
+              maxLines: 2, // 🔧 MÁXIMO 2 LÍNEAS
+              overflow: TextOverflow.ellipsis, // 🔧 TRUNCAR SI ES NECESARIO
             ),
           ),
         ],
@@ -349,6 +379,7 @@ class _CompanionEvolutionDialogState extends State<CompanionEvolutionDialog>
     );
   }
   
+ 
   Widget _buildContinueButton() {
     return SizedBox(
       width: double.infinity,
@@ -382,7 +413,9 @@ class _CompanionEvolutionDialogState extends State<CompanionEvolutionDialog>
         ),
       ),
     );
+    
   }
+  
   
   List<String> _getNewAbilities() {
     switch (widget.companion.stage) {

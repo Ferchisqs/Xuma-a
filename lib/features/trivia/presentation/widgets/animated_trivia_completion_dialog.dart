@@ -1,3 +1,4 @@
+// lib/features/trivia/presentation/widgets/animated_trivia_completion_dialog.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -151,9 +152,10 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
               opacity: _fadeAnimation,
               child: Container(
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.85, // 🔧 LIMITAMOS ALTURA
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                  maxWidth: MediaQuery.of(context).size.width * 0.9, // 🔧 AGREGADO MAXWIDTH
                 ),
-                padding: const EdgeInsets.all(20), // 🔧 REDUCIMOS PADDING
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: AppColors.background,
                   borderRadius: BorderRadius.circular(20),
@@ -165,7 +167,7 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
                     ),
                   ],
                 ),
-                child: SingleChildScrollView( // 🔧 AGREGAMOS SCROLL
+                child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -175,7 +177,7 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
                       // Estrella animada
                       _buildAnimatedStar(),
                       
-                      const SizedBox(height: 16), // 🔧 REDUCIMOS ESPACIO
+                      const SizedBox(height: 16),
                       
                       // Título con animación
                       SlideTransition(
@@ -190,12 +192,12 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
                         ),
                       ),
                       
-                      const SizedBox(height: 12), // 🔧 REDUCIMOS ESPACIO
+                      const SizedBox(height: 12),
                       
                       // Puntos animados
                       _buildAnimatedPoints(),
                       
-                      const SizedBox(height: 16), // 🔧 REDUCIMOS ESPACIO
+                      const SizedBox(height: 16),
                       
                       // Mensaje con animación
                       SlideTransition(
@@ -203,7 +205,7 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
                         child: _buildSuccessMessage(),
                       ),
                       
-                      const SizedBox(height: 16), // 🔧 REDUCIMOS ESPACIO
+                      const SizedBox(height: 16),
                       
                       // Estadísticas animadas
                       SlideTransition(
@@ -211,9 +213,9 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
                         child: _buildAnimatedStats(),
                       ),
                       
-                      const SizedBox(height: 20), // 🔧 REDUCIMOS ESPACIO
+                      const SizedBox(height: 20),
                       
-                      // Botones con animación
+                      // Botones con animación - 🔧 NAVEGACIÓN ARREGLADA
                       SlideTransition(
                         position: _slideAnimation,
                         child: _buildActionButtons(context),
@@ -233,7 +235,7 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
     return AnimatedBuilder(
       animation: _confettiController,
       builder: (context, child) {
-        return Container(
+        return SizedBox(
           height: 60,
           child: Stack(
             children: List.generate(12, (index) {
@@ -317,7 +319,11 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
             return Transform.scale(
               scale: scale,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                width: double.infinity, // 🔧 ANCHO COMPLETO
+                constraints: const BoxConstraints(
+                  maxWidth: 280, // 🔧 MÁXIMO ANCHO PARA EVITAR DESBORDAMIENTO
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // 🔧 PADDING REDUCIDO
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -332,7 +338,8 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
                   ),
                 ),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center, // 🔧 CENTRADO
+                  mainAxisSize: MainAxisSize.min, // 🔧 TAMAÑO MÍNIMO
                   children: [
                     TweenAnimationBuilder<double>(
                       duration: const Duration(milliseconds: 500),
@@ -340,20 +347,24 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
                       builder: (context, value, child) {
                         return Transform.rotate(
                           angle: value * 2 * 3.14159,
-                          child: const Icon(
+                          child: Icon(
                             Icons.eco,
                             color: AppColors.primary,
-                            size: 28,
+                            size: 24, // 🔧 TAMAÑO REDUCIDO
                           ),
                         );
                       },
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      '+ ${_pointsCountAnimation.value} pts',
-                      style: AppTextStyles.h3.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
+                    Flexible( // 🔧 FLEXIBLE EN LUGAR DE EXPANDED
+                      child: Text(
+                        '+ ${_pointsCountAnimation.value} pts',
+                        style: AppTextStyles.h4.copyWith( // 🔧 TEXTO MÁS PEQUEÑO
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis, // 🔧 PREVENIR OVERFLOW
                       ),
                     ),
                   ],
@@ -495,6 +506,7 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
     );
   }
 
+  // 🔧 BOTONES DE ACCIÓN CORREGIDOS - NAVEGACIÓN ARREGLADA
   Widget _buildActionButtons(BuildContext context) {
     return Column(
       children: [
@@ -509,17 +521,20 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.of(context).pop();
-                    widget.onContinue();
+                    // 🔧 NAVEGACIÓN CORRECTA A COMPAÑEROS
+                    Navigator.of(context).pop(); // Cerrar diálogo
+                    // Usar Navigator.pop hasta llegar al MainWrapper y luego navegar
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    // Cambiar a la pestaña de compañeros
                     context.read<NavigationCubit>().goToCompanion();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 12), // 🔧 REDUCIMOS PADDING
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    elevation: 4, // 🔧 REDUCIMOS ELEVACIÓN
+                    elevation: 4,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -534,7 +549,7 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
                             child: const Icon(
                               Icons.pets, 
                               color: Colors.white,
-                              size: 18, // 🔧 REDUCIMOS TAMAÑO
+                              size: 18,
                             ),
                           );
                         },
@@ -542,8 +557,8 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
-                          'Ver Compañeros', // 🔧 TEXTO MÁS CORTO
-                          style: AppTextStyles.bodySmall.copyWith( // 🔧 TEXTO MÁS PEQUEÑO
+                          'Ver Compañeros',
+                          style: AppTextStyles.bodySmall.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
                           ),
@@ -558,26 +573,28 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
           },
         ),
         
-        const SizedBox(height: 8), // 🔧 REDUCIMOS ESPACIO
+        const SizedBox(height: 8),
         
         // Botón continuar con trivias
         SizedBox(
           width: double.infinity,
           child: OutlinedButton(
             onPressed: () {
-              Navigator.of(context).pop();
-              widget.onContinue();
+              // 🔧 NAVEGACIÓN CORRECTA PARA CONTINUAR CON TRIVIAS
+              Navigator.of(context).pop(); // Cerrar diálogo
+              widget.onContinue(); // Cerrar página de juego actual
+              // El usuario regresará a la página de categorías de trivia
             },
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: AppColors.primary),
-              padding: const EdgeInsets.symmetric(vertical: 12), // 🔧 REDUCIMOS PADDING
+              padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: Text(
-              'Continuar Trivias', // 🔧 TEXTO MÁS CORTO
-              style: AppTextStyles.bodySmall.copyWith( // 🔧 TEXTO MÁS PEQUEÑO
+              'Continuar Trivias',
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w600,
               ),
