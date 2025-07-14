@@ -8,6 +8,9 @@ import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/register_usecase.dart';
 import '../../domain/services/auth_service.dart';
 import '../../../../core/utils/error_handler.dart';
+// 🆕 IMPORTAR PROFILE SERVICE
+import '../../../profile/domain/services/profile_service.dart';
+import '../../../profile/domain/entities/user_profile_entity.dart';
 
 // ==================== ESTADOS ====================
 abstract class AuthState extends Equatable {
@@ -25,15 +28,17 @@ class AuthAuthenticated extends AuthState {
   final UserEntity user;
   final bool emailVerified;
   final bool parentalConsentApproved;
+  final UserProfileEntity? fullProfile; // 🆕 AGREGAR PERFIL COMPLETO
 
   const AuthAuthenticated(
     this.user, {
     this.emailVerified = true,
     this.parentalConsentApproved = true,
+    this.fullProfile, // 🆕 PERFIL OPCIONAL
   });
 
   @override
-  List<Object> get props => [user, emailVerified, parentalConsentApproved];
+  List<Object?> get props => [user, emailVerified, parentalConsentApproved, fullProfile];
 }
 
 class AuthError extends AuthState {
@@ -93,22 +98,34 @@ class AuthTokenRefreshed extends AuthState {
   List<Object> get props => [user];
 }
 
+// 🆕 NUEVO ESTADO PARA CUANDO SE ESTÁ CARGANDO EL PERFIL COMPLETO
+class AuthLoadingFullProfile extends AuthState {
+  final UserEntity user;
+
+  const AuthLoadingFullProfile(this.user);
+
+  @override
+  List<Object> get props => [user];
+}
+
 // ==================== CUBIT ====================
 @injectable
 class AuthCubit extends Cubit<AuthState> {
   final LoginUseCase _loginUseCase;
   final RegisterUseCase _registerUseCase;
   final AuthService _authService;
+  final ProfileService _profileService; // 🆕 AGREGAR PROFILE SERVICE
 
   AuthCubit({
     required LoginUseCase loginUseCase,
     required RegisterUseCase registerUseCase,
     required AuthService authService,
+    required ProfileService profileService, // 🆕 INYECTAR PROFILE SERVICE
   }) : _loginUseCase = loginUseCase,
        _registerUseCase = registerUseCase,
        _authService = authService,
+       _profileService = profileService, // 🆕 ASIGNAR PROFILE SERVICE
        super(AuthInitial());
-
 
   Future<void> login(String email, String password) async {
     emit(AuthLoading());
@@ -119,23 +136,23 @@ class AuthCubit extends Cubit<AuthState> {
 
       await result.fold(
         (failure) async {
-          print('❌ Login failed: ${failure.message}'); // Para debug
+          print('❌ Login failed: ${failure.message}');
           final userFriendlyMessage = ErrorHandler.getErrorMessage(failure.message);
           emit(AuthError(userFriendlyMessage));
         },
         (user) async {
-          print('✅ Login successful for: ${user.email}'); // Para debug
+          print('✅ Login successful for: ${user.email}');
           await _handleSuccessfulAuth(user);
         },
       );
     } catch (e) {
-      print('❌ Login exception: $e'); // Para debug
+      print('❌ Login exception: $e');
       final userFriendlyMessage = ErrorHandler.getErrorMessage(e.toString());
       emit(AuthError(userFriendlyMessage));
     }
   }
 
-   Future<void> register({
+  Future<void> register({
     required String firstName,
     required String lastName,
     required String email,
@@ -155,35 +172,34 @@ class AuthCubit extends Cubit<AuthState> {
         age: age,
       );
 
-      print('🔍 Registering user: $email, age: $age'); // Para debug
+      print('🔍 Registering user: $email, age: $age');
 
-      // Si es menor de 13 años, solicitar información parental
       if (baseParams.needsParentalConsent) {
-        print('👨‍👩‍👧‍👦 Menor de 13, requiere info parental'); // Para debug
+        print('👨‍👩‍👧‍👦 Menor de 13, requiere info parental');
         emit(AuthParentalInfoRequired(baseParams));
         return;
       }
 
-      // Registro normal
       final result = await _registerUseCase(baseParams);
 
       await result.fold(
         (failure) async {
-          print('❌ Registration failed: ${failure.message}'); // Para debug
+          print('❌ Registration failed: ${failure.message}');
           final userFriendlyMessage = ErrorHandler.getErrorMessage(failure.message);
           emit(AuthError(userFriendlyMessage));
         },
         (user) async {
-          print('✅ Registration successful for: ${user.email}'); // Para debug
+          print('✅ Registration successful for: ${user.email}');
           await _handleSuccessfulAuth(user);
         },
       );
     } catch (e) {
-      print('❌ Registration exception: $e'); // Para debug
+      print('❌ Registration exception: $e');
       final userFriendlyMessage = ErrorHandler.getErrorMessage(e.toString());
       emit(AuthError(userFriendlyMessage));
     }
   }
+
   Future<void> registerWithParentalInfo({
     required RegisterParams baseParams,
     required ParentalInfo parentalInfo,
@@ -209,7 +225,6 @@ class AuthCubit extends Cubit<AuthState> {
           emit(AuthError(userFriendlyMessage));
         },
         (user) async {
-          // Para menores, mostrar estado de consentimiento pendiente
           emit(AuthParentalConsentPending(user, parentalInfo.guardianEmail));
         },
       );
@@ -219,19 +234,17 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
- 
   Future<void> logout() async {
     emit(AuthLoading());
     
     try {
-      print('🔍 Starting logout process...'); // Para debug
+      print('🔍 Starting logout process...');
       
       final result = await _authService.logout();
       
       await result.fold(
         (failure) async {
-          print('⚠️ Server logout failed: ${failure.message}'); // Para debug
-          // Incluso si falla el logout en el servidor, limpiar localmente
+          print('⚠️ Server logout failed: ${failure.message}');
           print('✅ Cleaning local session anyway...');
           emit(AuthInitial());
         },
@@ -241,8 +254,7 @@ class AuthCubit extends Cubit<AuthState> {
         },
       );
     } catch (e) {
-      print('❌ Logout exception: $e'); // Para debug
-      // Incluso si hay excepción, limpiar estado local
+      print('❌ Logout exception: $e');
       print('✅ Exception during logout, but cleaning local session...');
       emit(AuthInitial());
     }
@@ -256,7 +268,6 @@ class AuthCubit extends Cubit<AuthState> {
       
       await currentUserResult.fold(
         (failure) async {
-          // Si no hay usuario válido, ir a inicial sin mostrar error
           emit(AuthInitial());
         },
         (user) async {
@@ -353,14 +364,12 @@ class AuthCubit extends Cubit<AuthState> {
 
       await result.fold(
         (failure) async {
-          // No mostrar error, solo mantener estado actual para verificaciones automáticas
+          // No mostrar error, solo mantener estado actual
         },
         (status) async {
           if (status['isVerified'] == true) {
-            // Email verificado, obtener usuario actualizado
             await validateCurrentToken();
           }
-          // Si no está verificado, mantener el estado actual
         },
       );
     } catch (e) {
@@ -380,10 +389,8 @@ class AuthCubit extends Cubit<AuthState> {
         },
         (status) async {
           if (status['isApproved'] == true) {
-            // Consentimiento aprobado, obtener usuario actualizado
             await validateCurrentToken();
           }
-          // Si no está aprobado, mantener el estado actual
         },
       );
     } catch (e) {
@@ -393,82 +400,79 @@ class AuthCubit extends Cubit<AuthState> {
 
   // ==================== MÉTODOS HELPER ====================
 
-    Future<void> _handleSuccessfulAuth(UserEntity user) async {
+  // 🆕 MÉTODO PRINCIPAL ACTUALIZADO PARA CARGAR PERFIL COMPLETO
+  Future<void> _handleSuccessfulAuth(UserEntity user) async {
     try {
-      print('🔍 Handling successful auth for user: ${user.email}'); // Para debug
+      print('🔍 [AUTH] Handling successful auth for user: ${user.email}');
       
-      // Para usuarios que ya están verificados (como en login), ir directo
-      // Solo verificar servicios adicionales si es necesario
+      // Primero emitir que tenemos autenticación básica
+      emit(AuthAuthenticated(user));
       
-      if (user.age < 13) {
-        // Para menores de 13, verificar consentimiento parental
-        print('👨‍👩‍👧‍👦 Usuario menor de 13, verificando consentimiento parental'); // Para debug
-        
-        final consentResult = await _authService.getParentalConsentStatus(user.id);
-        
-        await consentResult.fold(
-          (failure) async {
-            print('⚠️ No se pudo verificar consentimiento parental, usuario autenticado'); // Para debug
-            // Si no hay servicio de consentimiento, asumir que está autenticado
-            emit(AuthAuthenticated(user));
-          },
-          (consentStatus) async {
-            final isApproved = consentStatus['isApproved'] ?? 
-                              consentStatus['approved'] ?? 
-                              true; // Default true para login
-            final parentEmail = consentStatus['parentEmail'] ?? 
-                               consentStatus['guardian_email'] ?? 
-                               '';
-            
-            if (!isApproved) {
-              print('👨‍👩‍👧‍👦 Consentimiento parental pendiente'); // Para debug
-              emit(AuthParentalConsentPending(user, parentEmail));
-            } else {
-              print('✅ Consentimiento parental aprobado'); // Para debug
-              emit(AuthAuthenticated(user));
-            }
-          },
-        );
-      } else {
-        // Para usuarios mayores de 13
-        print('👤 Usuario mayor de 13, verificando estado de verificación'); // Para debug
-        
-        // Intentar obtener estado completo, pero no bloquear si no funciona
-        final authStatusResult = await _authService.getFullAuthStatus(user.id);
-
-        await authStatusResult.fold(
-          (failure) async {
-            print('⚠️ No se pudo verificar estado completo, asumiendo usuario verificado'); // Para debug
-            // Para login, si no podemos verificar estado, asumir que está autenticado
-            emit(AuthAuthenticated(user));
-          },
-          (authStatus) async {
-            final emailVerification = authStatus['emailVerification'] as Map<String, dynamic>?;
-            
-            final isEmailVerified = emailVerification?['isVerified'] ?? 
-                                   emailVerification?['emailVerified'] ?? 
-                                   true; // Default true para login
-
-            print('🔍 Email verification status: $isEmailVerified'); // Para debug
-
-            if (!isEmailVerified) {
-              print('📧 Email no verificado, mostrando pantalla de verificación'); // Para debug
-              emit(AuthEmailVerificationRequired(user));
-            } else {
-              print('✅ Usuario completamente autenticado'); // Para debug
-              emit(AuthAuthenticated(user));
-            }
-          },
-        );
-      }
+      // Luego intentar cargar el perfil completo
+      print('🔍 [AUTH] Loading full profile for user: ${user.id}');
+      emit(AuthLoadingFullProfile(user));
+      
+      final profileResult = await _profileService.getUserProfile(user.id);
+      
+      await profileResult.fold(
+        (failure) async {
+          print('⚠️ [AUTH] Could not load full profile: ${failure.message}');
+          // Si no se puede cargar el perfil completo, mantener autenticación básica
+          emit(AuthAuthenticated(user));
+        },
+        (fullProfile) async {
+          print('✅ [AUTH] Full profile loaded successfully');
+          // Emitir con perfil completo
+          emit(AuthAuthenticated(user, fullProfile: fullProfile));
+        },
+      );
+      
     } catch (e) {
-      print('❌ Error en _handleSuccessfulAuth: $e'); // Para debug
-      // Si hay cualquier error, para login asumir que está autenticado
-      print('✅ Error en verificación, pero usuario autenticado para login'); // Para debug
+      print('❌ [AUTH] Error in _handleSuccessfulAuth: $e');
+      // Si hay cualquier error, mantener autenticación básica
       emit(AuthAuthenticated(user));
     }
   }
 
+  // ==================== MÉTODO PARA RECARGAR PERFIL ====================
+  
+  // 🆕 MÉTODO PARA RECARGAR SOLO EL PERFIL SIN AFECTAR LA AUTENTICACIÓN
+  Future<void> refreshUserProfile() async {
+    final currentState = state;
+    if (currentState is! AuthAuthenticated) return;
+    
+    try {
+      print('🔍 [AUTH] Refreshing user profile...');
+      emit(AuthLoadingFullProfile(currentState.user));
+      
+      final profileResult = await _profileService.getUserProfile(currentState.user.id);
+      
+      await profileResult.fold(
+        (failure) async {
+          print('⚠️ [AUTH] Could not refresh profile: ${failure.message}');
+          // Volver al estado anterior si había perfil, sino autenticación básica
+          emit(AuthAuthenticated(
+            currentState.user,
+            fullProfile: currentState.fullProfile,
+          ));
+        },
+        (fullProfile) async {
+          print('✅ [AUTH] Profile refreshed successfully');
+          emit(AuthAuthenticated(
+            currentState.user,
+            fullProfile: fullProfile,
+          ));
+        },
+      );
+    } catch (e) {
+      print('❌ [AUTH] Error refreshing profile: $e');
+      // Volver al estado anterior
+      emit(AuthAuthenticated(
+        currentState.user,
+        fullProfile: currentState.fullProfile,
+      ));
+    }
+  }
 
   // ==================== MÉTODOS DE NAVEGACIÓN ====================
 
@@ -490,14 +494,12 @@ class AuthCubit extends Cubit<AuthState> {
 
   // ==================== AUTO-VERIFICACIÓN ====================
 
-  /// Inicia verificación automática periódica para usuarios pendientes
   void startPeriodicCheck(String userId) {
     if (state is AuthEmailVerificationSent || 
         state is AuthParentalConsentPending) {
       
-      // Verificar cada 30 segundos si el estado ha cambiado
       Stream.periodic(const Duration(seconds: 30))
-          .take(20) // Máximo 20 intentos (10 minutos)
+          .take(20)
           .listen((_) async {
         if (state is AuthEmailVerificationSent) {
           await checkEmailVerificationStatus(userId);
@@ -518,7 +520,23 @@ class AuthCubit extends Cubit<AuthState> {
     return null;
   }
 
+  // 🆕 GETTER PARA EL PERFIL COMPLETO
+  UserProfileEntity? get currentUserProfile {
+    final currentState = state;
+    if (currentState is AuthAuthenticated) {
+      return currentState.fullProfile;
+    }
+    return null;
+  }
+
   bool get isAuthenticated => state is AuthAuthenticated;
   
-  bool get isLoading => state is AuthLoading;
+  bool get isLoading => state is AuthLoading || state is AuthLoadingFullProfile;
+
+  bool get isLoadingProfile => state is AuthLoadingFullProfile;
+
+  bool get hasFullProfile {
+    final currentState = state;
+    return currentState is AuthAuthenticated && currentState.fullProfile != null;
+  }
 }

@@ -60,4 +60,6 @@ class UserProfileEntity extends Equatable {
     lessonsCompleted,
     level,
   ];
+
+  get profilePicture => null;
 }

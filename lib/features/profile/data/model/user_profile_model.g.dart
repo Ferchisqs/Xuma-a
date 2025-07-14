@@ -1,10 +1,13 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
 part of 'user_profile_model.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-UserProfileModel _$UserProfileModelFromJson(Map<String, dynamic> json) => UserProfileModel(
+UserProfileModel _$UserProfileModelFromJson(Map<String, dynamic> json) =>
+    UserProfileModel(
       id: json['id'] as String,
       email: json['email'] as String,
       firstName: json['firstName'] as String,
@@ -27,7 +30,8 @@ UserProfileModel _$UserProfileModelFromJson(Map<String, dynamic> json) => UserPr
       level: json['level'] as String? ?? 'Eco Explorer',
     );
 
-Map<String, dynamic> _$UserProfileModelToJson(UserProfileModel instance) => <String, dynamic>{
+Map<String, dynamic> _$UserProfileModelToJson(UserProfileModel instance) =>
+    <String, dynamic>{
       'id': instance.id,
       'email': instance.email,
       'firstName': instance.firstName,

@@ -1,8 +1,10 @@
+// lib/core/network/api_client.dart - VERSIÓN ACTUALIZADA CON TOKEN MANAGER
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 import '../config/api_endpoints.dart';
 import '../errors/exceptions.dart';
 import '../services/cache_service.dart';
+import '../services/token_manager.dart'; // 🆕 IMPORTAR TOKEN MANAGER
 import 'network_info.dart';
 
 @lazySingleton
@@ -11,12 +13,17 @@ class ApiClient {
   late final Dio _userDio;  // Para servicio de usuarios
   final NetworkInfo _networkInfo;
   final CacheService _cacheService;
+  final TokenManager _tokenManager; // 🆕 AGREGAR TOKEN MANAGER
 
   // URLs de los diferentes servicios
   static const String _authServiceUrl = 'https://auth-service-production-e333.up.railway.app';
   static const String _userServiceUrl = 'https://user-service-xumaa-production.up.railway.app';
 
-  ApiClient(this._networkInfo, this._cacheService) {
+  ApiClient(
+    this._networkInfo, 
+    this._cacheService,
+    this._tokenManager, // 🆕 INYECTAR TOKEN MANAGER
+  ) {
     _setupAuthDio();
     _setupUserDio();
   }
@@ -46,7 +53,7 @@ class ApiClient {
   }
 
   void _setupInterceptors(Dio dio, String serviceName) {
-    // 1. Auth Interceptor - Manejo de tokens
+    // 1. Auth Interceptor - 🆕 MEJORADO CON TOKEN MANAGER
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -200,7 +207,7 @@ class ApiClient {
     }
   }
 
-  // ==================== GESTIÓN DE TOKENS ====================
+  // ==================== GESTIÓN DE TOKENS - 🆕 MEJORADO ====================
 
   Future<void> _addAuthToken(RequestOptions options, String serviceName) async {
     // No agregar token para endpoints de autenticación
@@ -214,11 +221,16 @@ class ApiClient {
       options.path.contains(endpoint));
     
     if (!isAuthEndpoint) {
-      final token = await _cacheService.get<String>('access_token');
+      final token = await _tokenManager.getAccessToken();
       if (token != null) {
         options.headers['Authorization'] = 'Bearer $token';
-        print('🔍 [$serviceName] Added auth token to request');
+        print('🔍 [$serviceName] Added auth token to request: ${options.path}');
+        print('🔍 [$serviceName] Token preview: ${token.substring(0, 20)}...');
+      } else {
+        print('⚠️ [$serviceName] No access token available for: ${options.path}');
       }
+    } else {
+      print('🔍 [$serviceName] Skipping auth token for auth endpoint: ${options.path}');
     }
   }
 
@@ -227,25 +239,46 @@ class ApiClient {
       final data = response.data as Map<String, dynamic>;
       
       // Solo guardar tokens del servicio de auth
-      if (serviceName == 'AUTH') {
-        await _saveTokensFromResponse(data);
+      if (serviceName == 'AUTH' && _shouldSaveTokens(response.requestOptions.path)) {
+        try {
+          await _tokenManager.saveTokensFromResponse(data);
+          print('✅ [$serviceName] Tokens saved from response');
+        } catch (e) {
+          print('⚠️ [$serviceName] Could not save tokens: $e');
+          // No fallar por esto, solo loggear
+        }
       }
     }
   }
 
+  bool _shouldSaveTokens(String path) {
+    final tokenSavingEndpoints = [
+      ApiEndpoints.login,
+      ApiEndpoints.register,
+      ApiEndpoints.refreshToken,
+    ];
+    
+    return tokenSavingEndpoints.any((endpoint) => path.contains(endpoint));
+  }
+
   Future<DioException> _handleTokenError(DioException error) async {
     if (error.response?.statusCode == 401) {
-      // Token expirado, limpiar tokens
-      await _clearAllTokens();
+      print('⚠️ Token expired or invalid, clearing tokens');
+      await _tokenManager.clearAllTokens();
     }
     return error;
   }
 
   Future<Response?> _retryWithRefreshToken(DioException error, Dio dio) async {
     try {
-      final refreshToken = await _cacheService.get<String>('refresh_token');
-      if (refreshToken == null) return null;
+      final refreshToken = await _tokenManager.getRefreshToken();
+      if (refreshToken == null) {
+        print('⚠️ No refresh token available for retry');
+        return null;
+      }
 
+      print('🔄 Attempting to refresh token...');
+      
       // Intentar renovar token usando el servicio de auth
       final refreshResponse = await _authDio.post(
         ApiEndpoints.refreshToken,
@@ -255,59 +288,24 @@ class ApiClient {
 
       if (refreshResponse.statusCode == 200) {
         // Guardar nuevos tokens
-        await _saveTokensFromResponse(refreshResponse.data);
+        await _tokenManager.saveTokensFromResponse(refreshResponse.data);
         
         // Reintentar request original con nuevo token
-        final newToken = await _cacheService.get<String>('access_token');
-        final originalRequest = error.requestOptions;
-        originalRequest.headers['Authorization'] = 'Bearer $newToken';
-        
-        return await dio.fetch(originalRequest);
+        final newToken = await _tokenManager.getAccessToken();
+        if (newToken != null) {
+          final originalRequest = error.requestOptions;
+          originalRequest.headers['Authorization'] = 'Bearer $newToken';
+          
+          print('✅ Token refreshed, retrying original request');
+          return await dio.fetch(originalRequest);
+        }
       }
     } catch (e) {
       print('❌ Error renovando token: $e');
-      await _clearAllTokens();
+      await _tokenManager.clearAllTokens();
     }
     
     return null;
-  }
-
-  Future<void> _saveTokensFromResponse(Map<String, dynamic> data) async {
-    // Buscar tokens en diferentes formatos de respuesta
-    String? accessToken;
-    String? refreshToken;
-    
-    // Formato 1: tokens directos
-    if (data.containsKey('token')) {
-      accessToken = data['token'];
-    } else if (data.containsKey('accessToken')) {
-      accessToken = data['accessToken'];
-    } else if (data.containsKey('access_token')) {
-      accessToken = data['access_token'];
-    }
-    
-    if (data.containsKey('refreshToken')) {
-      refreshToken = data['refreshToken'];
-    } else if (data.containsKey('refresh_token')) {
-      refreshToken = data['refresh_token'];
-    }
-    
-    // Formato 2: tokens anidados
-    if (data.containsKey('tokens')) {
-      final tokens = data['tokens'] as Map<String, dynamic>?;
-      if (tokens != null) {
-        accessToken ??= tokens['accessToken'] ?? tokens['access_token'];
-        refreshToken ??= tokens['refreshToken'] ?? tokens['refresh_token'];
-      }
-    }
-    
-    // Guardar tokens si se encontraron
-    if (accessToken != null) {
-      await _cacheService.set('access_token', accessToken);
-    }
-    if (refreshToken != null) {
-      await _cacheService.set('refresh_token', refreshToken);
-    }
   }
 
   // ==================== MÉTODOS HELPER ====================
@@ -318,14 +316,17 @@ class ApiClient {
     }
   }
 
-  Future<void> _clearAllTokens() async {
-    await _cacheService.remove('access_token');
-    await _cacheService.remove('refresh_token');
-    await _cacheService.remove('cached_user');
+  Future<void> clearTokens() async {
+    await _tokenManager.clearAllTokens();
   }
 
-  Future<void> clearTokens() async {
-    await _clearAllTokens();
+  // 🆕 MÉTODOS PARA DEBUG
+  Future<void> debugTokens() async {
+    await _tokenManager.debugTokenInfo();
+  }
+
+  Future<bool> hasValidToken() async {
+    return await _tokenManager.hasValidAccessToken();
   }
 
   ServerException _handleDioError(DioException error) {

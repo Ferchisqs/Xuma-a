@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart' as _i460;
 import '../core/network/api_client.dart' as _i510;
 import '../core/network/network_info.dart' as _i6;
 import '../core/services/cache_service.dart' as _i800;
+import '../core/services/token_manager.dart' as _i497;
 import '../features/auth/data/datasources/auth_local_datasource.dart' as _i182;
 import '../features/auth/data/datasources/auth_remote_datasource.dart' as _i130;
 import '../features/auth/data/repositories/auth_repository_impl.dart' as _i570;
@@ -115,6 +116,18 @@ import '../features/learning/presentation/cubit/lesson_list_cubit.dart'
     as _i568;
 import '../features/navigation/presentation/cubit/navigation_cubit.dart'
     as _i630;
+import '../features/profile/data/datasources/profile_remote_datasource.dart'
+    as _i850;
+import '../features/profile/data/repositories/profile_repository_impl.dart'
+    as _i13;
+import '../features/profile/domain/repositories/profile_repository.dart'
+    as _i386;
+import '../features/profile/domain/services/profile_service.dart' as _i92;
+import '../features/profile/domain/usecases/get_user_profile_usecase.dart'
+    as _i65;
+import '../features/profile/domain/usecases/update_user_avatar_usecase.dart'
+    as _i186;
+import '../features/profile/presentation/cubit/profile_cubit.dart' as _i300;
 import '../features/trivia/data/datasources/trivia_local_datasource.dart'
     as _i430;
 import '../features/trivia/data/datasources/trivia_remote_datasource.dart'
@@ -155,6 +168,8 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i630.NavigationCubit>(() => _i630.NavigationCubit());
     gh.lazySingleton<_i800.CacheService>(() => _i800.CacheService());
     gh.lazySingleton<_i895.Connectivity>(() => externalModule.connectivity);
+    gh.lazySingleton<_i497.TokenManager>(
+        () => _i497.TokenManager(gh<_i460.SharedPreferences>()));
     gh.lazySingleton<_i819.HomeLocalDataSource>(
         () => _i819.HomeLocalDataSourceImpl(gh<_i800.CacheService>()));
     gh.lazySingleton<_i182.AuthLocalDataSource>(
@@ -172,13 +187,15 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i510.ApiClient>(() => _i510.ApiClient(
           gh<_i6.NetworkInfo>(),
           gh<_i800.CacheService>(),
+          gh<_i497.TokenManager>(),
         ));
-    gh.lazySingleton<_i130.AuthRemoteDataSource>(
-        () => _i130.AuthRemoteDataSourceImpl(gh<_i510.ApiClient>()));
-    gh.factory<_i252.ChallengesRemoteDataSource>(
-        () => _i252.ChallengesRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i506.LearningRemoteDataSource>(
         () => _i506.LearningRemoteDataSourceImpl(gh<_i510.ApiClient>()));
+    gh.lazySingleton<_i130.AuthRemoteDataSource>(
+        () => _i130.AuthRemoteDataSourceImpl(
+              gh<_i510.ApiClient>(),
+              gh<_i497.TokenManager>(),
+            ));
     gh.lazySingleton<_i869.AuthRepository>(() => _i570.AuthRepositoryImpl(
           gh<_i130.AuthRemoteDataSource>(),
           gh<_i182.AuthLocalDataSource>(),
@@ -187,6 +204,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i75.HomeRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i115.CompanionRemoteDataSource>(
         () => _i115.CompanionRemoteDataSourceImpl(gh<_i510.ApiClient>()));
+    gh.lazySingleton<_i850.ProfileRemoteDataSource>(
+        () => _i850.ProfileRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i614.TriviaRemoteDataSource>(
         () => _i614.TriviaRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i416.TriviaRepository>(() => _i121.TriviaRepositoryImpl(
@@ -194,6 +213,8 @@ extension GetItInjectableX on _i174.GetIt {
           localDataSource: gh<_i430.TriviaLocalDataSource>(),
           networkInfo: gh<_i6.NetworkInfo>(),
         ));
+    gh.lazySingleton<_i386.ProfileRepository>(
+        () => _i13.ProfileRepositoryImpl(gh<_i850.ProfileRemoteDataSource>()));
     gh.lazySingleton<_i66.HomeRepository>(() => _i6.HomeRepositoryImpl(
           gh<_i75.HomeRemoteDataSource>(),
           gh<_i819.HomeLocalDataSource>(),
@@ -232,11 +253,6 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i869.AuthRepository>(),
           gh<_i130.AuthRemoteDataSource>(),
         ));
-    gh.factory<_i959.ChallengesRepository>(() => _i285.ChallengesRepositoryImpl(
-          remoteDataSource: gh<_i252.ChallengesRemoteDataSource>(),
-          localDataSource: gh<_i422.ChallengesLocalDataSource>(),
-          networkInfo: gh<_i6.NetworkInfo>(),
-        ));
     gh.factory<_i852.LearningRepository>(() => _i378.LearningRepositoryImpl(
           remoteDataSource: gh<_i506.LearningRemoteDataSource>(),
           localDataSource: gh<_i195.LearningLocalDataSource>(),
@@ -256,12 +272,61 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i381.SubmitTriviaResultUseCase(gh<_i416.TriviaRepository>()));
     gh.factory<_i157.SubmitTriviaResultUseCase>(
         () => _i157.SubmitTriviaResultUseCase(gh<_i416.TriviaRepository>()));
+    gh.lazySingleton<_i65.GetUserProfileUseCase>(
+        () => _i65.GetUserProfileUseCase(gh<_i386.ProfileRepository>()));
+    gh.lazySingleton<_i186.UpdateUserAvatarUseCase>(
+        () => _i186.UpdateUserAvatarUseCase(gh<_i386.ProfileRepository>()));
     gh.factory<_i993.TriviaCubit>(() => _i993.TriviaCubit(
         getTriviaCategoriesUseCase: gh<_i828.GetTriviaCategoriesUseCase>()));
+    gh.factory<_i252.ChallengesRemoteDataSource>(
+        () => _i252.ChallengesRemoteDataSourceImpl(gh<_i510.ApiClient>()));
+    gh.lazySingleton<_i92.ProfileService>(
+        () => _i92.ProfileService(gh<_i386.ProfileRepository>()));
+    gh.factory<_i300.ProfileCubit>(() => _i300.ProfileCubit(
+          getUserProfileUseCase: gh<_i65.GetUserProfileUseCase>(),
+          updateUserAvatarUseCase: gh<_i186.UpdateUserAvatarUseCase>(),
+        ));
+    gh.factory<_i0.CompanionDetailCubit>(() => _i0.CompanionDetailCubit(
+          feedCompanionUseCase: gh<_i960.FeedCompanionUseCase>(),
+          loveCompanionUseCase: gh<_i820.LoveCompanionUseCase>(),
+          evolveCompanionUseCase: gh<_i108.EvolveCompanionUseCase>(),
+        ));
+    gh.factory<_i412.CompleteLessonUseCase>(
+        () => _i412.CompleteLessonUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i80.GetCategoriesUseCase>(
+        () => _i80.GetCategoriesUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i194.GetLessonsByCategoryUseCase>(() =>
+        _i194.GetLessonsByCategoryUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i391.GetLessonContentUseCase>(
+        () => _i391.GetLessonContentUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i420.SearchLessonsUseCase>(
+        () => _i420.SearchLessonsUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i813.UpdateLessonProgressUseCase>(() =>
+        _i813.UpdateLessonProgressUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i917.CompanionCubit>(() => _i917.CompanionCubit(
+          getUserCompanionsUseCase: gh<_i574.GetUserCompanionsUseCase>(),
+          getCompanionShopUseCase: gh<_i76.GetCompanionShopUseCase>(),
+        ));
+    gh.factory<_i1017.HomeCubit>(() => _i1017.HomeCubit(
+          getDailyTipUseCase: gh<_i957.GetDailyTipUseCase>(),
+          getUserStatsUseCase: gh<_i762.GetUserStatsUseCase>(),
+        ));
+    gh.factory<_i912.TriviaGameCubit>(() => _i912.TriviaGameCubit(
+          getTriviaQuestionsUseCase: gh<_i9.GetTriviaQuestionsUseCase>(),
+          submitTriviaResultUseCase: gh<_i157.SubmitTriviaResultUseCase>(),
+        ));
+    gh.factory<_i992.LearningCubit>(() => _i992.LearningCubit(
+        getCategoriesUseCase: gh<_i80.GetCategoriesUseCase>()));
+    gh.factory<_i959.ChallengesRepository>(() => _i285.ChallengesRepositoryImpl(
+          remoteDataSource: gh<_i252.ChallengesRemoteDataSource>(),
+          localDataSource: gh<_i422.ChallengesLocalDataSource>(),
+          networkInfo: gh<_i6.NetworkInfo>(),
+        ));
     gh.factory<_i70.AuthCubit>(() => _i70.AuthCubit(
           loginUseCase: gh<_i406.LoginUseCase>(),
           registerUseCase: gh<_i819.RegisterUseCase>(),
           authService: gh<_i88.AuthService>(),
+          profileService: gh<_i92.ProfileService>(),
         ));
     gh.factory<_i522.CompleteChallengeUseCase>(
         () => _i522.CompleteChallengeUseCase(gh<_i959.ChallengesRepository>()));
@@ -280,47 +345,6 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i1056.UpdateChallengeProgressUseCase>(() =>
         _i1056.UpdateChallengeProgressUseCase(
             gh<_i959.ChallengesRepository>()));
-    gh.factory<_i0.CompanionDetailCubit>(() => _i0.CompanionDetailCubit(
-          feedCompanionUseCase: gh<_i960.FeedCompanionUseCase>(),
-          loveCompanionUseCase: gh<_i820.LoveCompanionUseCase>(),
-          evolveCompanionUseCase: gh<_i108.EvolveCompanionUseCase>(),
-        ));
-    gh.factory<_i412.CompleteLessonUseCase>(
-        () => _i412.CompleteLessonUseCase(gh<_i852.LearningRepository>()));
-    gh.factory<_i80.GetCategoriesUseCase>(
-        () => _i80.GetCategoriesUseCase(gh<_i852.LearningRepository>()));
-    gh.factory<_i194.GetLessonsByCategoryUseCase>(() =>
-        _i194.GetLessonsByCategoryUseCase(gh<_i852.LearningRepository>()));
-    gh.factory<_i391.GetLessonContentUseCase>(
-        () => _i391.GetLessonContentUseCase(gh<_i852.LearningRepository>()));
-    gh.factory<_i420.SearchLessonsUseCase>(
-        () => _i420.SearchLessonsUseCase(gh<_i852.LearningRepository>()));
-    gh.factory<_i813.UpdateLessonProgressUseCase>(() =>
-        _i813.UpdateLessonProgressUseCase(gh<_i852.LearningRepository>()));
-    gh.factory<_i366.ChallengeDetailCubit>(() => _i366.ChallengeDetailCubit(
-          startChallengeUseCase: gh<_i23.StartChallengeUseCase>(),
-          completeChallengeUseCase: gh<_i522.CompleteChallengeUseCase>(),
-          updateChallengeProgressUseCase:
-              gh<_i1056.UpdateChallengeProgressUseCase>(),
-        ));
-    gh.factory<_i917.CompanionCubit>(() => _i917.CompanionCubit(
-          getUserCompanionsUseCase: gh<_i574.GetUserCompanionsUseCase>(),
-          getCompanionShopUseCase: gh<_i76.GetCompanionShopUseCase>(),
-        ));
-    gh.factory<_i1017.HomeCubit>(() => _i1017.HomeCubit(
-          getDailyTipUseCase: gh<_i957.GetDailyTipUseCase>(),
-          getUserStatsUseCase: gh<_i762.GetUserStatsUseCase>(),
-        ));
-    gh.factory<_i912.TriviaGameCubit>(() => _i912.TriviaGameCubit(
-          getTriviaQuestionsUseCase: gh<_i9.GetTriviaQuestionsUseCase>(),
-          submitTriviaResultUseCase: gh<_i157.SubmitTriviaResultUseCase>(),
-        ));
-    gh.factory<_i992.LearningCubit>(() => _i992.LearningCubit(
-        getCategoriesUseCase: gh<_i80.GetCategoriesUseCase>()));
-    gh.factory<_i314.ChallengesCubit>(() => _i314.ChallengesCubit(
-          getChallengesUseCase: gh<_i1010.GetChallengesUseCase>(),
-          getUserProgressUseCase: gh<_i287.GetUserProgressUseCase>(),
-        ));
     gh.factory<_i803.LessonContentCubit>(() => _i803.LessonContentCubit(
           getLessonContentUseCase: gh<_i391.GetLessonContentUseCase>(),
           updateLessonProgressUseCase: gh<_i813.UpdateLessonProgressUseCase>(),
@@ -329,6 +353,16 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i568.LessonListCubit>(() => _i568.LessonListCubit(
           getLessonsByCategoryUseCase: gh<_i194.GetLessonsByCategoryUseCase>(),
           searchLessonsUseCase: gh<_i420.SearchLessonsUseCase>(),
+        ));
+    gh.factory<_i366.ChallengeDetailCubit>(() => _i366.ChallengeDetailCubit(
+          startChallengeUseCase: gh<_i23.StartChallengeUseCase>(),
+          completeChallengeUseCase: gh<_i522.CompleteChallengeUseCase>(),
+          updateChallengeProgressUseCase:
+              gh<_i1056.UpdateChallengeProgressUseCase>(),
+        ));
+    gh.factory<_i314.ChallengesCubit>(() => _i314.ChallengesCubit(
+          getChallengesUseCase: gh<_i1010.GetChallengesUseCase>(),
+          getUserProgressUseCase: gh<_i287.GetUserProgressUseCase>(),
         ));
     return this;
   }

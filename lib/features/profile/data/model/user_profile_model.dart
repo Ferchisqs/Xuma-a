@@ -1,4 +1,4 @@
-// lib/features/profile/data/model/user_profile_model.dart
+// lib/features/profile/data/model/user_profile_model.dart - VERSIÓN CORREGIDA
 import 'package:json_annotation/json_annotation.dart';
 import '../../domain/entities/user_profile_entity.dart';
 
@@ -42,6 +42,9 @@ class UserProfileModel extends UserProfileEntity {
     level: level,
   );
 
+  // 🆕 AGREGAR GETTER PARA COMPATIBILIDAD
+  String? get profilePicture => avatarUrl;
+
   factory UserProfileModel.fromJson(Map<String, dynamic> json) {
     try {
       print('🔍 Parsing UserProfileModel from JSON: $json');
@@ -60,7 +63,7 @@ class UserProfileModel extends UserProfileEntity {
         'usuario@xumaa.com'
       );
       
-      // Nombres
+      // Nombres - 🆕 MEJORADO PARA USAR LOS DATOS REALES DE TU API
       final String firstName = _parseStringField(
         json['firstName'] ?? json['first_name'] ?? json['name'], 
         'Usuario'
@@ -74,14 +77,19 @@ class UserProfileModel extends UserProfileEntity {
       // 🆕 EDAD - PROCESAMIENTO ESPECIAL
       final int age = _parseAgeField(json['age']);
       
-      // Avatar/Profile Picture
+      // Avatar/Profile Picture - 🆕 MÚLTIPLES NOMBRES DE CAMPO
       final String? avatarUrl = _parseOptionalStringField(
-        json['avatarUrl'] ?? json['avatar_url'] ?? json['profilePicture'] ?? json['profile_picture']
+        json['avatarUrl'] ?? 
+        json['avatar_url'] ?? 
+        json['profilePicture'] ?? 
+        json['profile_picture'] ??
+        json['profileImage'] ??
+        json['profilePhoto']
       );
       
       // Bio y Location opcionales
-      final String? bio = _parseOptionalStringField(json['bio']);
-      final String? location = _parseOptionalStringField(json['location']);
+      final String? bio = _parseOptionalStringField(json['bio'] ?? json['description']);
+      final String? location = _parseOptionalStringField(json['location'] ?? json['city']);
       
       // Fechas
       final DateTime createdAt = _parseDateTime(

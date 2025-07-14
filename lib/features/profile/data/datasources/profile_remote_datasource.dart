@@ -14,7 +14,7 @@ abstract class ProfileRemoteDataSource {
 class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   final ApiClient _apiClient;
   
-  // URL base para el servicio de usuarios
+  // 🆕 URL específica para el servicio de usuarios
   static const String _userServiceBaseUrl = 'https://user-service-xumaa-production.up.railway.app';
 
   ProfileRemoteDataSourceImpl(this._apiClient);
@@ -22,7 +22,8 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   @override
   Future<UserProfileModel> getUserProfile(String userId) async {
     try {
-      print('🔍 Obteniendo perfil para userId: $userId');
+      print('🔍 [PROFILE] Obteniendo perfil para userId: $userId');
+      print('🔍 [PROFILE] URL del servicio: $_userServiceBaseUrl/api/users/profile/$userId');
       
       final response = await _apiClient.get(
         '/api/users/profile/$userId',
@@ -31,108 +32,53 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
-          // 🆕 AGREGAR EL OVERRIDE DE BASE URL
+          // 🆕 IMPORTANTE: Override del baseUrl para usar el servicio de usuarios
           extra: {'baseUrl': _userServiceBaseUrl},
         ),
       );
 
-      print('🔍 Profile Response Status: ${response.statusCode}');
-      print('🔍 Profile Response Data (Raw): ${response.data}');
+      print('🔍 [PROFILE] Response Status: ${response.statusCode}');
+      print('🔍 [PROFILE] Response Data: ${response.data}');
 
       if (response.statusCode == 200) {
         final responseData = response.data;
         
-        // 🆕 MANEJO MEJORADO DE LA RESPUESTA
         Map<String, dynamic> userData;
         
         if (responseData is Map<String, dynamic>) {
-          // Verificar si hay un wrapper de success
+          // Verificar diferentes formatos de respuesta
           if (responseData.containsKey('success') && responseData['success'] == true) {
             if (responseData.containsKey('data') && responseData['data'] != null) {
               userData = responseData['data'] as Map<String, dynamic>;
+              print('✅ [PROFILE] Datos extraídos del wrapper success/data');
             } else {
               throw ServerException('No se encontraron datos del usuario en la respuesta');
             }
           } else if (responseData.containsKey('data')) {
             userData = responseData['data'] as Map<String, dynamic>;
+            print('✅ [PROFILE] Datos extraídos del campo data');
           } else {
             // La respuesta es directamente los datos del usuario
             userData = responseData;
+            print('✅ [PROFILE] Datos extraídos directamente de la respuesta');
           }
         } else {
           throw ServerException('Formato de respuesta inválido para perfil de usuario');
         }
 
-        print('🔍 Profile User Data (Processed): $userData');
+        print('🔍 [PROFILE] Datos procesados: $userData');
         
-        // 🆕 VALIDAR QUE TENGAMOS LOS CAMPOS BÁSICOS
-        if (!userData.containsKey('id') && !userData.containsKey('userId')) {
-          print('⚠️ No se encontró ID de usuario, usando el userId de la petición');
-          userData['id'] = userId;
-        }
+        // 🆕 Validar y completar campos faltantes
+        userData = _validateAndCompleteUserData(userData, userId);
         
-        // 🆕 VALIDAR EMAIL
-        if (!userData.containsKey('email') || userData['email'] == null) {
-          print('⚠️ No se encontró email, usando placeholder');
-          userData['email'] = 'usuario@xumaa.com';
-        }
-        
-        // 🆕 VALIDAR NOMBRES
-        if (!userData.containsKey('firstName') || userData['firstName'] == null) {
-          print('⚠️ No se encontró firstName, usando placeholder');
-          userData['firstName'] = 'Usuario';
-        }
-        
-        if (!userData.containsKey('lastName') || userData['lastName'] == null) {
-          print('⚠️ No se encontró lastName, usando placeholder');
-          userData['lastName'] = '';
-        }
-        
-        // 🆕 VALIDAR Y CORREGIR EDAD ESPECÍFICAMENTE
-        if (!userData.containsKey('age') || userData['age'] == null) {
-          print('⚠️ No se encontró age, usando 18 por defecto');
-          userData['age'] = 18;
-        } else {
-          // Asegurar que la edad sea un número válido
-          final ageValue = userData['age'];
-          if (ageValue is String) {
-            final parsedAge = int.tryParse(ageValue);
-            if (parsedAge != null && parsedAge > 0 && parsedAge <= 120) {
-              userData['age'] = parsedAge;
-              print('✅ Edad parseada correctamente: $parsedAge');
-            } else {
-              print('⚠️ Edad inválida en string: $ageValue, usando 18');
-              userData['age'] = 18;
-            }
-          } else if (ageValue is num) {
-            final ageInt = ageValue.toInt();
-            if (ageInt > 0 && ageInt <= 120) {
-              userData['age'] = ageInt;
-              print('✅ Edad válida: $ageInt');
-            } else {
-              print('⚠️ Edad fuera de rango: $ageInt, usando 18');
-              userData['age'] = 18;
-            }
-          } else {
-            print('⚠️ Tipo de edad no válido: ${ageValue.runtimeType}, usando 18');
-            userData['age'] = 18;
-          }
-        }
-        
-        // 🆕 VALIDAR FECHAS
-        if (!userData.containsKey('createdAt') || userData['createdAt'] == null) {
-          print('⚠️ No se encontró createdAt, usando fecha actual');
-          userData['createdAt'] = DateTime.now().toIso8601String();
-        }
-        
-        print('🔍 Final userData before model creation: $userData');
+        print('🔍 [PROFILE] Datos finales para el modelo: $userData');
         
         return UserProfileModel.fromJson(userData);
       } else {
         throw ServerException('Error obteniendo perfil: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
       }
     } catch (e) {
-      print('❌ Error obteniendo perfil: $e');
+      print('❌ [PROFILE] Error obteniendo perfil: $e');
       if (e is ServerException) rethrow;
       throw ServerException('Error de conexión obteniendo perfil: $e');
     }
@@ -141,8 +87,8 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   @override
   Future<UserProfileModel> updateUserAvatar(String userId, String avatarUrl) async {
     try {
-      print('🔍 Actualizando avatar para userId: $userId');
-      print('🔍 Nueva URL de avatar: $avatarUrl');
+      print('🔍 [PROFILE] Actualizando avatar para userId: $userId');
+      print('🔍 [PROFILE] Nueva URL de avatar: $avatarUrl');
       
       final response = await _apiClient.put(
         '/api/users/profile/$userId/avatar',
@@ -158,8 +104,8 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
         ),
       );
 
-      print('🔍 Avatar Update Response Status: ${response.statusCode}');
-      print('🔍 Avatar Update Response Data: ${response.data}');
+      print('🔍 [PROFILE] Avatar Update Response Status: ${response.statusCode}');
+      print('🔍 [PROFILE] Avatar Update Response Data: ${response.data}');
 
       if (response.statusCode == 200) {
         final responseData = response.data;
@@ -182,14 +128,102 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
           throw ServerException('Formato de respuesta inválido para actualización de avatar');
         }
         
+        // Validar y completar datos
+        userData = _validateAndCompleteUserData(userData, userId);
+        
         return UserProfileModel.fromJson(userData);
       } else {
         throw ServerException('Error actualizando avatar: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
       }
     } catch (e) {
-      print('❌ Error actualizando avatar: $e');
+      print('❌ [PROFILE] Error actualizando avatar: $e');
       if (e is ServerException) rethrow;
       throw ServerException('Error de conexión actualizando avatar: $e');
     }
+  }
+
+  // 🆕 Método helper para validar y completar datos del usuario
+  Map<String, dynamic> _validateAndCompleteUserData(Map<String, dynamic> userData, String userId) {
+    // Asegurar que tengamos el ID
+    if (!userData.containsKey('id') && !userData.containsKey('userId')) {
+      print('⚠️ [PROFILE] No se encontró ID de usuario, usando el userId de la petición');
+      userData['id'] = userId;
+    }
+    
+    // Usar userId si no hay id
+    if (!userData.containsKey('id') && userData.containsKey('userId')) {
+      userData['id'] = userData['userId'];
+    }
+    
+    // Validar email
+    if (!userData.containsKey('email') || userData['email'] == null || userData['email'].toString().trim().isEmpty) {
+      print('⚠️ [PROFILE] No se encontró email válido, usando placeholder');
+      userData['email'] = 'usuario@xumaa.com';
+    }
+    
+    // Validar nombres
+    if (!userData.containsKey('firstName') || userData['firstName'] == null || userData['firstName'].toString().trim().isEmpty) {
+      print('⚠️ [PROFILE] No se encontró firstName válido, usando placeholder');
+      userData['firstName'] = 'Usuario';
+    }
+    
+    if (!userData.containsKey('lastName') || userData['lastName'] == null) {
+      print('⚠️ [PROFILE] No se encontró lastName, usando string vacío');
+      userData['lastName'] = '';
+    }
+    
+    // Validar edad específicamente
+    if (!userData.containsKey('age') || userData['age'] == null) {
+      print('⚠️ [PROFILE] No se encontró age, usando 18 por defecto');
+      userData['age'] = 18;
+    } else {
+      userData['age'] = _parseAge(userData['age']);
+    }
+    
+    // Validar fechas
+    if (!userData.containsKey('createdAt') || userData['createdAt'] == null) {
+      print('⚠️ [PROFILE] No se encontró createdAt, usando fecha actual');
+      userData['createdAt'] = DateTime.now().toIso8601String();
+    }
+    
+    // Campos opcionales con defaults
+    userData['ecoPoints'] = userData['ecoPoints'] ?? userData['points'] ?? 0;
+    userData['achievementsCount'] = userData['achievementsCount'] ?? userData['achievements'] ?? 0;
+    userData['lessonsCompleted'] = userData['lessonsCompleted'] ?? userData['lessons'] ?? 0;
+    userData['level'] = userData['level'] ?? _getLevelFromAge(_parseAge(userData['age']));
+    userData['needsParentalConsent'] = userData['needsParentalConsent'] ?? (_parseAge(userData['age']) < 13);
+    
+    return userData;
+  }
+
+  // 🆕 Helper para parsear edad de forma robusta
+  int _parseAge(dynamic value) {
+    if (value == null) return 18;
+    
+    if (value is int) {
+      return (value > 0 && value <= 120) ? value : 18;
+    }
+    
+    if (value is double) {
+      final intValue = value.toInt();
+      return (intValue > 0 && intValue <= 120) ? intValue : 18;
+    }
+    
+    if (value is String) {
+      final parsed = int.tryParse(value.trim());
+      if (parsed != null && parsed > 0 && parsed <= 120) {
+        return parsed;
+      }
+    }
+    
+    return 18;
+  }
+
+  // 🆕 Helper para obtener nivel basado en edad
+  String _getLevelFromAge(int age) {
+    if (age < 13) return 'Eco Explorer';
+    if (age < 18) return 'Eco Guardian';
+    if (age < 25) return 'Eco Warrior';
+    return 'Eco Master';
   }
 }

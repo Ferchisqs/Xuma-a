@@ -63,7 +63,7 @@ class _ProfileMainContent extends StatelessWidget {
             title: 'Mi Perfil',
             showDrawerButton: true,
           ),
-          body: SafeArea( // 🆕 AGREGADO SafeArea
+          body: SafeArea(
             child: _buildBody(context, authState),
           ),
         );
@@ -97,7 +97,7 @@ class _ProfileMainContent extends StatelessWidget {
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min, // 🆕 AGREGADO
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.error_outline,
@@ -150,13 +150,13 @@ class _ProfileMainContent extends StatelessWidget {
   }
 
   Widget _buildProfileContent(BuildContext context, dynamic user, {bool isBasicData = false}) {
-    return LayoutBuilder( // 🆕 USAR LayoutBuilder PARA RESPONSIVE
+    return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(16), // 🆕 REDUCIDO PADDING
-          child: ConstrainedBox( // 🆕 CONSTRAINEDBOX PARA EVITAR OVERFLOW
+          padding: const EdgeInsets.all(16),
+          child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: constraints.maxHeight - 32, // Menos padding
+              minHeight: constraints.maxHeight - 32,
             ),
             child: Column(
               children: [
@@ -188,7 +188,7 @@ class _ProfileMainContent extends StatelessWidget {
                 // User Profile Card
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(20), // 🆕 REDUCIDO PADDING
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: AppColors.earthGradient,
                     borderRadius: BorderRadius.circular(16),
@@ -201,7 +201,7 @@ class _ProfileMainContent extends StatelessWidget {
                     ],
                   ),
                   child: Column(
-                    mainAxisSize: MainAxisSize.min, // 🆕 AGREGADO
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       // Profile Picture
                       _buildProfilePictureSection(context, user),
@@ -224,32 +224,74 @@ class _ProfileMainContent extends StatelessWidget {
                   ),
                 ),
                 
-                const SizedBox(height: 20), // 🆕 REDUCIDO ESPACIO
+                const SizedBox(height: 20),
                 
-                // Stats Cards - 🆕 HACER MÁS COMPACTO
+                // Stats Cards
                 _buildStatsSection(user),
                 
-                const SizedBox(height: 20), // 🆕 REDUCIDO ESPACIO
+                const SizedBox(height: 20),
                 
                 // Account Information Section
                 _buildAccountInfoSection(context, user),
                 
-                const SizedBox(height: 20), // 🆕 REDUCIDO ESPACIO
+                const SizedBox(height: 20),
                 
-                // Menu Options - 🆕 HACER MÁS COMPACTO
+                // Menu Options
                 _buildMenuSection(context),
                 
-                const SizedBox(height: 20), // 🆕 REDUCIDO ESPACIO
+                const SizedBox(height: 20),
                 
                 // Logout Button
                 _buildLogoutSection(context),
                 
-                const SizedBox(height: 20), // 🆕 ESPACIO FINAL PEQUEÑO
+                const SizedBox(height: 20),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  // 🆕 HELPER PARA MOSTRAR AVATAR - CORREGIDO Y SEGURO
+  Widget _buildUserAvatar(String? avatarUrl) {
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Image.network(
+          avatarUrl,
+          fit: BoxFit.cover,
+          width: 36,
+          height: 36,
+          errorBuilder: (context, error, stackTrace) {
+            print('❌ Error loading avatar: $error');
+            return const Icon(
+              Icons.person_rounded,
+              color: Colors.white,
+              size: 24,
+            );
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+    
+    return const Icon(
+      Icons.person_rounded,
+      color: Colors.white,
+      size: 24,
     );
   }
 
@@ -260,7 +302,7 @@ class _ProfileMainContent extends StatelessWidget {
       child: Stack(
         children: [
           Container(
-            width: 80, // 🆕 REDUCIDO TAMAÑO
+            width: 80,
             height: 80,
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
@@ -284,7 +326,7 @@ class _ProfileMainContent extends StatelessWidget {
               child: Icon(
                 Icons.camera_alt_rounded,
                 color: AppColors.primary,
-                size: 14, // 🆕 REDUCIDO TAMAÑO
+                size: 14,
               ),
             ),
           ),
@@ -299,7 +341,7 @@ class _ProfileMainContent extends StatelessWidget {
       children: [
         Text(
           _getFullName(user),
-          style: AppTextStyles.h4.copyWith( // 🆕 REDUCIDO TAMAÑO DE FUENTE
+          style: AppTextStyles.h4.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
@@ -323,7 +365,7 @@ class _ProfileMainContent extends StatelessWidget {
         const SizedBox(height: 8),
         // Level Badge
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), // 🆕 REDUCIDO PADDING
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.2),
             borderRadius: BorderRadius.circular(20),
@@ -334,7 +376,7 @@ class _ProfileMainContent extends StatelessWidget {
               Icon(
                 Icons.eco_rounded,
                 color: Colors.white,
-                size: 14, // 🆕 REDUCIDO TAMAÑO
+                size: 14,
               ),
               const SizedBox(width: 4),
               Text(
@@ -365,7 +407,7 @@ class _ProfileMainContent extends StatelessWidget {
                 color: AppColors.warning,
               ),
             ),
-            const SizedBox(width: 12), // 🆕 REDUCIDO ESPACIO
+            const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
                 icon: Icons.emoji_events_rounded,
@@ -376,7 +418,7 @@ class _ProfileMainContent extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12), // 🆕 REDUCIDO ESPACIO
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
@@ -387,7 +429,7 @@ class _ProfileMainContent extends StatelessWidget {
                 color: AppColors.info,
               ),
             ),
-            const SizedBox(width: 12), // 🆕 REDUCIDO ESPACIO
+            const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
                 icon: Icons.favorite_rounded,
@@ -460,11 +502,11 @@ class _ProfileMainContent extends StatelessWidget {
         onTap: () => _showLogoutDialog(context),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(14), // 🆕 REDUCIDO PADDING
+          padding: const EdgeInsets.all(14),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(6), // 🆕 REDUCIDO PADDING
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: AppColors.error.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
@@ -472,14 +514,14 @@ class _ProfileMainContent extends StatelessWidget {
                 child: Icon(
                   Icons.logout_rounded,
                   color: AppColors.error,
-                  size: 18, // 🆕 REDUCIDO TAMAÑO
+                  size: 18,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Cerrar Sesión',
-                  style: AppTextStyles.bodyMedium.copyWith( // 🆕 REDUCIDO TAMAÑO
+                  style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.error,
                     fontWeight: FontWeight.w600,
                   ),
@@ -488,7 +530,7 @@ class _ProfileMainContent extends StatelessWidget {
               Icon(
                 Icons.arrow_forward_ios_rounded,
                 color: AppColors.error,
-                size: 14, // 🆕 REDUCIDO TAMAÑO
+                size: 14,
               ),
             ],
           ),
@@ -497,7 +539,6 @@ class _ProfileMainContent extends StatelessWidget {
     );
   }
 
-  // 🆕 VERSIÓN COMPACTA DEL MENU OPTION
   Widget _buildCompactMenuOption({
     required IconData icon,
     required String title,
@@ -516,13 +557,13 @@ class _ProfileMainContent extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // 🆕 COMPACTO
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
               Icon(
                 icon,
                 color: AppColors.primary,
-                size: 20, // 🆕 REDUCIDO TAMAÑO
+                size: 20,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -537,7 +578,7 @@ class _ProfileMainContent extends StatelessWidget {
               Icon(
                 Icons.arrow_forward_ios_rounded,
                 color: AppColors.textHint,
-                size: 14, // 🆕 REDUCIDO TAMAÑO
+                size: 14,
               ),
             ],
           ),
@@ -546,33 +587,7 @@ class _ProfileMainContent extends StatelessWidget {
     );
   }
 
-  // 🆕 RESTO DE MÉTODOS HELPER (SIN CAMBIOS PERO MÁS COMPACTOS)
-  Widget _buildProfileImage(dynamic user) {
-    String? imageUrl = user.profilePicture ?? user.avatarUrl;
-    
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(40),
-        child: Image.network(
-          imageUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => const Icon(
-            Icons.person_rounded,
-            color: Colors.white,
-            size: 40,
-          ),
-        ),
-      );
-    }
-    
-    return const Icon(
-      Icons.person_rounded,
-      color: Colors.white,
-      size: 40,
-    );
-  }
-
-  // Helper methods para obtener datos del usuario
+  // Helper methods para obtener datos del usuario - CORREGIDOS
   String _getFullName(dynamic user) {
     if (user.fullName != null) return user.fullName;
     return '${user.firstName ?? ''} ${user.lastName ?? ''}'.trim();
@@ -580,6 +595,7 @@ class _ProfileMainContent extends StatelessWidget {
 
   String _getEmail(dynamic user) => user.email ?? '';
   int _getAge(dynamic user) => user.age ?? 18;
+  
   String _getUserLevel(dynamic user) {
     if (user.level != null) return user.level;
     int age = _getAge(user);
@@ -588,13 +604,92 @@ class _ProfileMainContent extends StatelessWidget {
     if (age < 25) return 'Eco Warrior';
     return 'Eco Master';
   }
+  
   DateTime _getCreatedAt(dynamic user) => user.createdAt ?? DateTime.now();
   int _getEcoPoints(dynamic user) => user.ecoPoints ?? 0;
   int _getAchievements(dynamic user) => user.achievementsCount ?? 0;
   int _getLessonsCompleted(dynamic user) => user.lessonsCompleted ?? 0;
+  
   int _getDaysActive(dynamic user) {
     DateTime createdAt = _getCreatedAt(user);
     return DateTime.now().difference(createdAt).inDays;
+  }
+
+  // MÉTODO CORREGIDO PARA OBTENER IMAGEN DE PERFIL
+  Widget _buildProfileImage(dynamic user) {
+    // Buscar la imagen en diferentes campos posibles usando reflexión segura
+    String? imageUrl;
+    
+    // Intentar acceder a diferentes campos de imagen de forma segura
+    try {
+      // Verificar si el objeto tiene la propiedad avatarUrl
+      if (user.runtimeType.toString().contains('UserProfileModel') || 
+          user.runtimeType.toString().contains('Profile')) {
+        // Para modelos de perfil, intentar acceder usando getters seguros
+        try {
+          imageUrl = (user as dynamic).avatarUrl;
+        } catch (e) {
+          print('🔍 No avatarUrl property found');
+        }
+        
+        if (imageUrl == null || imageUrl.isEmpty) {
+          try {
+            imageUrl = (user as dynamic).profilePicture;
+          } catch (e) {
+            print('🔍 No profilePicture property found');
+          }
+        }
+        
+        if (imageUrl == null || imageUrl.isEmpty) {
+          try {
+            imageUrl = (user as dynamic).imageUrl;
+          } catch (e) {
+            print('🔍 No imageUrl property found');
+          }
+        }
+      }
+    } catch (e) {
+      print('🔍 Error accessing image properties: $e');
+    }
+    
+    // Si encontramos una URL válida, mostrar la imagen
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(40),
+        child: Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            print('❌ Error loading profile image: $error');
+            return const Icon(
+              Icons.person_rounded,
+              color: Colors.white,
+              size: 40,
+            );
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(
+              child: SizedBox(
+                width: 30,
+                height: 30,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+    
+    // Si no hay imagen o hubo error, mostrar icono por defecto
+    return const Icon(
+      Icons.person_rounded,
+      color: Colors.white,
+      size: 40,
+    );
   }
 
   Widget _buildNotAuthenticatedContent(BuildContext context) {
@@ -603,10 +698,10 @@ class _ProfileMainContent extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min, // 🆕 AGREGADO
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 80, // 🆕 REDUCIDO TAMAÑO
+              width: 80,
               height: 80,
               decoration: BoxDecoration(
                 color: AppColors.primary.withOpacity(0.1),
@@ -614,14 +709,14 @@ class _ProfileMainContent extends StatelessWidget {
               ),
               child: Icon(
                 Icons.person_off_rounded,
-                size: 40, // 🆕 REDUCIDO TAMAÑO
+                size: 40,
                 color: AppColors.primary,
               ),
             ),
             const SizedBox(height: 16),
             Text(
               'No hay sesión activa',
-              style: AppTextStyles.h4.copyWith( // 🆕 REDUCIDO TAMAÑO
+              style: AppTextStyles.h4.copyWith(
                 color: AppColors.textPrimary,
               ),
             ),
@@ -640,7 +735,7 @@ class _ProfileMainContent extends StatelessWidget {
               label: const Text('Iniciar Sesión'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), // 🆕 REDUCIDO PADDING
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
             ),
           ],
@@ -654,7 +749,7 @@ class _ProfileMainContent extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Text(
         title,
-        style: AppTextStyles.bodyLarge.copyWith( // 🆕 REDUCIDO TAMAÑO
+        style: AppTextStyles.bodyLarge.copyWith(
           color: AppColors.textPrimary,
           fontWeight: FontWeight.bold,
         ),
@@ -665,7 +760,7 @@ class _ProfileMainContent extends StatelessWidget {
   Widget _buildInfoCard(user) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16), // 🆕 REDUCIDO PADDING
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -674,7 +769,7 @@ class _ProfileMainContent extends StatelessWidget {
         ),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // 🆕 AGREGADO
+        mainAxisSize: MainAxisSize.min,
         children: [
           _buildInfoRow('Nombre', _getFullName(user)),
           const SizedBox(height: 8),
@@ -696,7 +791,7 @@ class _ProfileMainContent extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyles.bodySmall.copyWith( // 🆕 REDUCIDO TAMAÑO
+          style: AppTextStyles.bodySmall.copyWith(
             color: AppColors.textSecondary,
             fontWeight: FontWeight.w500,
           ),
@@ -704,7 +799,7 @@ class _ProfileMainContent extends StatelessWidget {
         Flexible(
           child: Text(
             value,
-            style: AppTextStyles.bodySmall.copyWith( // 🆕 REDUCIDO TAMAÑO
+            style: AppTextStyles.bodySmall.copyWith(
               color: isWarning ? AppColors.warning : AppColors.textPrimary,
               fontWeight: FontWeight.w600,
             ),
@@ -722,7 +817,7 @@ class _ProfileMainContent extends StatelessWidget {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12), // 🆕 REDUCIDO PADDING
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -731,17 +826,17 @@ class _ProfileMainContent extends StatelessWidget {
         ),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // 🆕 AGREGADO
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
             color: color,
-            size: 20, // 🆕 REDUCIDO TAMAÑO
+            size: 20,
           ),
-          const SizedBox(height: 6), // 🆕 REDUCIDO ESPACIO
+          const SizedBox(height: 6),
           Text(
             value,
-            style: AppTextStyles.bodyLarge.copyWith( // 🆕 REDUCIDO TAMAÑO
+            style: AppTextStyles.bodyLarge.copyWith(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.bold,
             ),
@@ -764,13 +859,13 @@ class _ProfileMainContent extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) => Container(
-        padding: const EdgeInsets.all(20), // 🆕 REDUCIDO PADDING
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Cambiar foto de perfil',
-              style: AppTextStyles.bodyLarge.copyWith( // 🆕 REDUCIDO TAMAÑO
+              style: AppTextStyles.bodyLarge.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold,
               ),
@@ -816,23 +911,23 @@ class _ProfileMainContent extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(12), // 🆕 REDUCIDO PADDING
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.primary.withOpacity(0.3)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min, // 🆕 AGREGADO
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
               color: AppColors.primary,
-              size: 24, // 🆕 REDUCIDO TAMAÑO
+              size: 24,
             ),
-            const SizedBox(height: 6), // 🆕 REDUCIDO ESPACIO
+            const SizedBox(height: 6),
             Text(
               title,
-              style: AppTextStyles.bodySmall.copyWith( // 🆕 REDUCIDO TAMAÑO
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
               ),
@@ -857,12 +952,12 @@ class _ProfileMainContent extends StatelessWidget {
               Icon(
                 Icons.logout_rounded,
                 color: AppColors.error,
-                size: 20, // 🆕 REDUCIDO TAMAÑO
+                size: 20,
               ),
               const SizedBox(width: 8),
               Text(
                 'Cerrar Sesión',
-                style: AppTextStyles.bodyLarge.copyWith( // 🆕 REDUCIDO TAMAÑO
+                style: AppTextStyles.bodyLarge.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
@@ -969,5 +1064,137 @@ class _ProfileMainContent extends StatelessWidget {
     ];
     
     return '${date.day} de ${months[date.month - 1]} ${date.year}';
+  }
+
+  // 🆕 HELPER PARA OBTENER NIVEL DE USUARIO BASADO EN EDAD
+  String _getUserLevelFromAge(int age) {
+    if (age < 13) return 'Eco Explorer';
+    if (age < 18) return 'Eco Guardian';
+    if (age < 25) return 'Eco Warrior';
+    return 'Eco Master';
+  }
+
+  // 🆕 MOSTRAR PERFIL DE USUARIO AUTENTICADO - CORREGIDO Y SEGURO
+  Widget _buildAuthenticatedUserProfile(AuthAuthenticated authState) {
+    final user = authState.user;
+    final fullProfile = authState.fullProfile;
+    
+    // Usar datos del perfil completo si está disponible, sino usar datos básicos
+    final displayName = fullProfile?.fullName ?? user.fullName ?? 'Usuario';
+    final userLevel = fullProfile?.level ?? _getUserLevelFromAge(user.age ?? 18);
+    
+    // Obtener avatarUrl de forma segura
+    String? avatarUrl;
+    try {
+      avatarUrl = fullProfile?.avatarUrl;
+    } catch (e) {
+      print('🔍 No avatarUrl in fullProfile');
+    }
+    
+    if (avatarUrl == null || avatarUrl.isEmpty) {
+      try {
+        avatarUrl = fullProfile?.profilePicture;
+      } catch (e) {
+        print('🔍 No profilePicture in fullProfile');
+      }
+    }
+    
+    final ecoPoints = fullProfile?.ecoPoints ?? 0;
+    
+    return Row(
+      children: [
+        // User avatar
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.primary.withOpacity(0.3),
+              width: 2,
+            ),
+          ),
+          child: _buildUserAvatar(avatarUrl),
+        ),
+        const SizedBox(width: 12),
+        
+        // User info
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                displayName.isNotEmpty ? displayName : 'Usuario',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Row(
+                children: [
+                  Icon(
+                    Icons.eco_rounded,
+                    color: AppColors.primary,
+                    size: 12,
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      userLevel,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (fullProfile != null) ...[
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.stars_rounded,
+                      color: AppColors.warning,
+                      size: 12,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '$ecoPoints',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.warning,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+        
+        // Status indicator and arrow
+        Column(
+          children: [
+            // Indicador de estado del perfil
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: fullProfile != null ? AppColors.success : AppColors.warning,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: AppColors.textSecondary,
+              size: 16,
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
