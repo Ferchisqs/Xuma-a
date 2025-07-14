@@ -1,4 +1,4 @@
-// lib/features/profile/presentation/pages/profile_main_page.dart
+// lib/features/profile/presentation/pages/profile_main_page.dart - LAYOUT CORREGIDO
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -9,24 +9,30 @@ import '../../../auth/presentation/pages/login_page.dart';
 import '../../../navigation/presentation/widgets/custom_app_bar.dart';
 import '../../../navigation/presentation/widgets/side_nav_bar.dart';
 import '../../../navigation/presentation/cubit/navigation_cubit.dart';
+import '../cubit/profile_cubit.dart';
 
 class ProfileMainPage extends StatelessWidget {
   const ProfileMainPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Verificar si ya existe un AuthCubit en el contexto
-    return BlocProvider<AuthCubit>(
-      create: (context) {
-        final authCubit = getIt<AuthCubit>();
-        // Validar token al crear el cubit
-        authCubit.validateCurrentToken();
-        return authCubit;
-      },
-      child: BlocProvider.value(
-        value: context.read<NavigationCubit>(),
-        child: const _ProfileMainContent(),
-      ),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<AuthCubit>(
+          create: (context) {
+            final authCubit = getIt<AuthCubit>();
+            authCubit.validateCurrentToken();
+            return authCubit;
+          },
+        ),
+        BlocProvider<ProfileCubit>(
+          create: (context) => getIt<ProfileCubit>(),
+        ),
+        BlocProvider.value(
+          value: context.read<NavigationCubit>(),
+        ),
+      ],
+      child: const _ProfileMainContent(),
     );
   }
 }
@@ -39,15 +45,17 @@ class _ProfileMainContent extends StatelessWidget {
     return BlocConsumer<AuthCubit, AuthState>(
       listener: (context, state) {
         if (state is AuthInitial) {
-          // Usuario ha cerrado sesión, navegar al login
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _navigateToLogin(context);
           });
         } else if (state is AuthError) {
           _showErrorSnackBar(context, state.message);
+        } else if (state is AuthAuthenticated) {
+          print('🔍 Usuario autenticado, cargando perfil completo para: ${state.user.id}');
+          context.read<ProfileCubit>().loadUserProfile(state.user.id);
         }
       },
-      builder: (context, state) {
+      builder: (context, authState) {
         return Scaffold(
           backgroundColor: AppColors.background,
           drawer: const SideNavBar(),
@@ -55,14 +63,16 @@ class _ProfileMainContent extends StatelessWidget {
             title: 'Mi Perfil',
             showDrawerButton: true,
           ),
-          body: _buildBody(context, state),
+          body: SafeArea( // 🆕 AGREGADO SafeArea
+            child: _buildBody(context, authState),
+          ),
         );
       },
     );
   }
 
-  Widget _buildBody(BuildContext context, AuthState state) {
-    if (state is AuthLoading) {
+  Widget _buildBody(BuildContext context, AuthState authState) {
+    if (authState is AuthLoading) {
       return const Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
@@ -70,312 +80,211 @@ class _ProfileMainContent extends StatelessWidget {
       );
     }
 
-    if (state is AuthAuthenticated) {
-      return _buildProfileContent(context, state.user);
-    }
+    if (authState is AuthAuthenticated) {
+      return BlocBuilder<ProfileCubit, ProfileState>(
+        builder: (context, profileState) {
+          if (profileState is ProfileLoading) {
+            return const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              ),
+            );
+          }
 
-    // Si no hay usuario autenticado o estado inicial, mostrar mensaje
-    return _buildNotAuthenticatedContent(context);
-  }
-
-  Widget _buildProfileContent(BuildContext context, user) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          // User Profile Card
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: AppColors.earthGradient,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Profile Picture
-                GestureDetector(
-                  onTap: () => _showProfilePictureOptions(context),
-                  child: Stack(
-                    children: [
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(50),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
-                            width: 3,
-                          ),
-                        ),
-                        child: user.profilePicture != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(50),
-                                child: Image.network(
-                                  user.profilePicture!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => 
-                                      const Icon(
-                                        Icons.person_rounded,
-                                        color: Colors.white,
-                                        size: 50,
-                                      ),
-                                ),
-                              )
-                            : const Icon(
-                                Icons.person_rounded,
-                                color: Colors.white,
-                                size: 50,
-                              ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.camera_alt_rounded,
-                            color: AppColors.primary,
-                            size: 16,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // User Info
-                Text(
-                  user.fullName,
-                  style: AppTextStyles.h3.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  user.email,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                
-                // Age info
-                Text(
-                  '${user.age} años',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: Colors.white.withOpacity(0.8),
-                  ),
-                ),
-                
-                const SizedBox(height: 12),
-                
-                // Level Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.eco_rounded,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _getUserLevel(user.age),
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 12),
-                
-                // Member since
-                Text(
-                  'Miembro desde ${_formatDate(user.createdAt)}',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: Colors.white.withOpacity(0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Stats Cards
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  icon: Icons.stars_rounded,
-                  title: 'Puntos',
-                  value: '1,250',
-                  color: AppColors.warning,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStatCard(
-                  icon: Icons.emoji_events_rounded,
-                  title: 'Logros',
-                  value: '15',
-                  color: AppColors.success,
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  icon: Icons.school_rounded,
-                  title: 'Lecciones',
-                  value: '23',
-                  color: AppColors.info,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStatCard(
-                  icon: Icons.favorite_rounded,
-                  title: 'Días activo',
-                  value: _getDaysActive(user.createdAt),
-                  color: AppColors.error,
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 32),
-          
-          // Account Information Section
-          _buildSectionHeader('Información de la Cuenta'),
-          _buildInfoCard(user),
-          
-          const SizedBox(height: 24),
-          
-          // Menu Options
-          _buildSectionHeader('Configuración'),
-          _buildMenuOption(
-            icon: Icons.edit_rounded,
-            title: 'Editar Perfil',
-            subtitle: 'Actualiza tu información personal',
-            onTap: () => _showSnackBar(context, 'Función de edición próximamente'),
-          ),
-          
-          _buildMenuOption(
-            icon: Icons.notifications_rounded,
-            title: 'Notificaciones',
-            subtitle: 'Configura tus alertas',
-            onTap: () => _showSnackBar(context, 'Función de notificaciones próximamente'),
-          ),
-          
-          _buildMenuOption(
-            icon: Icons.privacy_tip_rounded,
-            title: 'Privacidad',
-            subtitle: 'Gestiona tu privacidad',
-            onTap: () => _showSnackBar(context, 'Función de privacidad próximamente'),
-          ),
-          
-          _buildMenuOption(
-            icon: Icons.help_outline_rounded,
-            title: 'Ayuda',
-            subtitle: 'Centro de ayuda y FAQ',
-            onTap: () {
-              // Verificar si NavigationCubit está disponible
-              try {
-                context.read<NavigationCubit>().goToContact();
-              } catch (e) {
-                _showSnackBar(context, 'Función de ayuda próximamente');
-              }
-            },
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Logout Button
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.error.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.error.withOpacity(0.3),
-              ),
-            ),
-            child: InkWell(
-              onTap: () => _showLogoutDialog(context),
-              borderRadius: BorderRadius.circular(12),
+          if (profileState is ProfileError) {
+            return Center(
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min, // 🆕 AGREGADO
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.error.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.logout_rounded,
-                        color: AppColors.error,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Cerrar Sesión',
-                            style: AppTextStyles.bodyLarge.copyWith(
-                              color: AppColors.error,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            'Salir de tu cuenta',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.error.withOpacity(0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                     Icon(
-                      Icons.arrow_forward_ios_rounded,
+                      Icons.error_outline,
+                      size: 64,
                       color: AppColors.error,
-                      size: 16,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error cargando perfil',
+                      style: AppTextStyles.h4.copyWith(color: AppColors.error),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      profileState.message,
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        context.read<ProfileCubit>().loadUserProfile(authState.user.id);
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reintentar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                      ),
                     ),
                   ],
                 ),
+              ),
+            );
+          }
+
+          if (profileState is ProfileLoaded || profileState is ProfileUpdated) {
+            final profile = profileState is ProfileLoaded 
+                ? profileState.profile 
+                : (profileState as ProfileUpdated).profile;
+            
+            return _buildProfileContent(context, profile);
+          }
+
+          return _buildProfileContent(context, authState.user, isBasicData: true);
+        },
+      );
+    }
+
+    return _buildNotAuthenticatedContent(context);
+  }
+
+  Widget _buildProfileContent(BuildContext context, dynamic user, {bool isBasicData = false}) {
+    return LayoutBuilder( // 🆕 USAR LayoutBuilder PARA RESPONSIVE
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16), // 🆕 REDUCIDO PADDING
+          child: ConstrainedBox( // 🆕 CONSTRAINEDBOX PARA EVITAR OVERFLOW
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight - 32, // Menos padding
+            ),
+            child: Column(
+              children: [
+                // Banner informativo si usamos datos básicos
+                if (isBasicData) 
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.info.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.info.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: AppColors.info, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Cargando información completa del perfil...',
+                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.info),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // User Profile Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20), // 🆕 REDUCIDO PADDING
+                  decoration: BoxDecoration(
+                    gradient: AppColors.earthGradient,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min, // 🆕 AGREGADO
+                    children: [
+                      // Profile Picture
+                      _buildProfilePictureSection(context, user),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // User Info
+                      _buildUserInfoSection(user),
+                      
+                      const SizedBox(height: 12),
+                      
+                      // Member since
+                      Text(
+                        'Miembro desde ${_formatDate(_getCreatedAt(user))}',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.white.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 20), // 🆕 REDUCIDO ESPACIO
+                
+                // Stats Cards - 🆕 HACER MÁS COMPACTO
+                _buildStatsSection(user),
+                
+                const SizedBox(height: 20), // 🆕 REDUCIDO ESPACIO
+                
+                // Account Information Section
+                _buildAccountInfoSection(context, user),
+                
+                const SizedBox(height: 20), // 🆕 REDUCIDO ESPACIO
+                
+                // Menu Options - 🆕 HACER MÁS COMPACTO
+                _buildMenuSection(context),
+                
+                const SizedBox(height: 20), // 🆕 REDUCIDO ESPACIO
+                
+                // Logout Button
+                _buildLogoutSection(context),
+                
+                const SizedBox(height: 20), // 🆕 ESPACIO FINAL PEQUEÑO
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 🆕 MÉTODOS SEPARADOS PARA MEJOR ORGANIZACIÓN
+  Widget _buildProfilePictureSection(BuildContext context, dynamic user) {
+    return GestureDetector(
+      onTap: () => _showProfilePictureOptions(context),
+      child: Stack(
+        children: [
+          Container(
+            width: 80, // 🆕 REDUCIDO TAMAÑO
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(40),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 3,
+              ),
+            ),
+            child: _buildProfileImage(user),
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.camera_alt_rounded,
+                color: AppColors.primary,
+                size: 14, // 🆕 REDUCIDO TAMAÑO
               ),
             ),
           ),
@@ -384,34 +293,339 @@ class _ProfileMainContent extends StatelessWidget {
     );
   }
 
+  Widget _buildUserInfoSection(dynamic user) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          _getFullName(user),
+          style: AppTextStyles.h4.copyWith( // 🆕 REDUCIDO TAMAÑO DE FUENTE
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _getEmail(user),
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: Colors.white.withOpacity(0.9),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${_getAge(user)} años',
+          style: AppTextStyles.bodySmall.copyWith(
+            color: Colors.white.withOpacity(0.8),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Level Badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), // 🆕 REDUCIDO PADDING
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.eco_rounded,
+                color: Colors.white,
+                size: 14, // 🆕 REDUCIDO TAMAÑO
+              ),
+              const SizedBox(width: 4),
+              Text(
+                _getUserLevel(user),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsSection(dynamic user) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                icon: Icons.stars_rounded,
+                title: 'Puntos',
+                value: _getEcoPoints(user).toString(),
+                color: AppColors.warning,
+              ),
+            ),
+            const SizedBox(width: 12), // 🆕 REDUCIDO ESPACIO
+            Expanded(
+              child: _buildStatCard(
+                icon: Icons.emoji_events_rounded,
+                title: 'Logros',
+                value: _getAchievements(user).toString(),
+                color: AppColors.success,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12), // 🆕 REDUCIDO ESPACIO
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                icon: Icons.school_rounded,
+                title: 'Lecciones',
+                value: _getLessonsCompleted(user).toString(),
+                color: AppColors.info,
+              ),
+            ),
+            const SizedBox(width: 12), // 🆕 REDUCIDO ESPACIO
+            Expanded(
+              child: _buildStatCard(
+                icon: Icons.favorite_rounded,
+                title: 'Días activo',
+                value: _getDaysActive(user).toString(),
+                color: AppColors.error,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAccountInfoSection(BuildContext context, dynamic user) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildSectionHeader('Información de la Cuenta'),
+        const SizedBox(height: 8),
+        _buildInfoCard(user),
+      ],
+    );
+  }
+
+  Widget _buildMenuSection(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildSectionHeader('Configuración'),
+        const SizedBox(height: 8),
+        _buildCompactMenuOption(
+          icon: Icons.edit_rounded,
+          title: 'Editar Perfil',
+          onTap: () => _showSnackBar(context, 'Función de edición próximamente'),
+        ),
+        const SizedBox(height: 8),
+        _buildCompactMenuOption(
+          icon: Icons.notifications_rounded,
+          title: 'Notificaciones',
+          onTap: () => _showSnackBar(context, 'Función de notificaciones próximamente'),
+        ),
+        const SizedBox(height: 8),
+        _buildCompactMenuOption(
+          icon: Icons.help_outline_rounded,
+          title: 'Ayuda',
+          onTap: () {
+            try {
+              context.read<NavigationCubit>().goToContact();
+            } catch (e) {
+              _showSnackBar(context, 'Función de ayuda próximamente');
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLogoutSection(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.error.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.error.withOpacity(0.3),
+        ),
+      ),
+      child: InkWell(
+        onTap: () => _showLogoutDialog(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(14), // 🆕 REDUCIDO PADDING
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6), // 🆕 REDUCIDO PADDING
+                decoration: BoxDecoration(
+                  color: AppColors.error.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.logout_rounded,
+                  color: AppColors.error,
+                  size: 18, // 🆕 REDUCIDO TAMAÑO
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Cerrar Sesión',
+                  style: AppTextStyles.bodyMedium.copyWith( // 🆕 REDUCIDO TAMAÑO
+                    color: AppColors.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: AppColors.error,
+                size: 14, // 🆕 REDUCIDO TAMAÑO
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 🆕 VERSIÓN COMPACTA DEL MENU OPTION
+  Widget _buildCompactMenuOption({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.1),
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // 🆕 COMPACTO
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: AppColors.primary,
+                size: 20, // 🆕 REDUCIDO TAMAÑO
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: AppColors.textHint,
+                size: 14, // 🆕 REDUCIDO TAMAÑO
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 🆕 RESTO DE MÉTODOS HELPER (SIN CAMBIOS PERO MÁS COMPACTOS)
+  Widget _buildProfileImage(dynamic user) {
+    String? imageUrl = user.profilePicture ?? user.avatarUrl;
+    
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(40),
+        child: Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => const Icon(
+            Icons.person_rounded,
+            color: Colors.white,
+            size: 40,
+          ),
+        ),
+      );
+    }
+    
+    return const Icon(
+      Icons.person_rounded,
+      color: Colors.white,
+      size: 40,
+    );
+  }
+
+  // Helper methods para obtener datos del usuario
+  String _getFullName(dynamic user) {
+    if (user.fullName != null) return user.fullName;
+    return '${user.firstName ?? ''} ${user.lastName ?? ''}'.trim();
+  }
+
+  String _getEmail(dynamic user) => user.email ?? '';
+  int _getAge(dynamic user) => user.age ?? 18;
+  String _getUserLevel(dynamic user) {
+    if (user.level != null) return user.level;
+    int age = _getAge(user);
+    if (age < 13) return 'Eco Explorer';
+    if (age < 18) return 'Eco Guardian';
+    if (age < 25) return 'Eco Warrior';
+    return 'Eco Master';
+  }
+  DateTime _getCreatedAt(dynamic user) => user.createdAt ?? DateTime.now();
+  int _getEcoPoints(dynamic user) => user.ecoPoints ?? 0;
+  int _getAchievements(dynamic user) => user.achievementsCount ?? 0;
+  int _getLessonsCompleted(dynamic user) => user.lessonsCompleted ?? 0;
+  int _getDaysActive(dynamic user) {
+    DateTime createdAt = _getCreatedAt(user);
+    return DateTime.now().difference(createdAt).inDays;
+  }
+
   Widget _buildNotAuthenticatedContent(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min, // 🆕 AGREGADO
           children: [
             Container(
-              width: 120,
-              height: 120,
+              width: 80, // 🆕 REDUCIDO TAMAÑO
+              height: 80,
               decoration: BoxDecoration(
                 color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(60),
+                borderRadius: BorderRadius.circular(40),
               ),
               child: Icon(
                 Icons.person_off_rounded,
-                size: 60,
+                size: 40, // 🆕 REDUCIDO TAMAÑO
                 color: AppColors.primary,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Text(
               'No hay sesión activa',
-              style: AppTextStyles.h3.copyWith(
+              style: AppTextStyles.h4.copyWith( // 🆕 REDUCIDO TAMAÑO
                 color: AppColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
               'Por favor inicia sesión para ver tu perfil',
               style: AppTextStyles.bodyMedium.copyWith(
@@ -419,14 +633,14 @@ class _ProfileMainContent extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () => _navigateToLogin(context),
               icon: const Icon(Icons.login_rounded),
               label: const Text('Iniciar Sesión'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), // 🆕 REDUCIDO PADDING
               ),
             ),
           ],
@@ -436,18 +650,14 @@ class _ProfileMainContent extends StatelessWidget {
   }
 
   Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: AppTextStyles.h4.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        title,
+        style: AppTextStyles.bodyLarge.copyWith( // 🆕 REDUCIDO TAMAÑO
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -455,7 +665,7 @@ class _ProfileMainContent extends StatelessWidget {
   Widget _buildInfoCard(user) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16), // 🆕 REDUCIDO PADDING
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -464,22 +674,16 @@ class _ProfileMainContent extends StatelessWidget {
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min, // 🆕 AGREGADO
         children: [
-          _buildInfoRow('Nombre completo', user.fullName),
-          const Divider(height: 24),
-          _buildInfoRow('Email', user.email),
-          const Divider(height: 24),
-          _buildInfoRow('Edad', '${user.age} años'),
-          const Divider(height: 24),
-          _buildInfoRow('Miembro desde', _formatDate(user.createdAt)),
-          if (user.lastLogin != null) ...[
-            const Divider(height: 24),
-            _buildInfoRow('Último acceso', _formatDate(user.lastLogin!)),
-          ],
-          if (user.needsParentalConsent) ...[
-            const Divider(height: 24),
-            _buildInfoRow('Consentimiento parental', 'Requerido', 
-                isWarning: true),
+          _buildInfoRow('Nombre', _getFullName(user)),
+          const SizedBox(height: 8),
+          _buildInfoRow('Email', _getEmail(user)),
+          const SizedBox(height: 8),
+          _buildInfoRow('Edad', '${_getAge(user)} años'),
+          if (user.needsParentalConsent == true) ...[
+            const SizedBox(height: 8),
+            _buildInfoRow('Consentimiento', 'Requerido', isWarning: true),
           ],
         ],
       ),
@@ -488,26 +692,23 @@ class _ProfileMainContent extends StatelessWidget {
 
   Widget _buildInfoRow(String label, String value, {bool isWarning = false}) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Expanded(
-          flex: 2,
-          child: Text(
-            label,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
+        Text(
+          label,
+          style: AppTextStyles.bodySmall.copyWith( // 🆕 REDUCIDO TAMAÑO
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        Expanded(
-          flex: 3,
+        Flexible(
           child: Text(
             value,
-            style: AppTextStyles.bodyMedium.copyWith(
+            style: AppTextStyles.bodySmall.copyWith( // 🆕 REDUCIDO TAMAÑO
               color: isWarning ? AppColors.warning : AppColors.textPrimary,
               fontWeight: FontWeight.w600,
             ),
+            textAlign: TextAlign.end,
           ),
         ),
       ],
@@ -521,7 +722,7 @@ class _ProfileMainContent extends StatelessWidget {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12), // 🆕 REDUCIDO PADDING
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -530,23 +731,17 @@ class _ProfileMainContent extends StatelessWidget {
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min, // 🆕 AGREGADO
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 24,
-            ),
+          Icon(
+            icon,
+            color: color,
+            size: 20, // 🆕 REDUCIDO TAMAÑO
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6), // 🆕 REDUCIDO ESPACIO
           Text(
             value,
-            style: AppTextStyles.h4.copyWith(
+            style: AppTextStyles.bodyLarge.copyWith( // 🆕 REDUCIDO TAMAÑO
               color: AppColors.textPrimary,
               fontWeight: FontWeight.bold,
             ),
@@ -561,73 +756,6 @@ class _ProfileMainContent extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildMenuOption({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: AppColors.primary,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: AppTextStyles.bodyLarge.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: AppColors.textHint,
-                  size: 16,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   void _showProfilePictureOptions(BuildContext context) {
     showModalBottomSheet(
@@ -636,18 +764,18 @@ class _ProfileMainContent extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20), // 🆕 REDUCIDO PADDING
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Cambiar foto de perfil',
-              style: AppTextStyles.h4.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith( // 🆕 REDUCIDO TAMAÑO
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -660,7 +788,7 @@ class _ProfileMainContent extends StatelessWidget {
                     },
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: _buildPhotoOption(
                     icon: Icons.photo_library_rounded,
@@ -688,22 +816,23 @@ class _ProfileMainContent extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // 🆕 REDUCIDO PADDING
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.primary.withOpacity(0.3)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min, // 🆕 AGREGADO
           children: [
             Icon(
               icon,
               color: AppColors.primary,
-              size: 32,
+              size: 24, // 🆕 REDUCIDO TAMAÑO
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6), // 🆕 REDUCIDO ESPACIO
             Text(
               title,
-              style: AppTextStyles.bodyMedium.copyWith(
+              style: AppTextStyles.bodySmall.copyWith( // 🆕 REDUCIDO TAMAÑO
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
               ),
@@ -718,7 +847,7 @@ class _ProfileMainContent extends StatelessWidget {
     showDialog(
       context: context,
       builder: (dialogContext) => BlocProvider.value(
-        value: context.read<AuthCubit>(), // Pasar el AuthCubit al dialog
+        value: context.read<AuthCubit>(),
         child: AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -728,11 +857,12 @@ class _ProfileMainContent extends StatelessWidget {
               Icon(
                 Icons.logout_rounded,
                 color: AppColors.error,
+                size: 20, // 🆕 REDUCIDO TAMAÑO
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Text(
                 'Cerrar Sesión',
-                style: AppTextStyles.h4.copyWith(
+                style: AppTextStyles.bodyLarge.copyWith( // 🆕 REDUCIDO TAMAÑO
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
@@ -740,7 +870,7 @@ class _ProfileMainContent extends StatelessWidget {
             ],
           ),
           content: Text(
-            '¿Estás seguro de que quieres cerrar sesión? Tu progreso se guardará automáticamente.',
+            '¿Estás seguro de que quieres cerrar sesión?',
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textSecondary,
             ),
@@ -790,13 +920,12 @@ class _ProfileMainContent extends StatelessWidget {
   }
 
   void _performLogout(BuildContext context) {
-    print('🔍 Performing logout...'); // Para debug
-    // Llamar al método de logout del AuthCubit
+    print('🔍 Performing logout...');
     context.read<AuthCubit>().logout();
   }
 
   void _navigateToLogin(BuildContext context) {
-    print('🔍 Navigating to login...'); // Para debug
+    print('🔍 Navigating to login...');
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (context) => const LoginPage(),
@@ -833,14 +962,6 @@ class _ProfileMainContent extends StatelessWidget {
     );
   }
 
-  // Helper methods
-  String _getUserLevel(int age) {
-    if (age < 13) return 'Eco Explorer';
-    if (age < 18) return 'Eco Guardian';
-    if (age < 25) return 'Eco Warrior';
-    return 'Eco Master';
-  }
-
   String _formatDate(DateTime date) {
     const months = [
       'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -848,10 +969,5 @@ class _ProfileMainContent extends StatelessWidget {
     ];
     
     return '${date.day} de ${months[date.month - 1]} ${date.year}';
-  }
-
-  String _getDaysActive(DateTime createdAt) {
-    final difference = DateTime.now().difference(createdAt).inDays;
-    return difference.toString();
   }
 }
