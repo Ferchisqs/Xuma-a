@@ -172,8 +172,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i497.TokenManager(gh<_i460.SharedPreferences>()));
     gh.lazySingleton<_i819.HomeLocalDataSource>(
         () => _i819.HomeLocalDataSourceImpl(gh<_i800.CacheService>()));
-    gh.lazySingleton<_i182.AuthLocalDataSource>(
-        () => _i182.AuthLocalDataSourceImpl(gh<_i460.SharedPreferences>()));
     gh.factory<_i430.TriviaLocalDataSource>(
         () => _i430.TriviaLocalDataSourceImpl(gh<_i800.CacheService>()));
     gh.factory<_i422.ChallengesLocalDataSource>(
@@ -182,6 +180,11 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i195.LearningLocalDataSourceImpl(gh<_i800.CacheService>()));
     gh.factory<_i1032.CompanionLocalDataSource>(
         () => _i1032.CompanionLocalDataSourceImpl(gh<_i800.CacheService>()));
+    gh.lazySingleton<_i182.AuthLocalDataSource>(
+        () => _i182.AuthLocalDataSourceImpl(
+              gh<_i460.SharedPreferences>(),
+              gh<_i497.TokenManager>(),
+            ));
     gh.lazySingleton<_i6.NetworkInfo>(
         () => _i6.NetworkInfoImpl(gh<_i895.Connectivity>()));
     gh.lazySingleton<_i510.ApiClient>(() => _i510.ApiClient(
@@ -196,16 +199,17 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i510.ApiClient>(),
               gh<_i497.TokenManager>(),
             ));
-    gh.lazySingleton<_i869.AuthRepository>(() => _i570.AuthRepositoryImpl(
-          gh<_i130.AuthRemoteDataSource>(),
-          gh<_i182.AuthLocalDataSource>(),
-        ));
     gh.lazySingleton<_i75.HomeRemoteDataSource>(
         () => _i75.HomeRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i115.CompanionRemoteDataSource>(
         () => _i115.CompanionRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i614.TriviaRemoteDataSource>(
         () => _i614.TriviaRemoteDataSourceImpl(gh<_i510.ApiClient>()));
+    gh.lazySingleton<_i869.AuthRepository>(() => _i570.AuthRepositoryImpl(
+          gh<_i130.AuthRemoteDataSource>(),
+          gh<_i182.AuthLocalDataSource>(),
+          gh<_i497.TokenManager>(),
+        ));
     gh.lazySingleton<_i850.ProfileRemoteDataSource>(
         () => _i850.ProfileRemoteDataSourceImpl(
               gh<_i510.ApiClient>(),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart'; // 🆕 AGREGADO
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../navigation/presentation/widgets/custom_app_bar.dart';
@@ -8,6 +9,9 @@ import '../../../navigation/presentation/cubit/navigation_cubit.dart';
 
 class ContactMainPage extends StatelessWidget {
   const ContactMainPage({Key? key}) : super(key: key);
+
+  // 🆕 EMAIL DE CONTACTO AGREGADO
+  static const String contactEmail = 'nova.code.oficial.1@gmail.com';
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +94,8 @@ class _ContactMainContent extends StatelessWidget {
               title: 'Correo Electrónico',
               subtitle: 'soporte@xumaa.com',
               onTap: () {
-                _showSnackBar(context, 'Función de email próximamente');
+                // 🆕 MODIFICADO: Ahora redirige al email
+                _sendEmail(context);
               },
             ),
             
@@ -99,7 +104,7 @@ class _ContactMainContent extends StatelessWidget {
             _buildContactOption(
               icon: Icons.phone_rounded,
               title: 'Teléfono',
-              subtitle: '+52 961 123 4567',
+              subtitle: '‪+52 961 123 4567‬',
               onTap: () {
                 _showSnackBar(context, 'Función de llamada próximamente');
               },
@@ -246,6 +251,29 @@ class _ContactMainContent extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // 🆕 FUNCIÓN AGREGADA PARA ENVIAR EMAIL
+  Future<void> _sendEmail(BuildContext context) async {
+    try {
+      final Uri emailUri = Uri(
+        scheme: 'mailto',
+        path: ContactMainPage.contactEmail,
+        queryParameters: {
+          'subject': 'Consulta sobre XUMA\'A',
+          'body': 'Hola equipo de XUMA\'A,\n\nTengo una consulta sobre:\n\n[Describe tu consulta aquí]\n\nGracias por su tiempo.\n\nSaludos cordiales.',
+        },
+      );
+
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        // Fallback si no puede abrir el email
+        _showSnackBar(context, 'No se pudo abrir el cliente de email. Email: ${ContactMainPage.contactEmail}');
+      }
+    } catch (e) {
+      _showSnackBar(context, 'Error al abrir email. Contacto: ${ContactMainPage.contactEmail}');
+    }
   }
 
   void _showSnackBar(BuildContext context, String message) {

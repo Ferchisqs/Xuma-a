@@ -119,87 +119,155 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
   }
 
-  @override
-  Future<UserModel> register(RegisterParams params) async {
-    try {
-      print('🔍 [AUTH] Starting registration for: ${params.email}');
+ @override
+Future<UserModel> register(RegisterParams params) async {
+  try {
+    print('🔍 [AUTH] Starting registration for: ${params.email}');
+    
+    final response = await _apiClient.post(
+      ApiEndpoints.register,
+      data: {
+        'email': params.email,
+        'password': params.password,
+        'confirmPassword': params.confirmPassword,
+        'age': params.age,
+        'firstName': params.firstName,
+        'lastName': params.lastName,
+      },
+    );
+
+    print('🔍 [AUTH] Register Response Status: ${response.statusCode}');
+    print('🔍 [AUTH] Register Response Data: ${response.data}');
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final responseData = response.data;
       
-      final response = await _apiClient.post(
-        ApiEndpoints.register,
-        data: {
-          'email': params.email,
-          'password': params.password,
-          'confirmPassword': params.confirmPassword,
-          'age': params.age,
-          'firstName': params.firstName,
-          'lastName': params.lastName,
-        },
-      );
-
-      print('🔍 [AUTH] Register Response Status: ${response.statusCode}');
-      print('🔍 [AUTH] Register Response Data: ${response.data}');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = response.data;
+      // Verificar que la respuesta sea exitosa
+      if (responseData['success'] != true) {
+        throw ServerException('Registro no exitoso: ${responseData['message'] ?? 'Error desconocido'}');
+      }
+      
+      await _tokenManager.saveTokensFromResponse(responseData);
+      
+      Map<String, dynamic> userData = {};
+      
+      if (responseData['data'] != null) {
+        final data = responseData['data'];
         
-        // Verificar que la respuesta sea exitosa
-        if (responseData['success'] != true) {
-          throw ServerException('Registro no exitoso: ${responseData['message'] ?? 'Error desconocido'}');
+        if (data['user'] != null) {
+          userData = Map<String, dynamic>.from(data['user']);
+          userData['userId'] = data['userId'];
+          userData['id'] = data['userId'];
+        } else {
+          userData = Map<String, dynamic>.from(data);
         }
         
-        // 🆕 GUARDAR TOKENS EXPLÍCITAMENTE
+        if (userData['age'] == null) {
+          userData['age'] = params.age;
+        }
+        
+        userData['firstName'] = userData['firstName'] ?? params.firstName;
+        userData['lastName'] = userData['lastName'] ?? params.lastName;
+        userData['email'] = userData['email'] ?? params.email;
+        
+      } else {
+        throw ServerException('Datos de usuario no encontrados en la respuesta de registro');
+      }
+      
+      return _createUserModelFromApiData(userData, isLogin: false);
+    } else {
+      throw ServerException('Error en el registro: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
+    }
+  } catch (e) {
+    print('❌ [AUTH] Register Error Details: $e');
+    if (e is ServerException) rethrow;
+    throw ServerException('Error de conexión en registro: $e');
+  }
+}
+
+@override
+Future<UserModel> registerWithParentalConsent(RegisterParams params) async {
+  try {
+    print('🔍 [AUTH] Starting parental consent registration for: ${params.email}');
+    
+    final requestData = {
+      'email': params.email,
+      'password': params.password,
+      'confirmPassword': params.confirmPassword,
+      'age': params.age,
+      'firstName': params.firstName,
+      'lastName': params.lastName,
+      'needsParentalConsent': true,
+    };
+
+    if (params.parentalInfo != null) {
+      requestData.addAll({
+        'guardianName': params.parentalInfo!.guardianName,
+        'relationship': params.parentalInfo!.relationship,
+        'guardianEmail': params.parentalInfo!.guardianEmail,
+      });
+    }
+
+    final response = await _apiClient.post(
+      ApiEndpoints.register,
+      data: requestData,
+    );
+
+    print('🔍 [AUTH] Parental Register Response Status: ${response.statusCode}');
+    print('🔍 [AUTH] Parental Register Response Data: ${response.data}');
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      await _tokenManager.saveTokensFromResponse(response.data);
+      
+      Map<String, dynamic> userData = {};
+      
+      if (response.data['data'] != null) {
+        final data = response.data['data'];
+        
+        if (data['user'] != null) {
+          userData = Map<String, dynamic>.from(data['user']);
+          userData['userId'] = data['userId'];
+          userData['id'] = data['userId'];
+        } else {
+          userData = Map<String, dynamic>.from(data);
+        }
+      } else {
+        userData = response.data;
+      }
+      
+      // Asegurar datos del registro
+      userData['firstName'] = userData['firstName'] ?? params.firstName;
+      userData['lastName'] = userData['lastName'] ?? params.lastName;
+      userData['email'] = userData['email'] ?? params.email;
+      userData['age'] = userData['age'] ?? params.age;
+      userData['needsParentalConsent'] = true;
+      
+      // Si hay información parental, solicitar consentimiento
+      if (params.needsParentalConsent && params.parentalInfo != null) {
         try {
-          await _tokenManager.saveTokensFromResponse(responseData);
-          print('✅ [AUTH] Tokens saved after successful registration');
-          
-          // Debug tokens
-          await _tokenManager.debugTokenInfo();
+          await requestParentalConsent(
+            minorUserId: userData['id'] ?? userData['userId'],
+            parentEmail: params.parentalInfo!.guardianEmail,
+            parentName: params.parentalInfo!.guardianName,
+            relationship: params.parentalInfo!.relationship,
+          );
+          print('✅ [AUTH] Parental consent request sent successfully');
         } catch (e) {
-          print('⚠️ [AUTH] Warning: Could not save tokens: $e');
+          print('⚠️ [AUTH] Warning: Could not send parental consent request: $e');
           // No fallar el registro por esto
         }
-        
-        // Extraer datos del usuario para REGISTER
-        Map<String, dynamic> userData = {};
-        
-        if (responseData['data'] != null) {
-          final data = responseData['data'];
-          
-          // Para REGISTER: puede venir diferente estructura
-          if (data['user'] != null) {
-            userData = Map<String, dynamic>.from(data['user']);
-            userData['userId'] = data['userId'];
-            userData['id'] = data['userId'];
-          } else {
-            userData = Map<String, dynamic>.from(data);
-          }
-          
-          // Para register, agregar la edad que enviamos
-          if (userData['age'] == null) {
-            userData['age'] = params.age;
-          }
-          
-          // Agregar campos del registro
-          userData['firstName'] = userData['firstName'] ?? params.firstName;
-          userData['lastName'] = userData['lastName'] ?? params.lastName;
-          userData['email'] = userData['email'] ?? params.email;
-          
-        } else {
-          throw ServerException('Datos de usuario no encontrados en la respuesta de registro');
-        }
-        
-        print('🔍 [AUTH] Final user data for REGISTER model: $userData');
-        
-        return _createUserModelFromApiData(userData, isLogin: false);
-      } else {
-        throw ServerException('Error en el registro: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
       }
-    } catch (e) {
-      print('❌ [AUTH] Register Error Details: $e');
-      if (e is ServerException) rethrow;
-      throw ServerException('Error de conexión en registro: $e');
+      
+      return _createUserModelFromApiData(userData, isLogin: false);
+    } else {
+      throw ServerException('Error en registro con consentimiento parental: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
     }
+  } catch (e) {
+    print('❌ [AUTH] Parental Register Error Details: $e');
+    if (e is ServerException) rethrow;
+    throw ServerException('Error de conexión en registro parental: $e');
   }
+}
 
   @override
   Future<void> logout() async {
@@ -481,62 +549,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   // ==================== RESTO DE MÉTODOS (CONSENTIMIENTO PARENTAL Y EMAIL) ====================
   
-  @override
-  Future<UserModel> registerWithParentalConsent(RegisterParams params) async {
-    // ... implementación existente ...
-    try {
-      final requestData = {
-        'email': params.email,
-        'password': params.password,
-        'confirmPassword': params.confirmPassword,
-        'age': params.age,
-        'firstName': params.firstName,
-        'lastName': params.lastName,
-        'needsParentalConsent': true,
-      };
-
-      if (params.parentalInfo != null) {
-        requestData.addAll({
-          'guardianName': params.parentalInfo!.guardianName,
-          'relationship': params.parentalInfo!.relationship,
-          'guardianEmail': params.parentalInfo!.guardianEmail,
-        });
-      }
-
-      final response = await _apiClient.post(
-        ApiEndpoints.register,
-        data: requestData,
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        // 🆕 GUARDAR TOKENS
-        try {
-          await _tokenManager.saveTokensFromResponse(response.data);
-        } catch (e) {
-          print('⚠️ [AUTH] Warning: Could not save tokens for parental consent registration: $e');
-        }
-        
-        final userData = response.data['user'] ?? response.data;
-        
-        if (params.needsParentalConsent && params.parentalInfo != null) {
-          await requestParentalConsent(
-            minorUserId: userData['id'],
-            parentEmail: params.parentalInfo!.guardianEmail,
-            parentName: params.parentalInfo!.guardianName,
-            relationship: params.parentalInfo!.relationship,
-          );
-        }
-        
-        return UserModel.fromJson(userData);
-      } else {
-        throw ServerException('Error en registro con consentimiento parental: ${response.data['message'] ?? 'Error desconocido'}');
-      }
-    } catch (e) {
-      if (e is ServerException) rethrow;
-      throw ServerException('Error de conexión en registro parental: $e');
-    }
-  }
-
+  
   @override
   Future<Map<String, dynamic>> requestParentalConsent({
     required String minorUserId,
