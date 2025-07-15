@@ -1,36 +1,34 @@
-// lib/core/network/api_client.dart - VERSIÓN ACTUALIZADA CON TOKEN MANAGER
+// lib/core/network/api_client.dart - ACTUALIZADO CON CONTENT SERVICE
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 import '../config/api_endpoints.dart';
 import '../errors/exceptions.dart';
 import '../services/cache_service.dart';
-import '../services/token_manager.dart'; // 🆕 IMPORTAR TOKEN MANAGER
+import '../services/token_manager.dart';
 import 'network_info.dart';
 
 @lazySingleton
 class ApiClient {
-  late final Dio _authDio;  // Para servicio de auth
-  late final Dio _userDio;  // Para servicio de usuarios
+  late final Dio _authDio;     // Para servicio de auth
+  late final Dio _userDio;     // Para servicio de usuarios
+  late final Dio _contentDio;  // 🆕 Para servicio de contenido
   final NetworkInfo _networkInfo;
   final CacheService _cacheService;
-  final TokenManager _tokenManager; // 🆕 AGREGAR TOKEN MANAGER
-
-  // URLs de los diferentes servicios
-  static const String _authServiceUrl = 'https://auth-service-production-e333.up.railway.app';
-  static const String _userServiceUrl = 'https://user-service-xumaa-production.up.railway.app';
+  final TokenManager _tokenManager;
 
   ApiClient(
     this._networkInfo, 
     this._cacheService,
-    this._tokenManager, // 🆕 INYECTAR TOKEN MANAGER
+    this._tokenManager,
   ) {
     _setupAuthDio();
     _setupUserDio();
+    _setupContentDio(); // 🆕
   }
 
   void _setupAuthDio() {
     _authDio = Dio(BaseOptions(
-      baseUrl: _authServiceUrl,
+      baseUrl: ApiEndpoints.authServiceUrl,
       connectTimeout: Duration(milliseconds: ApiEndpoints.connectTimeout),
       receiveTimeout: Duration(milliseconds: ApiEndpoints.receiveTimeout),
       sendTimeout: Duration(milliseconds: ApiEndpoints.sendTimeout),
@@ -42,7 +40,7 @@ class ApiClient {
 
   void _setupUserDio() {
     _userDio = Dio(BaseOptions(
-      baseUrl: _userServiceUrl,
+      baseUrl: ApiEndpoints.userServiceUrl,
       connectTimeout: Duration(milliseconds: ApiEndpoints.connectTimeout),
       receiveTimeout: Duration(milliseconds: ApiEndpoints.receiveTimeout),
       sendTimeout: Duration(milliseconds: ApiEndpoints.sendTimeout),
@@ -52,8 +50,21 @@ class ApiClient {
     _setupInterceptors(_userDio, 'USER');
   }
 
+  // 🆕 CONFIGURAR DIO PARA CONTENT SERVICE
+  void _setupContentDio() {
+    _contentDio = Dio(BaseOptions(
+      baseUrl: ApiEndpoints.contentServiceUrl,
+      connectTimeout: Duration(milliseconds: ApiEndpoints.connectTimeout),
+      receiveTimeout: Duration(milliseconds: ApiEndpoints.receiveTimeout),
+      sendTimeout: Duration(milliseconds: ApiEndpoints.sendTimeout),
+      headers: ApiEndpoints.contentHeaders,
+    ));
+
+    _setupInterceptors(_contentDio, 'CONTENT');
+  }
+
   void _setupInterceptors(Dio dio, String serviceName) {
-    // 1. Auth Interceptor - 🆕 MEJORADO CON TOKEN MANAGER
+    // 1. Auth Interceptor
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -71,7 +82,7 @@ class ApiClient {
       ),
     );
 
-    // 2. Retry Interceptor - Reintentar con token renovado
+    // 2. Retry Interceptor
     dio.interceptors.add(
       InterceptorsWrapper(
         onError: (error, handler) async {
@@ -87,7 +98,7 @@ class ApiClient {
       ),
     );
 
-    // 3. Logging Interceptor (solo en desarrollo)
+    // 3. Logging Interceptor
     dio.interceptors.add(
       LogInterceptor(
         requestBody: true,
@@ -192,22 +203,36 @@ class ApiClient {
     final baseUrl = options?.extra?['baseUrl'] as String?;
     
     if (baseUrl != null) {
-      if (baseUrl.contains('user-service')) {
+      if (baseUrl.contains('content-service')) {
+        print('🎯 [API CLIENT] Using CONTENT service for: $path');
+        return _contentDio;
+      } else if (baseUrl.contains('user-service')) {
+        print('🎯 [API CLIENT] Using USER service for: $path');
         return _userDio;
       } else if (baseUrl.contains('auth-service')) {
+        print('🎯 [API CLIENT] Using AUTH service for: $path');
         return _authDio;
       }
     }
 
-    // Determinar por el path
-    if (path.startsWith('/api/users') || path.contains('profile')) {
+    // 🆕 DETERMINAR SERVICIO POR ENDPOINT
+    if (ApiEndpoints.isContentEndpoint(path)) {
+      print('🎯 [API CLIENT] Auto-detected CONTENT service for: $path');
+      return _contentDio;
+    } else if (ApiEndpoints.isUserEndpoint(path)) {
+      print('🎯 [API CLIENT] Auto-detected USER service for: $path');
       return _userDio;
-    } else {
-      return _authDio; // Por defecto auth service
+    } else if (ApiEndpoints.isAuthEndpoint(path)) {
+      print('🎯 [API CLIENT] Auto-detected AUTH service for: $path');
+      return _authDio;
     }
+
+    // Por defecto usar auth service
+    print('🎯 [API CLIENT] Using default AUTH service for: $path');
+    return _authDio;
   }
 
-  // ==================== GESTIÓN DE TOKENS - 🆕 MEJORADO ====================
+  // ==================== GESTIÓN DE TOKENS ====================
 
   Future<void> _addAuthToken(RequestOptions options, String serviceName) async {
     // No agregar token para endpoints de autenticación
@@ -220,14 +245,20 @@ class ApiClient {
     final isAuthEndpoint = authEndpoints.any((endpoint) => 
       options.path.contains(endpoint));
     
+    // 🆕 Para content service, siempre intentar agregar token si está disponible
+    // (pero no fallar si no hay token)
     if (!isAuthEndpoint) {
       final token = await _tokenManager.getAccessToken();
       if (token != null) {
         options.headers['Authorization'] = 'Bearer $token';
         print('🔍 [$serviceName] Added auth token to request: ${options.path}');
-        print('🔍 [$serviceName] Token preview: ${token.substring(0, 20)}...');
       } else {
         print('⚠️ [$serviceName] No access token available for: ${options.path}');
+        
+        // Para content service, esto podría ser normal (contenido público)
+        if (serviceName == 'CONTENT') {
+          print('ℹ️ [$serviceName] Content request without token (public content)');
+        }
       }
     } else {
       print('🔍 [$serviceName] Skipping auth token for auth endpoint: ${options.path}');
@@ -245,7 +276,6 @@ class ApiClient {
           print('✅ [$serviceName] Tokens saved from response');
         } catch (e) {
           print('⚠️ [$serviceName] Could not save tokens: $e');
-          // No fallar por esto, solo loggear
         }
       }
     }
@@ -279,7 +309,6 @@ class ApiClient {
 
       print('🔄 Attempting to refresh token...');
       
-      // Intentar renovar token usando el servicio de auth
       final refreshResponse = await _authDio.post(
         ApiEndpoints.refreshToken,
         data: {'refreshToken': refreshToken},
@@ -287,10 +316,8 @@ class ApiClient {
       );
 
       if (refreshResponse.statusCode == 200) {
-        // Guardar nuevos tokens
         await _tokenManager.saveTokensFromResponse(refreshResponse.data);
         
-        // Reintentar request original con nuevo token
         final newToken = await _tokenManager.getAccessToken();
         if (newToken != null) {
           final originalRequest = error.requestOptions;
@@ -320,13 +347,46 @@ class ApiClient {
     await _tokenManager.clearAllTokens();
   }
 
-  // 🆕 MÉTODOS PARA DEBUG
   Future<void> debugTokens() async {
     await _tokenManager.debugTokenInfo();
   }
 
   Future<bool> hasValidToken() async {
     return await _tokenManager.hasValidAccessToken();
+  }
+
+  // 🆕 MÉTODOS ESPECÍFICOS PARA CONTENT SERVICE
+  
+  Future<Response> getContent(
+    String endpoint, {
+    Map<String, dynamic>? queryParameters,
+    bool requireAuth = false,
+  }) async {
+    print('🎯 [API CLIENT] Content request: $endpoint');
+    
+    return await get(
+      endpoint,
+      queryParameters: queryParameters,
+      options: Options(
+        extra: {'baseUrl': ApiEndpoints.contentServiceUrl},
+        headers: requireAuth ? null : {'Authorization': null},
+      ),
+    );
+  }
+
+  Future<Response> postContent(
+    String endpoint, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    print('🎯 [API CLIENT] Content post: $endpoint');
+    
+    return await post(
+      endpoint,
+      data: data,
+      queryParameters: queryParameters,
+      options: Options(extra: {'baseUrl': ApiEndpoints.contentServiceUrl}),
+    );
   }
 
   ServerException _handleDioError(DioException error) {
@@ -356,7 +416,6 @@ class ApiClient {
     
     String message = 'Error del servidor';
     
-    // Extraer mensaje de error de diferentes formatos
     if (data is Map<String, dynamic>) {
       message = data['message'] ?? 
                 data['error'] ?? 
