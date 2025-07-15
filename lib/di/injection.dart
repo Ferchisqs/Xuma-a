@@ -1,4 +1,4 @@
-// lib/di/injection.dart - ACTUALIZADO CON CONTENT DEPENDENCIES
+// lib/di/injection.dart - ACTUALIZADO PARA LEARNING CON TOPICS
 import 'package:get_it/get_it.dart';
 import 'package:injectable/injectable.dart';
 import 'injection.config.dart';
@@ -18,7 +18,7 @@ import '../features/learning/presentation/cubit/learning_cubit.dart';
 import '../features/learning/presentation/cubit/lesson_list_cubit.dart';
 import '../features/learning/presentation/cubit/lesson_content_cubit.dart';
 
-// 🆕 CONTENT IMPORTS
+// 🆕 CONTENT IMPORTS PARA TOPICS
 import '../features/learning/data/datasources/content_remote_datasource.dart';
 import '../features/learning/data/repositories/content_repository_impl.dart';
 import '../features/learning/domain/repositories/content_repository.dart';
@@ -55,7 +55,7 @@ final getIt = GetIt.instance;
 )
 void configureDependencies() => getIt.init();
 
-// ==================== CONTENT DEPENDENCIES (NUEVO) ====================
+// ==================== CONTENT DEPENDENCIES (PARA TOPICS) ====================
 
 void setupContentDependencies() {
   print('🔧 [INJECTION] Setting up Content dependencies...');
@@ -91,7 +91,7 @@ void setupContentDependencies() {
     print('✅ [INJECTION] GetContentByIdUseCase registered');
   }
   
-  // Cubit
+  // Cubit para contenido específico
   getIt.registerFactory(() => ContentCubit(
     getTopicsUseCase: getIt(),
     getContentByIdUseCase: getIt(),
@@ -101,12 +101,12 @@ void setupContentDependencies() {
   print('✅ [INJECTION] Content dependencies setup completed');
 }
 
-// ==================== LEARNING DEPENDENCIES (EXISTENTE) ====================
+// ==================== LEARNING DEPENDENCIES MODIFICADO ====================
 
 void setupLearningDependencies() {
   print('🔧 [INJECTION] Setting up Learning dependencies...');
   
-  // Data Sources
+  // Data Sources (mantener existentes para compatibilidad)
   if (!getIt.isRegistered<LearningLocalDataSource>()) {
     getIt.registerLazySingleton<LearningLocalDataSource>(
       () => LearningLocalDataSourceImpl(getIt()),
@@ -119,7 +119,7 @@ void setupLearningDependencies() {
     );
   }
   
-  // Repository
+  // Repository (mantener existente)
   if (!getIt.isRegistered<LearningRepository>()) {
     getIt.registerLazySingleton<LearningRepository>(
       () => LearningRepositoryImpl(
@@ -130,7 +130,7 @@ void setupLearningDependencies() {
     );
   }
   
-  // Use Cases
+  // Use Cases (mantener existentes para otras funcionalidades)
   if (!getIt.isRegistered<GetCategoriesUseCase>()) {
     getIt.registerLazySingleton(() => GetCategoriesUseCase(getIt()));
   }
@@ -155,9 +155,12 @@ void setupLearningDependencies() {
     getIt.registerLazySingleton(() => SearchLessonsUseCase(getIt()));
   }
   
-  // Cubits
-  getIt.registerFactory(() => LearningCubit(getCategoriesUseCase: getIt()));
+  // 🔄 LEARNING CUBIT MODIFICADO - AHORA USA TOPICS
+  getIt.registerFactory(() => LearningCubit(
+    getTopicsUseCase: getIt(), // CAMBIADO PARA USAR TOPICS
+  ));
   
+  // Otros cubits mantienen su funcionalidad original
   getIt.registerFactory(() => LessonListCubit(
     getLessonsByCategoryUseCase: getIt(),
     searchLessonsUseCase: getIt(),
@@ -267,11 +270,6 @@ void setupTipsDependencies() {
     print('✅ [INJECTION] GetRandomTipUseCase registered');
   }
   
-  if (!getIt.isRegistered<GetRandomTipWithoutParamsUseCase>()) {
-    getIt.registerLazySingleton(() => GetRandomTipWithoutParamsUseCase(getIt()));
-    print('✅ [INJECTION] GetRandomTipWithoutParamsUseCase registered');
-  }
-  
   // Cubit
   getIt.registerFactory(() => TipsCubit(getIt()));
   print('✅ [INJECTION] TipsCubit registered');
@@ -284,14 +282,14 @@ void setupTipsDependencies() {
 void debugDependencies() {
   print('🔍 [INJECTION] === DEPENDENCY DEBUG ===');
   
-  // Content dependencies
+  // Content dependencies (para topics)
   print('🔍 [INJECTION] ContentRemoteDataSource: ${getIt.isRegistered<ContentRemoteDataSource>()}');
   print('🔍 [INJECTION] ContentRepository: ${getIt.isRegistered<ContentRepository>()}');
   print('🔍 [INJECTION] GetTopicsUseCase: ${getIt.isRegistered<GetTopicsUseCase>()}');
   print('🔍 [INJECTION] GetContentByIdUseCase: ${getIt.isRegistered<GetContentByIdUseCase>()}');
   print('🔍 [INJECTION] ContentCubit: ${getIt.isRegistered<ContentCubit>()}');
   
-  // Learning dependencies
+  // Learning dependencies (modificado para usar topics)
   print('🔍 [INJECTION] LearningRepository: ${getIt.isRegistered<LearningRepository>()}');
   print('🔍 [INJECTION] LearningCubit: ${getIt.isRegistered<LearningCubit>()}');
   

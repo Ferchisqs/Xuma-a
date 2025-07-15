@@ -1,11 +1,12 @@
+// lib/features/learning/presentation/cubit/learning_cubit.dart - MODIFICADO PARA TOPICS
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/usecases/usecase.dart';
-import '../../domain/entities/category_entity.dart';
-import '../../domain/usecases/get_categories_usecase.dart';
+import '../../domain/entities/topic_entity.dart';
+import '../../domain/usecases/get_topics_usecase.dart';
 
-// States
+// States - CAMBIADO PARA TOPICS
 abstract class LearningState extends Equatable {
   const LearningState();
 
@@ -18,12 +19,12 @@ class LearningInitial extends LearningState {}
 class LearningLoading extends LearningState {}
 
 class LearningLoaded extends LearningState {
-  final List<CategoryEntity> categories;
+  final List<TopicEntity> topics; // CAMBIADO DE categories A topics
 
-  const LearningLoaded({required this.categories});
+  const LearningLoaded({required this.topics});
 
   @override
-  List<Object> get props => [categories];
+  List<Object> get props => [topics];
 }
 
 class LearningError extends LearningState {
@@ -35,23 +36,23 @@ class LearningError extends LearningState {
   List<Object> get props => [message];
 }
 
-// Cubit
+// Cubit - MODIFICADO PARA USAR TOPICS
 @injectable
 class LearningCubit extends Cubit<LearningState> {
-  final GetCategoriesUseCase getCategoriesUseCase;
+  final GetTopicsUseCase getTopicsUseCase; // CAMBIADO
 
   LearningCubit({
-    required this.getCategoriesUseCase,
+    required this.getTopicsUseCase, // CAMBIADO
   }) : super(LearningInitial());
 
   Future<void> loadCategories() async {
     emit(LearningLoading());
 
-    final result = await getCategoriesUseCase(NoParams());
+    final result = await getTopicsUseCase(NoParams()); // CAMBIADO
 
     result.fold(
       (failure) => emit(LearningError(message: failure.message)),
-      (categories) => emit(LearningLoaded(categories: categories)),
+      (topics) => emit(LearningLoaded(topics: topics)), // CAMBIADO
     );
   }
 

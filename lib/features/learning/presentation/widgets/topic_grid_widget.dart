@@ -1,3 +1,4 @@
+// lib/features/learning/presentation/widgets/topic_grid_widget.dart - ACTUALIZADO
 import 'package:flutter/material.dart';
 import '../../domain/entities/topic_entity.dart';
 import 'topic_card_widget.dart';
@@ -33,6 +34,14 @@ class TopicGridWidget extends StatelessWidget {
                 fontSize: 16,
                 color: Colors.grey[600],
                 fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Conectando con la API de contenido...',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
               ),
             ),
           ],

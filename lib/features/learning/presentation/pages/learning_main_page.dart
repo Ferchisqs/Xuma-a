@@ -1,3 +1,4 @@
+// lib/features/learning/presentation/pages/learning_main_page.dart - MODIFICADO PARA TOPICS
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -6,7 +7,7 @@ import '../../../../di/injection.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../cubit/learning_cubit.dart';
-import '../widgets/category_grid_widget.dart';
+import '../widgets/topic_grid_widget.dart'; // CAMBIADO A TOPIC GRID
 import '../../../navigation/presentation/widgets/custom_app_bar.dart';
 import '../../../navigation/presentation/widgets/side_nav_bar.dart';
 
@@ -29,12 +30,10 @@ class _LearningMainContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      // 🔄 DRAWER ASEGURADO - usando SideNavBar directamente
       drawer: const SideNavBar(),
-      // 🔄 APP BAR CONSISTENTE con drawer button
       appBar: const CustomAppBar(
         title: 'Aprendamos',
-        showDrawerButton: true, // 🔄 Asegurar botón hamburguesa
+        showDrawerButton: true,
         showEcoTip: true,
       ),
       body: RefreshIndicator(
@@ -46,7 +45,7 @@ class _LearningMainContent extends StatelessWidget {
             if (state is LearningLoading) {
               return const Center(
                 child: EcoLoadingWidget(
-                  message: 'Cargando categorías...',
+                  message: 'Cargando temas...',
                 ),
               );
             }
@@ -135,7 +134,7 @@ class _LearningMainContent extends StatelessWidget {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
-                              '${state.categories.length} categorías disponibles',
+                              '${state.topics.length} temas disponibles', // CAMBIADO
                               style: AppTextStyles.bodySmall.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w500,
@@ -147,9 +146,9 @@ class _LearningMainContent extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     
-                    // Título de categorías
+                    // Título de temas
                     Text(
-                      'Categorías',
+                      'Temas', // CAMBIADO
                       style: AppTextStyles.h4.copyWith(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
@@ -157,8 +156,8 @@ class _LearningMainContent extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     
-                    // Grid de categorías
-                    CategoryGridWidget(categories: state.categories),
+                    // Grid de temas - CAMBIADO A TOPIC GRID
+                    TopicGridWidget(topics: state.topics),
                   ],
                 ),
               );

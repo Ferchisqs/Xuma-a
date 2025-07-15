@@ -1,8 +1,9 @@
+// lib/features/learning/presentation/widgets/topic_card_widget.dart - NAVEGA DIRECTO AL CONTENIDO
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../domain/entities/topic_entity.dart';
-import '../pages/content_page.dart';
+import '../pages/content_page.dart'; // IMPORTA LA PÁGINA DE CONTENIDO
 
 class TopicCardWidget extends StatelessWidget {
   final TopicEntity topic;
@@ -16,9 +17,10 @@ class TopicCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        debugPrint('🎯 Navegando a contenido: ${topic.title}');
+        debugPrint('🎯 Navegando directo al contenido: ${topic.title}');
         
         try {
+          // NAVEGA DIRECTO AL CONTENIDO DEL TOPIC
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -156,13 +158,42 @@ class TopicCardWidget extends StatelessWidget {
                     
                     const SizedBox(height: 8),
                     
-                    // Fecha de creación
-                    Text(
-                      _formatDate(topic.createdAt),
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textHint,
-                        fontSize: 9,
-                      ),
+                    // Estado activo
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: topic.isActive 
+                                ? AppColors.success.withOpacity(0.1)
+                                : AppColors.textHint.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              topic.isActive ? 'Disponible' : 'No disponible',
+                              style: AppTextStyles.caption.copyWith(
+                                color: topic.isActive 
+                                  ? AppColors.success 
+                                  : AppColors.textHint,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 9,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatDate(topic.createdAt),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textHint,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ],
                     ),
                     
                     const SizedBox(height: 8),
@@ -181,7 +212,7 @@ class TopicCardWidget extends StatelessWidget {
                         ),
                         child: Center(
                           child: Text(
-                            'Leer contenido',
+                            'Ver contenido',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w600,

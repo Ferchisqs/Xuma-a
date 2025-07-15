@@ -342,6 +342,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i420.SearchLessonsUseCase(gh<_i852.LearningRepository>()));
     gh.factory<_i813.UpdateLessonProgressUseCase>(() =>
         _i813.UpdateLessonProgressUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i992.LearningCubit>(() =>
+        _i992.LearningCubit(getTopicsUseCase: gh<_i175.GetTopicsUseCase>()));
     gh.factory<_i22.GetRandomTipUseCase>(
         () => _i22.GetRandomTipUseCase(gh<_i406.TipsRepository>()));
     gh.factory<_i22.GetRandomTipWithoutParamsUseCase>(() =>
@@ -364,8 +366,6 @@ extension GetItInjectableX on _i174.GetIt {
           getTopicsUseCase: gh<_i175.GetTopicsUseCase>(),
           getContentByIdUseCase: gh<_i677.GetContentByIdUseCase>(),
         ));
-    gh.factory<_i992.LearningCubit>(() => _i992.LearningCubit(
-        getCategoriesUseCase: gh<_i80.GetCategoriesUseCase>()));
     gh.factory<_i959.ChallengesRepository>(() => _i285.ChallengesRepositoryImpl(
           remoteDataSource: gh<_i252.ChallengesRemoteDataSource>(),
           localDataSource: gh<_i422.ChallengesLocalDataSource>(),
