@@ -1,7 +1,7 @@
+// lib/main.dart - VERSIÓN FINAL ACTUALIZADA
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app/xuma_a_app.dart';
-import 'core/services/cache_service.dart';
 import 'di/injection.dart';
 
 void main() async {
@@ -26,30 +26,64 @@ void main() async {
   runApp(const XumaAApp());
 }
 
-Future<void> _initializeServices() async {
+Future _initializeServices() async {
   try {
+    print('🚀 [MAIN] Initializing XUMA\'A services...');
+    
+    // 1. Configurar dependencias principales
     configureDependencies();
     
+    // 2. Configurar Auth dependencies PRIMERO (muy importante)
+    setupAuthDependencies();
+    
+    // 3. Configurar Content dependencies
+    setupContentDependencies();
+    
+    // 4. Configurar otras dependencias
     setupLearningDependencies();
     setupChallengesDependencies();
-    setupTriviaDependencies();
-    setupCompanionDependencies(); 
-    setupProfileDependencies(); 
+    setupTipsDependencies();
     
-    await getIt<CacheService>().init();
+    // 5. Inicializar servicios
+    await getIt.allReady();
     
-    debugPrint('✅ XUMA\'A services initialized successfully');
-    debugPrint('✅ Learning feature configured successfully');
-    debugPrint('✅ Challenges feature configured successfully');
-    debugPrint('✅ Trivia feature configured successfully');
-    debugPrint('✅ Companion feature configured successfully'); // 🆕
+    // 6. Debug de dependencias (opcional, quitar en producción)
+    debugDependencies();
+    
+    print('✅ [MAIN] XUMA\'A services initialized successfully');
+    print('✅ [MAIN] Auth feature configured successfully');
+    print('✅ [MAIN] Content feature configured successfully');
+    print('✅ [MAIN] Learning feature configured successfully');
+    print('✅ [MAIN] Challenges feature configured successfully');
+    print('✅ [MAIN] Tips feature configured successfully');
+    
   } catch (e) {
-    debugPrint('❌ Error initializing XUMA\'A services: $e');
+    print('❌ [MAIN] Error initializing XUMA\'A services: $e');
+    print('❌ [MAIN] Stack trace: ${StackTrace.current}');
+  }
+}
+
+void setupAuthDependencies() {
+  try {
+    print('🔧 [MAIN] Setting up Auth dependencies...');
+    debugPrint('✅ Auth dependencies ready');
+  } catch (e) {
+    debugPrint('❌ Error setting up Auth dependencies: $e');
+  }
+}
+
+void setupContentDependencies() {
+  try {
+    print('🔧 [MAIN] Setting up Content dependencies...');
+    debugPrint('✅ Content dependencies ready');
+  } catch (e) {
+    debugPrint('❌ Error setting up Content dependencies: $e');
   }
 }
 
 void setupLearningDependencies() {
   try {
+    print('🔧 [MAIN] Setting up Learning dependencies...');
     debugPrint('✅ Learning dependencies ready');
   } catch (e) {
     debugPrint('❌ Error setting up Learning dependencies: $e');
@@ -58,32 +92,18 @@ void setupLearningDependencies() {
 
 void setupChallengesDependencies() {
   try {
+    print('🔧 [MAIN] Setting up Challenges dependencies...');
     debugPrint('✅ Challenges dependencies ready');
   } catch (e) {
     debugPrint('❌ Error setting up Challenges dependencies: $e');
   }
 }
 
-void setupTriviaDependencies() {
+void setupTipsDependencies() {
   try {
-    debugPrint('✅ Trivia dependencies ready');
+    print('🔧 [MAIN] Setting up Tips dependencies...');
+    debugPrint('✅ Tips dependencies ready');
   } catch (e) {
-    debugPrint('❌ Error setting up Trivia dependencies: $e');
-  }
-}
-
-void setupCompanionDependencies() {
-  try {
-    debugPrint('✅ Companion dependencies ready');
-  } catch (e) {
-    debugPrint('❌ Error setting up Companion dependencies: $e');
-  }
-}
-
-void setupProfileDependencies() {
-  try {
-    debugPrint('✅ Profile dependencies ready');
-  } catch (e) {
-    debugPrint('❌ Error setting up Profile dependencies: $e');
+    debugPrint('❌ Error setting up Tips dependencies: $e');
   }
 }

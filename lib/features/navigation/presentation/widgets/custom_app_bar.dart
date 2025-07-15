@@ -1,4 +1,4 @@
-// lib/features/navigation/presentation/widgets/custom_app_bar.dart - VERSIÓN ACTUALIZADA CON API
+// lib/features/navigation/presentation/widgets/custom_app_bar.dart - SIN CONSEJOS POR DEFECTO
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -126,7 +126,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       );
     }
     
-    // 🆕 BOTÓN ECO TIP CON API
+    // BOTÓN ECO TIP CON API
     if (showEcoTip) {
       actionsList.add(
         IconButton(
@@ -149,294 +149,124 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     return actionsList;
   }
 
-  // 🆕 MÉTODO ACTUALIZADO CON CUBIT DE TIPS
+  // MÉTODO SIMPLIFICADO SIN FALLBACK
   void _showEcoTipDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => BlocProvider(
-        create: (_) => getIt<TipsCubit>()..getRandomTip(),
-        child: Dialog(
-          backgroundColor: Colors.transparent,
-          child: Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: BlocBuilder<TipsCubit, TipsState>(
-              builder: (context, state) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Header con estado dinámico
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        gradient: AppColors.earthGradient,
-                        shape: BoxShape.circle,
-                      ),
-                      child: _buildTipIcon(state),
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Título
-                    Text(
-                      'Consejo de Xico',
-                      style: AppTextStyles.h4.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // 🆕 CONTENIDO DINÁMICO BASADO EN ESTADO
-                    _buildTipContent(context, state),
-                    
-                    const SizedBox(height: 20),
-                    
-                    // Botones
-                    _buildTipActions(context, state, dialogContext),
-                  ],
-                );
-              },
-            ),
+    try {
+      // Obtener el TipsCubit del inyector de dependencias
+      final tipsCubit = getIt<TipsCubit>();
+      
+      showDialog(
+        context: context,
+        builder: (context) => BlocProvider.value(
+          value: tipsCubit,
+          child: BlocBuilder<TipsCubit, TipsState>(
+            builder: (context, state) {
+              return AlertDialog(
+                title: const Text('Consejo de Xico'),
+                content: _buildTipContent(state),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cerrar'),
+                  ),
+                ],
+              );
+            },
           ),
         ),
+      );
+      
+      // Cargar un tip aleatorio al mostrar el diálogo
+      tipsCubit.getRandomTip();
+    } catch (e) {
+      print('❌ Error showing eco tip dialog: $e');
+      // Mostrar diálogo simple sin consejo
+      _showNoTipDialog(context);
+    }
+  }
+
+  // DIÁLOGO SIMPLE CUANDO NO HAY SERVICIO
+  void _showNoTipDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Consejo de Xico'),
+        content: const Text('Sin consejos del día'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
       ),
     );
   }
 
-  // 🆕 CONSTRUIR ICONO SEGÚN ESTADO
-  Widget _buildTipIcon(TipsState state) {
+  // CONSTRUIR CONTENIDO SEGÚN ESTADO
+  Widget _buildTipContent(TipsState state) {
     if (state is TipsLoading) {
-      return const Center(
-        child: SizedBox(
-          width: 30,
-          height: 30,
-          child: CircularProgressIndicator(
-            strokeWidth: 3,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-          ),
+      return const SizedBox(
+        height: 100,
+        child: Center(
+          child: CircularProgressIndicator(),
         ),
       );
-    } else if (state is TipsError) {
-      return const Icon(
-        Icons.warning_rounded,
-        color: Colors.white,
-        size: 30,
-      );
-    } else {
-      return const Icon(
-        Icons.pets,
-        color: Colors.white,
-        size: 30,
-      );
     }
-  }
-
-  // 🆕 CONSTRUIR CONTENIDO SEGÚN ESTADO
-  Widget _buildTipContent(BuildContext context, TipsState state) {
-    if (state is TipsLoading) {
-      return Column(
-        children: [
-          Text(
-            state.message,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          const LinearProgressIndicator(
-            backgroundColor: AppColors.surfaceLight,
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-          ),
-        ],
-      );
-    } else if (state is TipsError) {
-      return Column(
-        children: [
-          Text(
-            'Ups, no pude obtener un consejo nuevo',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.error,
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _getFallbackTip(),
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      );
-    } else if (state is TipsLoaded && state.currentTip != null) {
+    
+    if (state is TipsLoaded && state.currentTip != null) {
       final tip = state.currentTip!;
       return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Mostrar categoría si está disponible
-          if (tip.category.isNotEmpty) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                tip.category.toUpperCase(),
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-          
-          // Contenido del tip
           Text(
-            tip.formattedContent,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          
-          // Indicador si hay más tips
-          if (state.tips.length > 1) ...[
-            const SizedBox(height: 8),
-            Text(
-              '${state.currentIndex + 1} de ${state.tips.length}',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textHint,
-              ),
-            ),
-          ],
-        ],
-      );
-    } else {
-      return Text(
-        _getFallbackTip(),
-        style: AppTextStyles.bodyMedium.copyWith(
-          color: AppColors.textSecondary,
-        ),
-        textAlign: TextAlign.center,
-      );
-    }
-  }
-
-  // 🆕 CONSTRUIR ACCIONES SEGÚN ESTADO
-  Widget _buildTipActions(BuildContext context, TipsState state, BuildContext dialogContext) {
-    return Row(
-      children: [
-        // Botón para obtener otro tip
-        if (state is TipsLoaded && state.tips.length > 1) ...[
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () {
-                context.read<TipsCubit>().nextTip();
-              },
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.primary),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.refresh_rounded, size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Otro',
-                    style: AppTextStyles.buttonMedium.copyWith(
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
-              ),
+            tip.title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
           ),
-          const SizedBox(width: 12),
-        ],
-        
-        // Botón para reintentar si hay error
-        if (state is TipsError) ...[
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () {
-                context.read<TipsCubit>().getRandomTip();
-              },
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.warning),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.refresh_rounded, size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Reintentar',
-                    style: AppTextStyles.buttonMedium.copyWith(
-                      color: AppColors.warning,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-        ],
-        
-        // Botón principal
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+          const SizedBox(height: 8),
+          Text(tip.formattedContent),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              'Gracias, Xico',
-              style: AppTextStyles.buttonMedium.copyWith(
-                color: Colors.white,
+              tip.category.toUpperCase(),
+              style: TextStyle(
+                color: Colors.green[800],
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  // Tip de respaldo para cuando falla la API
-  String _getFallbackTip() {
-    final tips = [
-      '💡 Apaga luces y dispositivos que no uses. ¡Pequeños cambios, gran impacto!',
-      '🚿 Cierra la llave mientras te cepillas los dientes. Ahorras hasta 6 litros por minuto.',
-      '♻️ Separa tu basura: orgánica, inorgánica y reciclables. ¡La Tierra te lo agradece!',
-      '🌱 Planta una semilla hoy. En el futuro será un árbol que purifique el aire.',
-      '🚗 Camina, usa bici o transporte público. ¡Tu planeta y tu salud lo agradecerán!',
-    ];
+        ],
+      );
+    }
     
-    return tips[(DateTime.now().millisecond / 100).floor() % tips.length];
+    if (state is TipsError) {
+      return const Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.info_outline, color: Colors.grey, size: 48),
+          SizedBox(height: 8),
+          Text(
+            'Sin consejos del día',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      );
+    }
+    
+    return const Text('Cargando consejo...');
   }
 
   @override

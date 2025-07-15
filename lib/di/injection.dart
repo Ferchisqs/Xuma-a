@@ -1,9 +1,9 @@
-// lib/di/injection.dart - ACTUALIZACIÓN CORREGIDA
+// lib/di/injection.dart - ACTUALIZADO CON CONTENT DEPENDENCIES
 import 'package:get_it/get_it.dart';
 import 'package:injectable/injectable.dart';
 import 'injection.config.dart';
 
-// Learning imports (existentes)
+// Existing imports...
 import '../features/learning/data/datasources/learning_local_datasource.dart';
 import '../features/learning/data/datasources/learning_remote_datasource.dart';
 import '../features/learning/data/repositories/learning_repository_impl.dart';
@@ -18,18 +18,33 @@ import '../features/learning/presentation/cubit/learning_cubit.dart';
 import '../features/learning/presentation/cubit/lesson_list_cubit.dart';
 import '../features/learning/presentation/cubit/lesson_content_cubit.dart';
 
-// 🆕 Challenges imports CORREGIDOS
+// 🆕 CONTENT IMPORTS
+import '../features/learning/data/datasources/content_remote_datasource.dart';
+import '../features/learning/data/repositories/content_repository_impl.dart';
+import '../features/learning/domain/repositories/content_repository.dart';
+import '../features/learning/domain/usecases/get_topics_usecase.dart';
+import '../features/learning/domain/usecases/get_content_by_id_usecase.dart';
+import '../features/learning/presentation/cubit/content_cubit.dart';
+
+// Challenges imports (existentes)
 import '../features/challenges/data/datasources/challenges_local_datasource.dart';
 import '../features/challenges/data/datasources/challenges_remote_datasource.dart';
 import '../features/challenges/data/repositories/challenges_repository_impl.dart';
 import '../features/challenges/domain/repositories/challenges_repository.dart';
 import '../features/challenges/domain/usecases/get_challenges_usecase.dart';
-import '../features/challenges/domain/usecases/get_user_progress_usecase.dart'; // 🔧 CAMBIADO
-import '../features/challenges/domain/usecases/start_challenge_usecase.dart'; // 🔧 CAMBIADO
-import '../features/challenges/domain/usecases/complete_challenge_usecase.dart'; // 🔧 AGREGADO
+import '../features/challenges/domain/usecases/get_user_progress_usecase.dart';
+import '../features/challenges/domain/usecases/start_challenge_usecase.dart';
+import '../features/challenges/domain/usecases/complete_challenge_usecase.dart';
 import '../features/challenges/domain/usecases/update_challenge_progress_usecase.dart';
 import '../features/challenges/presentation/cubit/challenges_cubit.dart';
 import '../features/challenges/presentation/cubit/challenge_detail_cubit.dart';
+
+// Tips imports (existentes)
+import '../features/tips/data/datasources/tips_remote_datasource.dart';
+import '../features/tips/data/repositories/tips_repository_impl.dart';
+import '../features/tips/domain/repositories/tips_repository.dart';
+import '../features/tips/domain/usecases/get_random_tip_usecase.dart';
+import '../features/tips/presentation/cubit/tips_cubit.dart';
 
 final getIt = GetIt.instance;
 
@@ -40,8 +55,57 @@ final getIt = GetIt.instance;
 )
 void configureDependencies() => getIt.init();
 
-// Configuración manual adicional si es necesaria
+// ==================== CONTENT DEPENDENCIES (NUEVO) ====================
+
+void setupContentDependencies() {
+  print('🔧 [INJECTION] Setting up Content dependencies...');
+  
+  // Data Sources
+  if (!getIt.isRegistered<ContentRemoteDataSource>()) {
+    getIt.registerLazySingleton<ContentRemoteDataSource>(
+      () => ContentRemoteDataSourceImpl(getIt()),
+    );
+    print('✅ [INJECTION] ContentRemoteDataSource registered');
+  }
+  
+  // Repository
+  if (!getIt.isRegistered<ContentRepository>()) {
+    getIt.registerLazySingleton<ContentRepository>(
+      () => ContentRepositoryImpl(
+        remoteDataSource: getIt(),
+        localDataSource: getIt(),
+        networkInfo: getIt(),
+      ),
+    );
+    print('✅ [INJECTION] ContentRepository registered');
+  }
+  
+  // Use Cases
+  if (!getIt.isRegistered<GetTopicsUseCase>()) {
+    getIt.registerLazySingleton(() => GetTopicsUseCase(getIt()));
+    print('✅ [INJECTION] GetTopicsUseCase registered');
+  }
+  
+  if (!getIt.isRegistered<GetContentByIdUseCase>()) {
+    getIt.registerLazySingleton(() => GetContentByIdUseCase(getIt()));
+    print('✅ [INJECTION] GetContentByIdUseCase registered');
+  }
+  
+  // Cubit
+  getIt.registerFactory(() => ContentCubit(
+    getTopicsUseCase: getIt(),
+    getContentByIdUseCase: getIt(),
+  ));
+  print('✅ [INJECTION] ContentCubit registered');
+  
+  print('✅ [INJECTION] Content dependencies setup completed');
+}
+
+// ==================== LEARNING DEPENDENCIES (EXISTENTE) ====================
+
 void setupLearningDependencies() {
+  print('🔧 [INJECTION] Setting up Learning dependencies...');
+  
   // Data Sources
   if (!getIt.isRegistered<LearningLocalDataSource>()) {
     getIt.registerLazySingleton<LearningLocalDataSource>(
@@ -104,10 +168,15 @@ void setupLearningDependencies() {
     updateLessonProgressUseCase: getIt(),
     completeLessonUseCase: getIt(),
   ));
+  
+  print('✅ [INJECTION] Learning dependencies setup completed');
 }
 
-// 🆕 Configuración de dependencias para Challenges CORREGIDA
+// ==================== CHALLENGES DEPENDENCIES (EXISTENTE) ====================
+
 void setupChallengesDependencies() {
+  print('🔧 [INJECTION] Setting up Challenges dependencies...');
+  
   // Data Sources
   if (!getIt.isRegistered<ChallengesLocalDataSource>()) {
     getIt.registerLazySingleton<ChallengesLocalDataSource>(
@@ -125,7 +194,7 @@ void setupChallengesDependencies() {
   if (!getIt.isRegistered<ChallengesRepository>()) {
     getIt.registerLazySingleton<ChallengesRepository>(
       () => ChallengesRepositoryImpl(
-        remoteDataSource: getIt(), // 🔧 CORREGIR parámetros nombrados
+        remoteDataSource: getIt(),
         localDataSource: getIt(),
         networkInfo: getIt(),
       ),
@@ -137,15 +206,15 @@ void setupChallengesDependencies() {
     getIt.registerLazySingleton(() => GetChallengesUseCase(getIt()));
   }
   
-  if (!getIt.isRegistered<GetUserProgressUseCase>()) { // 🔧 CAMBIADO
+  if (!getIt.isRegistered<GetUserProgressUseCase>()) {
     getIt.registerLazySingleton(() => GetUserProgressUseCase(getIt()));
   }
   
-  if (!getIt.isRegistered<StartChallengeUseCase>()) { // 🔧 CAMBIADO
+  if (!getIt.isRegistered<StartChallengeUseCase>()) {
     getIt.registerLazySingleton(() => StartChallengeUseCase(getIt()));
   }
   
-  if (!getIt.isRegistered<CompleteChallengeUseCase>()) { // 🔧 AGREGADO
+  if (!getIt.isRegistered<CompleteChallengeUseCase>()) {
     getIt.registerLazySingleton(() => CompleteChallengeUseCase(getIt()));
   }
   
@@ -156,12 +225,88 @@ void setupChallengesDependencies() {
   // Cubits
   getIt.registerFactory(() => ChallengesCubit(
     getChallengesUseCase: getIt(),
-    getUserProgressUseCase: getIt(), // 🔧 CAMBIADO
+    getUserProgressUseCase: getIt(),
   ));
   
   getIt.registerFactory(() => ChallengeDetailCubit(
-    startChallengeUseCase: getIt(), // 🔧 CAMBIADO
-    completeChallengeUseCase: getIt(), // 🔧 AGREGADO
+    startChallengeUseCase: getIt(),
+    completeChallengeUseCase: getIt(),
     updateChallengeProgressUseCase: getIt(),
   ));
+  
+  print('✅ [INJECTION] Challenges dependencies setup completed');
+}
+
+// ==================== TIPS DEPENDENCIES (EXISTENTE) ====================
+
+void setupTipsDependencies() {
+  print('🔧 [INJECTION] Setting up Tips dependencies...');
+  
+  // Data Sources
+  if (!getIt.isRegistered<TipsRemoteDataSource>()) {
+    getIt.registerLazySingleton<TipsRemoteDataSource>(
+      () => TipsRemoteDataSourceImpl(getIt()),
+    );
+    print('✅ [INJECTION] TipsRemoteDataSource registered');
+  }
+  
+  // Repository
+  if (!getIt.isRegistered<TipsRepository>()) {
+    getIt.registerLazySingleton<TipsRepository>(
+      () => TipsRepositoryImpl(
+        getIt(), // TipsRemoteDataSource
+        getIt(), // CacheService
+      ),
+    );
+    print('✅ [INJECTION] TipsRepository registered');
+  }
+  
+  // Use Cases
+  if (!getIt.isRegistered<GetRandomTipUseCase>()) {
+    getIt.registerLazySingleton(() => GetRandomTipUseCase(getIt()));
+    print('✅ [INJECTION] GetRandomTipUseCase registered');
+  }
+  
+  if (!getIt.isRegistered<GetRandomTipWithoutParamsUseCase>()) {
+    getIt.registerLazySingleton(() => GetRandomTipWithoutParamsUseCase(getIt()));
+    print('✅ [INJECTION] GetRandomTipWithoutParamsUseCase registered');
+  }
+  
+  // Cubit
+  getIt.registerFactory(() => TipsCubit(getIt()));
+  print('✅ [INJECTION] TipsCubit registered');
+  
+  print('✅ [INJECTION] Tips dependencies setup completed');
+}
+
+// ==================== DEBUG HELPER ====================
+
+void debugDependencies() {
+  print('🔍 [INJECTION] === DEPENDENCY DEBUG ===');
+  
+  // Content dependencies
+  print('🔍 [INJECTION] ContentRemoteDataSource: ${getIt.isRegistered<ContentRemoteDataSource>()}');
+  print('🔍 [INJECTION] ContentRepository: ${getIt.isRegistered<ContentRepository>()}');
+  print('🔍 [INJECTION] GetTopicsUseCase: ${getIt.isRegistered<GetTopicsUseCase>()}');
+  print('🔍 [INJECTION] GetContentByIdUseCase: ${getIt.isRegistered<GetContentByIdUseCase>()}');
+  print('🔍 [INJECTION] ContentCubit: ${getIt.isRegistered<ContentCubit>()}');
+  
+  // Learning dependencies
+  print('🔍 [INJECTION] LearningRepository: ${getIt.isRegistered<LearningRepository>()}');
+  print('🔍 [INJECTION] LearningCubit: ${getIt.isRegistered<LearningCubit>()}');
+  
+  // Tips dependencies
+  print('🔍 [INJECTION] TipsRemoteDataSource: ${getIt.isRegistered<TipsRemoteDataSource>()}');
+  print('🔍 [INJECTION] TipsRepository: ${getIt.isRegistered<TipsRepository>()}');
+  print('🔍 [INJECTION] GetRandomTipUseCase: ${getIt.isRegistered<GetRandomTipUseCase>()}');
+  print('🔍 [INJECTION] TipsCubit: ${getIt.isRegistered<TipsCubit>()}');
+  
+  print('🔍 [INJECTION] === END DEBUG ===');
+}
+
+// ==================== CLEANUP ====================
+
+void clearAllDependencies() {
+  getIt.reset();
+  print('🧹 [INJECTION] All dependencies cleared');
 }

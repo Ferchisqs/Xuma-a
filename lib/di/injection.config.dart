@@ -89,26 +89,36 @@ import '../features/home/domain/usecases/get_user_stats_usecase.dart' as _i762;
 import '../features/home/domain/usecases/update_user_activity_usecase.dart'
     as _i604;
 import '../features/home/presentation/cubit/home_cubit.dart' as _i1017;
+import '../features/learning/data/datasources/content_remote_datasource.dart'
+    as _i605;
 import '../features/learning/data/datasources/learning_local_datasource.dart'
     as _i195;
 import '../features/learning/data/datasources/learning_remote_datasource.dart'
     as _i506;
+import '../features/learning/data/repositories/content_repository_impl.dart'
+    as _i577;
 import '../features/learning/data/repositories/learning_repository_impl.dart'
     as _i378;
+import '../features/learning/domain/repositories/content_repository.dart'
+    as _i19;
 import '../features/learning/domain/repositories/learning_repository.dart'
     as _i852;
 import '../features/learning/domain/usecases/complete_lesson_usecase.dart'
     as _i412;
 import '../features/learning/domain/usecases/get_categories_usecase.dart'
     as _i80;
+import '../features/learning/domain/usecases/get_content_by_id_usecase.dart'
+    as _i677;
 import '../features/learning/domain/usecases/get_lesson_content_usecase.dart'
     as _i391;
 import '../features/learning/domain/usecases/get_lessons_by_category_usecase.dart'
     as _i194;
+import '../features/learning/domain/usecases/get_topics_usecase.dart' as _i175;
 import '../features/learning/domain/usecases/search_lessons_usecase.dart'
     as _i420;
 import '../features/learning/domain/usecases/update_lesson_progress_usecase.dart'
     as _i813;
+import '../features/learning/presentation/cubit/content_cubit.dart' as _i921;
 import '../features/learning/presentation/cubit/learning_cubit.dart' as _i992;
 import '../features/learning/presentation/cubit/lesson_content_cubit.dart'
     as _i803;
@@ -128,6 +138,11 @@ import '../features/profile/domain/usecases/get_user_profile_usecase.dart'
 import '../features/profile/domain/usecases/update_user_avatar_usecase.dart'
     as _i186;
 import '../features/profile/presentation/cubit/profile_cubit.dart' as _i300;
+import '../features/tips/data/datasources/tips_remote_datasource.dart' as _i652;
+import '../features/tips/data/repositories/tips_repository_impl.dart' as _i397;
+import '../features/tips/domain/repositories/tips_repository.dart' as _i406;
+import '../features/tips/domain/usecases/get_random_tip_usecase.dart' as _i22;
+import '../features/tips/presentation/cubit/tips_cubit.dart' as _i441;
 import '../features/trivia/data/datasources/trivia_local_datasource.dart'
     as _i430;
 import '../features/trivia/data/datasources/trivia_remote_datasource.dart'
@@ -205,6 +220,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i115.CompanionRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i614.TriviaRemoteDataSource>(
         () => _i614.TriviaRemoteDataSourceImpl(gh<_i510.ApiClient>()));
+    gh.lazySingleton<_i652.TipsRemoteDataSource>(
+        () => _i652.TipsRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.lazySingleton<_i869.AuthRepository>(() => _i570.AuthRepositoryImpl(
           gh<_i130.AuthRemoteDataSource>(),
           gh<_i182.AuthLocalDataSource>(),
@@ -215,6 +232,8 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i510.ApiClient>(),
               gh<_i497.TokenManager>(),
             ));
+    gh.factory<_i605.ContentRemoteDataSource>(
+        () => _i605.ContentRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i416.TriviaRepository>(() => _i121.TriviaRepositoryImpl(
           remoteDataSource: gh<_i614.TriviaRemoteDataSource>(),
           localDataSource: gh<_i430.TriviaLocalDataSource>(),
@@ -226,6 +245,11 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i75.HomeRemoteDataSource>(),
           gh<_i819.HomeLocalDataSource>(),
           gh<_i6.NetworkInfo>(),
+        ));
+    gh.factory<_i19.ContentRepository>(() => _i577.ContentRepositoryImpl(
+          remoteDataSource: gh<_i605.ContentRemoteDataSource>(),
+          localDataSource: gh<_i195.LearningLocalDataSource>(),
+          networkInfo: gh<_i6.NetworkInfo>(),
         ));
     gh.lazySingleton<_i406.LoginUseCase>(
         () => _i406.LoginUseCase(gh<_i869.AuthRepository>()));
@@ -285,10 +309,18 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i186.UpdateUserAvatarUseCase(gh<_i386.ProfileRepository>()));
     gh.factory<_i993.TriviaCubit>(() => _i993.TriviaCubit(
         getTriviaCategoriesUseCase: gh<_i828.GetTriviaCategoriesUseCase>()));
+    gh.factory<_i677.GetContentByIdUseCase>(
+        () => _i677.GetContentByIdUseCase(gh<_i19.ContentRepository>()));
+    gh.factory<_i175.GetTopicsUseCase>(
+        () => _i175.GetTopicsUseCase(gh<_i19.ContentRepository>()));
     gh.factory<_i252.ChallengesRemoteDataSource>(
         () => _i252.ChallengesRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.lazySingleton<_i92.ProfileService>(
         () => _i92.ProfileService(gh<_i386.ProfileRepository>()));
+    gh.lazySingleton<_i406.TipsRepository>(() => _i397.TipsRepositoryImpl(
+          gh<_i652.TipsRemoteDataSource>(),
+          gh<_i800.CacheService>(),
+        ));
     gh.factory<_i300.ProfileCubit>(() => _i300.ProfileCubit(
           getUserProfileUseCase: gh<_i65.GetUserProfileUseCase>(),
           updateUserAvatarUseCase: gh<_i186.UpdateUserAvatarUseCase>(),
@@ -310,6 +342,12 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i420.SearchLessonsUseCase(gh<_i852.LearningRepository>()));
     gh.factory<_i813.UpdateLessonProgressUseCase>(() =>
         _i813.UpdateLessonProgressUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i22.GetRandomTipUseCase>(
+        () => _i22.GetRandomTipUseCase(gh<_i406.TipsRepository>()));
+    gh.factory<_i22.GetRandomTipWithoutParamsUseCase>(() =>
+        _i22.GetRandomTipWithoutParamsUseCase(gh<_i406.TipsRepository>()));
+    gh.factory<_i441.TipsCubit>(
+        () => _i441.TipsCubit(gh<_i406.TipsRepository>()));
     gh.factory<_i917.CompanionCubit>(() => _i917.CompanionCubit(
           getUserCompanionsUseCase: gh<_i574.GetUserCompanionsUseCase>(),
           getCompanionShopUseCase: gh<_i76.GetCompanionShopUseCase>(),
@@ -321,6 +359,10 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i912.TriviaGameCubit>(() => _i912.TriviaGameCubit(
           getTriviaQuestionsUseCase: gh<_i9.GetTriviaQuestionsUseCase>(),
           submitTriviaResultUseCase: gh<_i157.SubmitTriviaResultUseCase>(),
+        ));
+    gh.factory<_i921.ContentCubit>(() => _i921.ContentCubit(
+          getTopicsUseCase: gh<_i175.GetTopicsUseCase>(),
+          getContentByIdUseCase: gh<_i677.GetContentByIdUseCase>(),
         ));
     gh.factory<_i992.LearningCubit>(() => _i992.LearningCubit(
         getCategoriesUseCase: gh<_i80.GetCategoriesUseCase>()));
