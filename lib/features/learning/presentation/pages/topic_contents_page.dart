@@ -1,4 +1,4 @@
-// lib/features/learning/presentation/pages/topic_contents_page.dart
+// lib/features/learning/presentation/pages/topic_contents_page.dart - CORREGIDO
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -21,7 +21,29 @@ class TopicContentsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => getIt<TopicContentsCubit>()..loadTopicContents(topic),
+      create: (_) {
+        print('🔧 [TOPIC_CONTENTS_PAGE] Creating TopicContentsCubit for topic: ${topic.title}');
+        
+        // 🛡️ VERIFICACIÓN DE SEGURIDAD
+        if (!getIt.isRegistered<TopicContentsCubit>()) {
+          print('❌ [TOPIC_CONTENTS_PAGE] TopicContentsCubit not registered in GetIt!');
+          throw Exception('TopicContentsCubit not registered. Check your dependency injection setup.');
+        }
+        
+        try {
+          final cubit = getIt<TopicContentsCubit>();
+          print('✅ [TOPIC_CONTENTS_PAGE] TopicContentsCubit created successfully');
+          
+          // 🔄 CARGAR CONTENIDOS DEL TOPIC
+          cubit.loadTopicContents(topic);
+          
+          return cubit;
+        } catch (e, stackTrace) {
+          print('❌ [TOPIC_CONTENTS_PAGE] Error creating TopicContentsCubit: $e');
+          print('❌ [TOPIC_CONTENTS_PAGE] Stack trace: $stackTrace');
+          rethrow;
+        }
+      },
       child: _TopicContentsPageContent(topic: topic),
     );
   }
@@ -69,13 +91,25 @@ class _TopicContentsPageContent extends StatelessWidget {
       body: BlocConsumer<TopicContentsCubit, TopicContentsState>(
         listener: (context, state) {
           if (state is TopicContentsError) {
+            print('❌ [TOPIC_CONTENTS_PAGE] Error state: ${state.message}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Error: ${state.message}'),
                 backgroundColor: AppColors.error,
                 duration: const Duration(seconds: 3),
+                action: SnackBarAction(
+                  label: 'Reintentar',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    context.read<TopicContentsCubit>().loadTopicContents(topic);
+                  },
+                ),
               ),
             );
+          }
+          
+          if (state is TopicContentsLoaded) {
+            print('✅ [TOPIC_CONTENTS_PAGE] Loaded ${state.contents.length} contents for topic: ${topic.title}');
           }
         },
         builder: (context, state) {
@@ -163,6 +197,8 @@ class _TopicContentsPageContent extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context, TopicContentsState state) {
+    print('🔍 [TOPIC_CONTENTS_PAGE] Building content for state: ${state.runtimeType}');
+    
     if (state is TopicContentsLoading) {
       return const Center(
         child: EcoLoadingWidget(
@@ -176,6 +212,7 @@ class _TopicContentsPageContent extends StatelessWidget {
         child: EcoErrorWidget(
           message: state.message,
           onRetry: () {
+            print('🔄 [TOPIC_CONTENTS_PAGE] Retrying to load contents for topic: ${topic.title}');
             context.read<TopicContentsCubit>().loadTopicContents(topic);
           },
         ),
@@ -184,14 +221,16 @@ class _TopicContentsPageContent extends StatelessWidget {
 
     if (state is TopicContentsLoaded) {
       if (state.contents.isEmpty) {
-        return _buildEmptyState();
+        return _buildEmptyState(context);
       }
 
       return RefreshIndicator(
         onRefresh: () async {
+          print('🔄 [TOPIC_CONTENTS_PAGE] Refreshing contents for topic: ${topic.title}');
           context.read<TopicContentsCubit>().refreshContents();
         },
         child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(), // Para permitir refresh incluso con poco contenido
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,21 +270,64 @@ class _TopicContentsPageContent extends StatelessWidget {
                 topic: topic,
                 onLoadMore: state.hasMorePages && !state.isLoadingMore
                     ? () {
+                        print('📄 [TOPIC_CONTENTS_PAGE] Loading more contents (page ${state.currentPage + 1})');
                         context.read<TopicContentsCubit>().loadMoreContents();
                       }
                     : null,
                 isLoadingMore: state.isLoadingMore,
               ),
+              
+              // 🔄 INDICADOR DE CARGA PARA MÁS CONTENIDOS
+              if (state.isLoadingMore) ...[
+                const SizedBox(height: 16),
+                const Center(
+                  child: EcoLoadingWidget(
+                    message: 'Cargando más contenidos...',
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              
+              // 📄 INDICADOR DE FIN DE PÁGINA
+              if (!state.hasMorePages && state.contents.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '¡Has visto todos los contenidos!',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
             ],
           ),
         ),
       );
     }
 
-    return const SizedBox.shrink();
+    // 🔍 ESTADO INICIAL O DESCONOCIDO
+    return const Center(
+      child: EcoLoadingWidget(
+        message: 'Preparando contenidos...',
+      ),
+    );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -308,6 +390,25 @@ class _TopicContentsPageContent extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // 🔄 BOTÓN PARA REINTENTAR
+            ElevatedButton.icon(
+              onPressed: () {
+                print('🔄 [TOPIC_CONTENTS_PAGE] Manual retry for topic: ${topic.title}');
+                context.read<TopicContentsCubit>().loadTopicContents(topic);
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Actualizar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
