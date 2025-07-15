@@ -1,9 +1,9 @@
-// lib/features/learning/presentation/widgets/topic_card_widget.dart - NAVEGA DIRECTO AL CONTENIDO
+// lib/features/learning/presentation/widgets/topic_card_widget.dart - NAVEGA A TOPIC CONTENTS
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../domain/entities/topic_entity.dart';
-import '../pages/content_page.dart'; // IMPORTA LA PÁGINA DE CONTENIDO
+import '../pages/topic_contents_page.dart'; // CAMBIADO: Navega a la página intermedia
 
 class TopicCardWidget extends StatelessWidget {
   final TopicEntity topic;
@@ -17,14 +17,14 @@ class TopicCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        debugPrint('🎯 Navegando directo al contenido: ${topic.title}');
+        debugPrint('🎯 Navegando a contenidos del topic: ${topic.title}');
         
         try {
-          // NAVEGA DIRECTO AL CONTENIDO DEL TOPIC
+          // NAVEGA A LA PÁGINA INTERMEDIA DE CONTENIDOS
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ContentPage(topic: topic),
+              builder: (context) => TopicContentsPage(topic: topic),
             ),
           );
         } catch (e) {
@@ -198,7 +198,7 @@ class TopicCardWidget extends StatelessWidget {
                     
                     const SizedBox(height: 8),
                     
-                    // Botón de acción
+                    // Botón de acción - ACTUALIZADO
                     SizedBox(
                       height: 24,
                       child: Container(
@@ -212,7 +212,7 @@ class TopicCardWidget extends StatelessWidget {
                         ),
                         child: Center(
                           child: Text(
-                            'Ver contenido',
+                            'Ver contenidos', // CAMBIADO DE "Ver contenido" a "Ver contenidos"
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w600,

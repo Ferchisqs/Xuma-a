@@ -1,4 +1,3 @@
-// lib/main.dart - VERSIÓN FINAL ACTUALIZADA
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app/xuma_a_app.dart';
@@ -36,7 +35,7 @@ Future _initializeServices() async {
     // 2. Configurar Auth dependencies PRIMERO (muy importante)
     setupAuthDependencies();
     
-    // 3. Configurar Content dependencies
+    // 3. 🆕 CONFIGURAR CONTENT DEPENDENCIES (INCLUYE TOPIC CONTENTS CUBIT)
     setupContentDependencies();
     
     // 4. Configurar otras dependencias
@@ -52,7 +51,7 @@ Future _initializeServices() async {
     
     print('✅ [MAIN] XUMA\'A services initialized successfully');
     print('✅ [MAIN] Auth feature configured successfully');
-    print('✅ [MAIN] Content feature configured successfully');
+    print('✅ [MAIN] Content feature configured successfully'); // 🆕
     print('✅ [MAIN] Learning feature configured successfully');
     print('✅ [MAIN] Challenges feature configured successfully');
     print('✅ [MAIN] Tips feature configured successfully');
@@ -72,9 +71,15 @@ void setupAuthDependencies() {
   }
 }
 
+// 🆕 FUNCIÓN AGREGADA PARA CONTENT DEPENDENCIES
 void setupContentDependencies() {
   try {
     print('🔧 [MAIN] Setting up Content dependencies...');
+    
+    // Llamar la función que registra todas las dependencias de contenido
+    // incluyendo TopicContentsCubit
+    setupContentDependencies();
+    
     debugPrint('✅ Content dependencies ready');
   } catch (e) {
     debugPrint('❌ Error setting up Content dependencies: $e');
