@@ -64,7 +64,6 @@ class ApiClient {
   }
 
   void _setupInterceptors(Dio dio, String serviceName) {
-    // 1. Auth Interceptor
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -82,7 +81,6 @@ class ApiClient {
       ),
     );
 
-    // 2. Retry Interceptor
     dio.interceptors.add(
       InterceptorsWrapper(
         onError: (error, handler) async {
@@ -108,7 +106,6 @@ class ApiClient {
     );
   }
 
-  // ==================== MÉTODOS PÚBLICOS ====================
 
   Future<Response> get(
     String path, {
@@ -196,10 +193,8 @@ class ApiClient {
     }
   }
 
-  // ==================== SELECCIÓN DE DIO SEGÚN SERVICIO ====================
 
   Dio _getDioForPath(String path, Options? options) {
-    // Si las options especifican un baseUrl, usar el servicio correspondiente
     final baseUrl = options?.extra?['baseUrl'] as String?;
     
     if (baseUrl != null) {
@@ -215,7 +210,6 @@ class ApiClient {
       }
     }
 
-    // 🆕 DETERMINAR SERVICIO POR ENDPOINT
     if (ApiEndpoints.isContentEndpoint(path)) {
       print('🎯 [API CLIENT] Auto-detected CONTENT service for: $path');
       return _contentDio;
@@ -227,15 +221,12 @@ class ApiClient {
       return _authDio;
     }
 
-    // Por defecto usar auth service
     print('🎯 [API CLIENT] Using default AUTH service for: $path');
     return _authDio;
   }
 
-  // ==================== GESTIÓN DE TOKENS ====================
 
   Future<void> _addAuthToken(RequestOptions options, String serviceName) async {
-    // No agregar token para endpoints de autenticación
     final authEndpoints = [
       ApiEndpoints.login,
       ApiEndpoints.register,
@@ -245,8 +236,7 @@ class ApiClient {
     final isAuthEndpoint = authEndpoints.any((endpoint) => 
       options.path.contains(endpoint));
     
-    // 🆕 Para content service, siempre intentar agregar token si está disponible
-    // (pero no fallar si no hay token)
+   
     if (!isAuthEndpoint) {
       final token = await _tokenManager.getAccessToken();
       if (token != null) {
@@ -269,7 +259,6 @@ class ApiClient {
     if (response.data is Map<String, dynamic>) {
       final data = response.data as Map<String, dynamic>;
       
-      // Solo guardar tokens del servicio de auth
       if (serviceName == 'AUTH' && _shouldSaveTokens(response.requestOptions.path)) {
         try {
           await _tokenManager.saveTokensFromResponse(data);
@@ -355,7 +344,6 @@ class ApiClient {
     return await _tokenManager.hasValidAccessToken();
   }
 
-  // 🆕 MÉTODOS ESPECÍFICOS PARA CONTENT SERVICE
   
   Future<Response> getContent(
     String endpoint, {

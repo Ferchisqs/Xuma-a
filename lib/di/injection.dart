@@ -1,372 +1,482 @@
-  // lib/di/injection.dart - CON REGISTRO MANUAL TEMPORAL
-  import 'package:get_it/get_it.dart';
-  import 'package:injectable/injectable.dart';
-  import 'injection.config.dart';
+// lib/di/injection.dart - COMPLETO CON INTEGRACIÓN DE NEWS
+import 'package:get_it/get_it.dart';
+import 'package:injectable/injectable.dart';
+import 'injection.config.dart';
 
-  // Existing imports...
-  import '../features/learning/data/datasources/learning_local_datasource.dart';
-  import '../features/learning/data/datasources/learning_remote_datasource.dart';
-  import '../features/learning/data/repositories/learning_repository_impl.dart';
-  import '../features/learning/domain/repositories/learning_repository.dart';
-  import '../features/learning/domain/usecases/get_categories_usecase.dart';
-  import '../features/learning/domain/usecases/get_lessons_by_category_usecase.dart';
-  import '../features/learning/domain/usecases/get_lesson_content_usecase.dart';
-  import '../features/learning/domain/usecases/update_lesson_progress_usecase.dart';
-  import '../features/learning/domain/usecases/complete_lesson_usecase.dart';
-  import '../features/learning/domain/usecases/search_lessons_usecase.dart';
-  import '../features/learning/presentation/cubit/learning_cubit.dart';
-  import '../features/learning/presentation/cubit/lesson_list_cubit.dart';
-  import '../features/learning/presentation/cubit/lesson_content_cubit.dart';
+// ✅ IMPORTACIÓN CRÍTICA - API CLIENT
+import '../core/network/api_client.dart';
 
-  // 🆕 CONTENT IMPORTS PARA TOPICS Y CONTENIDOS
-  import '../features/learning/data/datasources/content_remote_datasource.dart';
-  import '../features/learning/data/repositories/content_repository_impl.dart';
-  import '../features/learning/domain/repositories/content_repository.dart';
-  import '../features/learning/domain/usecases/get_topics_usecase.dart';
-  import '../features/learning/domain/usecases/get_content_by_id_usecase.dart';
-  import '../features/learning/domain/usecases/get_contents_by_topic_usecase.dart'; // 🆕 NUEVO
-  import '../features/learning/presentation/cubit/content_cubit.dart';
-  import '../features/learning/presentation/cubit/topic_contents_cubit.dart'; // 🆕 NUEVO
+// Content imports
+import '../features/learning/data/datasources/content_remote_datasource.dart';
+import '../features/learning/data/repositories/content_repository_impl.dart';
+import '../features/learning/domain/repositories/content_repository.dart';
+import '../features/learning/domain/usecases/get_topics_usecase.dart';
+import '../features/learning/domain/usecases/get_content_by_id_usecase.dart';
+import '../features/learning/domain/usecases/get_contents_by_topic_usecase.dart';
+import '../features/learning/presentation/cubit/content_cubit.dart';
+import '../features/learning/presentation/cubit/topic_contents_cubit.dart';
 
-  // Challenges imports (existentes)
-  import '../features/challenges/data/datasources/challenges_local_datasource.dart';
-  import '../features/challenges/data/datasources/challenges_remote_datasource.dart';
-  import '../features/challenges/data/repositories/challenges_repository_impl.dart';
-  import '../features/challenges/domain/repositories/challenges_repository.dart';
-  import '../features/challenges/domain/usecases/get_challenges_usecase.dart';
-  import '../features/challenges/domain/usecases/get_user_progress_usecase.dart';
-  import '../features/challenges/domain/usecases/start_challenge_usecase.dart';
-  import '../features/challenges/domain/usecases/complete_challenge_usecase.dart';
-  import '../features/challenges/domain/usecases/update_challenge_progress_usecase.dart';
-  import '../features/challenges/presentation/cubit/challenges_cubit.dart';
-  import '../features/challenges/presentation/cubit/challenge_detail_cubit.dart';
+// Learning imports (solo los necesarios - SIN LearningLocalDataSource)
+import '../features/learning/data/datasources/learning_remote_datasource.dart';
+import '../features/learning/data/repositories/learning_repository_impl.dart';
+import '../features/learning/domain/repositories/learning_repository.dart';
+import '../features/learning/domain/usecases/get_categories_usecase.dart';
+import '../features/learning/domain/usecases/get_lessons_by_category_usecase.dart';
+import '../features/learning/domain/usecases/get_lesson_content_usecase.dart';
+import '../features/learning/domain/usecases/update_lesson_progress_usecase.dart';
+import '../features/learning/domain/usecases/complete_lesson_usecase.dart';
+import '../features/learning/domain/usecases/search_lessons_usecase.dart';
+import '../features/learning/presentation/cubit/learning_cubit.dart';
+import '../features/learning/presentation/cubit/lesson_list_cubit.dart';
+import '../features/learning/presentation/cubit/lesson_content_cubit.dart';
 
-  // Tips imports (existentes)
-  import '../features/tips/data/datasources/tips_remote_datasource.dart';
-  import '../features/tips/data/repositories/tips_repository_impl.dart';
-  import '../features/tips/domain/repositories/tips_repository.dart';
-  import '../features/tips/domain/usecases/get_random_tip_usecase.dart';
-  import '../features/tips/presentation/cubit/tips_cubit.dart';
+// News feature imports
+import '../features/news/data/datasources/news_remote_datasource.dart';
+import '../features/news/data/datasources/news_local_datasource.dart';
+import '../features/news/data/repositories/news_repository_impl.dart';
+import '../features/news/domain/repositories/news_repository.dart';
+import '../features/news/domain/usecases/get_climate_news_usecase.dart';
+import '../features/news/domain/usecases/get_cached_news_usecase.dart';
+import '../features/news/domain/usecases/refresh_news_usecase.dart';
+import '../features/news/presentation/cubit/news_cubit.dart';
 
-  final getIt = GetIt.instance;
+final getIt = GetIt.instance;
 
-  @InjectableInit(
-    initializerName: 'init',
-    preferRelativeImports: true,
-    asExtension: true,
-  )
-  void configureDependencies() => getIt.init();
-
-  // ==================== CONTENT DEPENDENCIES (REGISTRO MANUAL) ====================
-
-  void setupContentDependencies() {
-    print('🔧 [INJECTION] === STARTING CONTENT DEPENDENCIES SETUP (MANUAL) ===');
+@InjectableInit(
+  initializerName: 'init',
+  preferRelativeImports: true,
+  asExtension: true,
+)
+Future<void> configureDependencies() async {
+  print('🔧 [INJECTION] === STARTING DEPENDENCY CONFIGURATION ===');
+  
+  try {
+    // 1. PRIMERO: Configurar dependencias básicas con @injectable
+    print('🔧 [INJECTION] Step 1: Configuring auto-generated dependencies...');
+    await getIt.init();
+    print('✅ [INJECTION] Step 1: Auto-generated dependencies configured');
     
-    try {
-      // Data Sources
-      if (!getIt.isRegistered<ContentRemoteDataSource>()) {
-        getIt.registerLazySingleton<ContentRemoteDataSource>(
-          () => ContentRemoteDataSourceImpl(getIt()),
-        );
-        print('✅ [INJECTION] ContentRemoteDataSource registered');
-      }
-      
-      // Repository
-      if (!getIt.isRegistered<ContentRepository>()) {
-        getIt.registerLazySingleton<ContentRepository>(
-          () => ContentRepositoryImpl(
-            remoteDataSource: getIt(),
-            localDataSource: getIt(),
-            networkInfo: getIt(),
-          ),
-        );
-        print('✅ [INJECTION] ContentRepository registered');
-      }
-      
-      // Use Cases - REGISTRO MANUAL
-      if (!getIt.isRegistered<GetTopicsUseCase>()) {
-        getIt.registerLazySingleton<GetTopicsUseCase>(
-          () => GetTopicsUseCase(getIt<ContentRepository>()),
-        );
-        print('✅ [INJECTION] GetTopicsUseCase registered manually');
-      }
-      
-      if (!getIt.isRegistered<GetContentByIdUseCase>()) {
-        getIt.registerLazySingleton<GetContentByIdUseCase>(
-          () => GetContentByIdUseCase(getIt<ContentRepository>()),
-        );
-        print('✅ [INJECTION] GetContentByIdUseCase registered manually');
-      }
-      
-      // 🆕 REGISTRO MANUAL DEL NUEVO USE CRASE
-      if (!getIt.isRegistered<GetContentsByTopicUseCase>()) {
-        print('🔧 [INJECTION] Manually registering GetContentsByTopicUseCase...');
-        getIt.registerLazySingleton<GetContentsByTopicUseCase>(
-          () => GetContentsByTopicUseCase(getIt<ContentRepository>()),
-        );
-        print('✅ [INJECTION] GetContentsByTopicUseCase registered manually');
-      }
-      
-      // Cubits - REGISTRO MANUAL
-      if (!getIt.isRegistered<ContentCubit>()) {
-        getIt.registerFactory<ContentCubit>(
-          () => ContentCubit(
-            getTopicsUseCase: getIt<GetTopicsUseCase>(),
-            getContentByIdUseCase: getIt<GetContentByIdUseCase>(),
-          ),
-        );
-        print('✅ [INJECTION] ContentCubit registered manually');
-      }
-      
-      // 🆕 REGISTRO MANUAL DEL TOPIC CONTENTS CUBIT
-      if (!getIt.isRegistered<TopicContentsCubit>()) {
-        print('🔧 [INJECTION] Manually registering TopicContentsCubit...');
-        print('🔧 [INJECTION] Dependencies check:');
-        print('   - GetContentsByTopicUseCase: ${getIt.isRegistered<GetContentsByTopicUseCase>()}');
-        
-        getIt.registerFactory<TopicContentsCubit>(
-          () {
-            print('🏭 [INJECTION] Creating TopicContentsCubit instance manually...');
-            return TopicContentsCubit(
-              getContentsByTopicUseCase: getIt<GetContentsByTopicUseCase>(),
-            );
-          },
-        );
-        print('✅ [INJECTION] TopicContentsCubit registered manually as factory');
-      }
-      
-      print('✅ [INJECTION] === CONTENT DEPENDENCIES SETUP COMPLETED ===');
-      
-      // 🔍 VERIFICACIÓN FINAL
-      print('🔍 [INJECTION] Final verification...');
-      print('🔍 GetContentsByTopicUseCase registered: ${getIt.isRegistered<GetContentsByTopicUseCase>()}');
-      print('🔍 TopicContentsCubit registered: ${getIt.isRegistered<TopicContentsCubit>()}');
-      
-      // Test de resolución
-      try {
-        final testUseCase = getIt<GetContentsByTopicUseCase>();
-        print('✅ [INJECTION] GetContentsByTopicUseCase can be resolved');
-        
-        final testCubit = getIt<TopicContentsCubit>();
-        print('✅ [INJECTION] TopicContentsCubit can be resolved successfully');
-        testCubit.close(); // Cerrar el cubit de prueba
-      } catch (e) {
-        print('❌ [INJECTION] ERROR resolving dependencies: $e');
-      }
-      
-    } catch (e, stackTrace) {
-      print('❌ [INJECTION] CRITICAL ERROR in setupContentDependencies: $e');
-      print('❌ [INJECTION] Stack trace: $stackTrace');
-      rethrow;
-    }
+    // 2. SEGUNDO: Registrar dependencias de contenido manualmente
+    print('🔧 [INJECTION] Step 2: Registering content dependencies manually...');
+    _registerContentDependencies();
+    print('✅ [INJECTION] Step 2: Content dependencies registered');
+    
+    // 3. TERCERO: Registrar dependencias de learning modificadas
+    print('🔧 [INJECTION] Step 3: Registering learning dependencies...');
+    _registerLearningDependencies();
+    print('✅ [INJECTION] Step 3: Learning dependencies registered');
+    
+    // 4. CUARTO: Registrar dependencias de news
+    print('🔧 [INJECTION] Step 4: Registering news dependencies...');
+    _registerNewsDependencies();
+    print('✅ [INJECTION] Step 4: News dependencies registered');
+    
+    // 5. VERIFICACIÓN FINAL
+    print('🔍 [INJECTION] Step 5: Final verification...');
+    _verifyDependencies();
+    print('✅ [INJECTION] Step 5: All dependencies verified');
+    
+    print('🎉 [INJECTION] === DEPENDENCY CONFIGURATION COMPLETED ===');
+    
+  } catch (e, stackTrace) {
+    print('❌ [INJECTION] CRITICAL ERROR in configureDependencies: $e');
+    print('❌ [INJECTION] Stack trace: $stackTrace');
+    rethrow;
   }
+}
 
-  // ==================== LEARNING DEPENDENCIES MODIFICADO ====================
+// ==================== CONTENT DEPENDENCIES ====================
 
-  void setupLearningDependencies() {
-    print('🔧 [INJECTION] Setting up Learning dependencies...');
-    
-    // Data Sources (mantener existentes para compatibilidad)
-    if (!getIt.isRegistered<LearningLocalDataSource>()) {
-      getIt.registerLazySingleton<LearningLocalDataSource>(
-        () => LearningLocalDataSourceImpl(getIt()),
-      );
-    }
-    
-    if (!getIt.isRegistered<LearningRemoteDataSource>()) {
-      getIt.registerLazySingleton<LearningRemoteDataSource>(
-        () => LearningRemoteDataSourceImpl(getIt()),
-      );
-    }
-    
-    // Repository (mantener existente)
-    if (!getIt.isRegistered<LearningRepository>()) {
-      getIt.registerLazySingleton<LearningRepository>(
-        () => LearningRepositoryImpl(
-          remoteDataSource: getIt(),
-          localDataSource: getIt(),
-          networkInfo: getIt(),
-        ),
-      );
-    }
-    
-    // Use Cases (mantener existentes para otras funcionalidades)
-    if (!getIt.isRegistered<GetCategoriesUseCase>()) {
-      getIt.registerLazySingleton(() => GetCategoriesUseCase(getIt()));
-    }
-    
-    if (!getIt.isRegistered<GetLessonsByCategoryUseCase>()) {
-      getIt.registerLazySingleton(() => GetLessonsByCategoryUseCase(getIt()));
-    }
-    
-    if (!getIt.isRegistered<GetLessonContentUseCase>()) {
-      getIt.registerLazySingleton(() => GetLessonContentUseCase(getIt()));
-    }
-    
-    if (!getIt.isRegistered<UpdateLessonProgressUseCase>()) {
-      getIt.registerLazySingleton(() => UpdateLessonProgressUseCase(getIt()));
-    }
-    
-    if (!getIt.isRegistered<CompleteLessonUseCase>()) {
-      getIt.registerLazySingleton(() => CompleteLessonUseCase(getIt()));
-    }
-    
-    if (!getIt.isRegistered<SearchLessonsUseCase>()) {
-      getIt.registerLazySingleton(() => SearchLessonsUseCase(getIt()));
-    }
-    
-    // 🔄 LEARNING CUBIT MODIFICADO - AHORA USA TOPICS
-    getIt.registerFactory(() => LearningCubit(
-      getTopicsUseCase: getIt<GetTopicsUseCase>(), // ESPECÍFICO PARA USAR TOPICS
-    ));
-    
-    // Otros cubits mantienen su funcionalidad original
-    getIt.registerFactory(() => LessonListCubit(
-      getLessonsByCategoryUseCase: getIt(),
-      searchLessonsUseCase: getIt(),
-    ));
-    
-    getIt.registerFactory(() => LessonContentCubit(
-      getLessonContentUseCase: getIt(),
-      updateLessonProgressUseCase: getIt(),
-      completeLessonUseCase: getIt(),
-    ));
-    
-    print('✅ [INJECTION] Learning dependencies setup completed');
-  }
-
-  // ==================== CHALLENGES DEPENDENCIES (EXISTENTE) ====================
-
-  void setupChallengesDependencies() {
-    print('🔧 [INJECTION] Setting up Challenges dependencies...');
-    
+void _registerContentDependencies() {
+  try {
     // Data Sources
-    if (!getIt.isRegistered<ChallengesLocalDataSource>()) {
-      getIt.registerLazySingleton<ChallengesLocalDataSource>(
-        () => ChallengesLocalDataSourceImpl(getIt()),
+    if (!getIt.isRegistered<ContentRemoteDataSource>()) {
+      getIt.registerLazySingleton<ContentRemoteDataSource>(
+        () => ContentRemoteDataSourceImpl(getIt<ApiClient>()),
       );
-    }
-    
-    if (!getIt.isRegistered<ChallengesRemoteDataSource>()) {
-      getIt.registerLazySingleton<ChallengesRemoteDataSource>(
-        () => ChallengesRemoteDataSourceImpl(getIt()),
-      );
+      print('✅ [INJECTION] ContentRemoteDataSource registered');
     }
     
     // Repository
-    if (!getIt.isRegistered<ChallengesRepository>()) {
-      getIt.registerLazySingleton<ChallengesRepository>(
-        () => ChallengesRepositoryImpl(
-          remoteDataSource: getIt(),
+    if (!getIt.isRegistered<ContentRepository>()) {
+      getIt.registerLazySingleton<ContentRepository>(
+        () => ContentRepositoryImpl(
+          remoteDataSource: getIt<ContentRemoteDataSource>(),
           localDataSource: getIt(),
           networkInfo: getIt(),
         ),
       );
+      print('✅ [INJECTION] ContentRepository registered');
     }
     
     // Use Cases
-    if (!getIt.isRegistered<GetChallengesUseCase>()) {
-      getIt.registerLazySingleton(() => GetChallengesUseCase(getIt()));
+    if (!getIt.isRegistered<GetTopicsUseCase>()) {
+      getIt.registerLazySingleton<GetTopicsUseCase>(
+        () => GetTopicsUseCase(getIt<ContentRepository>()),
+      );
+      print('✅ [INJECTION] GetTopicsUseCase registered');
     }
     
-    if (!getIt.isRegistered<GetUserProgressUseCase>()) {
-      getIt.registerLazySingleton(() => GetUserProgressUseCase(getIt()));
+    if (!getIt.isRegistered<GetContentByIdUseCase>()) {
+      getIt.registerLazySingleton<GetContentByIdUseCase>(
+        () => GetContentByIdUseCase(getIt<ContentRepository>()),
+      );
+      print('✅ [INJECTION] GetContentByIdUseCase registered');
     }
     
-    if (!getIt.isRegistered<StartChallengeUseCase>()) {
-      getIt.registerLazySingleton(() => StartChallengeUseCase(getIt()));
-    }
-    
-    if (!getIt.isRegistered<CompleteChallengeUseCase>()) {
-      getIt.registerLazySingleton(() => CompleteChallengeUseCase(getIt()));
-    }
-    
-    if (!getIt.isRegistered<UpdateChallengeProgressUseCase>()) {
-      getIt.registerLazySingleton(() => UpdateChallengeProgressUseCase(getIt()));
+    if (!getIt.isRegistered<GetContentsByTopicUseCase>()) {
+      getIt.registerLazySingleton<GetContentsByTopicUseCase>(
+        () => GetContentsByTopicUseCase(getIt<ContentRepository>()),
+      );
+      print('✅ [INJECTION] GetContentsByTopicUseCase registered');
     }
     
     // Cubits
-    getIt.registerFactory(() => ChallengesCubit(
-      getChallengesUseCase: getIt(),
-      getUserProgressUseCase: getIt(),
-    ));
-    
-    getIt.registerFactory(() => ChallengeDetailCubit(
-      startChallengeUseCase: getIt(),
-      completeChallengeUseCase: getIt(),
-      updateChallengeProgressUseCase: getIt(),
-    ));
-    
-    print('✅ [INJECTION] Challenges dependencies setup completed');
-  }
-
-  // ==================== TIPS DEPENDENCIES (EXISTENTE) ====================
-
-  void setupTipsDependencies() {
-    print('🔧 [INJECTION] Setting up Tips dependencies...');
-    
-    // Data Sources
-    if (!getIt.isRegistered<TipsRemoteDataSource>()) {
-      getIt.registerLazySingleton<TipsRemoteDataSource>(
-        () => TipsRemoteDataSourceImpl(getIt()),
+    if (!getIt.isRegistered<ContentCubit>()) {
+      getIt.registerFactory<ContentCubit>(
+        () => ContentCubit(
+          getTopicsUseCase: getIt<GetTopicsUseCase>(),
+          getContentByIdUseCase: getIt<GetContentByIdUseCase>(),
+        ),
       );
-      print('✅ [INJECTION] TipsRemoteDataSource registered');
+      print('✅ [INJECTION] ContentCubit registered');
+    }
+    
+    // 🎯 REGISTRO CRÍTICO: TopicContentsCubit
+    if (!getIt.isRegistered<TopicContentsCubit>()) {
+      getIt.registerFactory<TopicContentsCubit>(
+        () {
+          print('🏭 [INJECTION] Creating TopicContentsCubit instance...');
+          return TopicContentsCubit(
+            getContentsByTopicUseCase: getIt<GetContentsByTopicUseCase>(),
+          );
+        },
+      );
+      print('✅ [INJECTION] TopicContentsCubit registered as factory');
+    }
+    
+  } catch (e, stackTrace) {
+    print('❌ [INJECTION] Error in _registerContentDependencies: $e');
+    print('❌ [INJECTION] Stack trace: $stackTrace');
+    rethrow;
+  }
+}
+
+// ==================== LEARNING DEPENDENCIES ====================
+
+void _registerLearningDependencies() {
+  try {
+    // ⚠️ IMPORTANTE: NO registrar LearningLocalDataSource manualmente
+    // Ya está registrado por @injectable en injection.config.dart
+    
+    // Data Sources - Solo remote
+    if (!getIt.isRegistered<LearningRemoteDataSource>()) {
+      getIt.registerLazySingleton<LearningRemoteDataSource>(
+        () => LearningRemoteDataSourceImpl(getIt<ApiClient>()),
+      );
+      print('✅ [INJECTION] LearningRemoteDataSource registered');
     }
     
     // Repository
-    if (!getIt.isRegistered<TipsRepository>()) {
-      getIt.registerLazySingleton<TipsRepository>(
-        () => TipsRepositoryImpl(
-          getIt(), // TipsRemoteDataSource
-          getIt(), // CacheService
+    if (!getIt.isRegistered<LearningRepository>()) {
+      getIt.registerLazySingleton<LearningRepository>(
+        () => LearningRepositoryImpl(
+          remoteDataSource: getIt<LearningRemoteDataSource>(),
+          localDataSource: getIt(), // Obtenido de injection.config.dart
+          networkInfo: getIt(),
         ),
       );
-      print('✅ [INJECTION] TipsRepository registered');
+      print('✅ [INJECTION] LearningRepository registered');
+    }
+    
+    // Use Cases (solo si no están registrados por @injectable)
+    if (!getIt.isRegistered<GetCategoriesUseCase>()) {
+      getIt.registerLazySingleton<GetCategoriesUseCase>(
+        () => GetCategoriesUseCase(getIt<LearningRepository>()),
+      );
+      print('✅ [INJECTION] GetCategoriesUseCase registered');
+    }
+    
+    if (!getIt.isRegistered<GetLessonsByCategoryUseCase>()) {
+      getIt.registerLazySingleton<GetLessonsByCategoryUseCase>(
+        () => GetLessonsByCategoryUseCase(getIt<LearningRepository>()),
+      );
+      print('✅ [INJECTION] GetLessonsByCategoryUseCase registered');
+    }
+    
+    if (!getIt.isRegistered<GetLessonContentUseCase>()) {
+      getIt.registerLazySingleton<GetLessonContentUseCase>(
+        () => GetLessonContentUseCase(getIt<LearningRepository>()),
+      );
+      print('✅ [INJECTION] GetLessonContentUseCase registered');
+    }
+    
+    if (!getIt.isRegistered<UpdateLessonProgressUseCase>()) {
+      getIt.registerLazySingleton<UpdateLessonProgressUseCase>(
+        () => UpdateLessonProgressUseCase(getIt<LearningRepository>()),
+      );
+      print('✅ [INJECTION] UpdateLessonProgressUseCase registered');
+    }
+    
+    if (!getIt.isRegistered<CompleteLessonUseCase>()) {
+      getIt.registerLazySingleton<CompleteLessonUseCase>(
+        () => CompleteLessonUseCase(getIt<LearningRepository>()),
+      );
+      print('✅ [INJECTION] CompleteLessonUseCase registered');
+    }
+    
+    if (!getIt.isRegistered<SearchLessonsUseCase>()) {
+      getIt.registerLazySingleton<SearchLessonsUseCase>(
+        () => SearchLessonsUseCase(getIt<LearningRepository>()),
+      );
+      print('✅ [INJECTION] SearchLessonsUseCase registered');
+    }
+    
+    // Learning Cubit MODIFICADO para usar topics
+    if (!getIt.isRegistered<LearningCubit>()) {
+      getIt.registerFactory<LearningCubit>(
+        () => LearningCubit(
+          getTopicsUseCase: getIt<GetTopicsUseCase>(), // USA TOPICS EN LUGAR DE CATEGORIES
+        ),
+      );
+      print('✅ [INJECTION] LearningCubit registered (using topics)');
+    }
+    
+    // Otros cubits
+    if (!getIt.isRegistered<LessonListCubit>()) {
+      getIt.registerFactory<LessonListCubit>(
+        () => LessonListCubit(
+          getLessonsByCategoryUseCase: getIt<GetLessonsByCategoryUseCase>(),
+          searchLessonsUseCase: getIt<SearchLessonsUseCase>(),
+        ),
+      );
+      print('✅ [INJECTION] LessonListCubit registered');
+    }
+    
+    if (!getIt.isRegistered<LessonContentCubit>()) {
+      getIt.registerFactory<LessonContentCubit>(
+        () => LessonContentCubit(
+          getLessonContentUseCase: getIt<GetLessonContentUseCase>(),
+          updateLessonProgressUseCase: getIt<UpdateLessonProgressUseCase>(),
+          completeLessonUseCase: getIt<CompleteLessonUseCase>(),
+        ),
+      );
+      print('✅ [INJECTION] LessonContentCubit registered');
+    }
+    
+  } catch (e, stackTrace) {
+    print('❌ [INJECTION] Error in _registerLearningDependencies: $e');
+    print('❌ [INJECTION] Stack trace: $stackTrace');
+    rethrow;
+  }
+}
+
+// ==================== NEWS DEPENDENCIES ====================
+
+void _registerNewsDependencies() {
+  try {
+    // Data Sources
+    if (!getIt.isRegistered<NewsRemoteDataSource>()) {
+      getIt.registerLazySingleton<NewsRemoteDataSource>(
+        () => NewsRemoteDataSourceImpl(),
+      );
+      print('✅ [INJECTION] NewsRemoteDataSource registered');
+    }
+    
+    if (!getIt.isRegistered<NewsLocalDataSource>()) {
+      getIt.registerLazySingleton<NewsLocalDataSource>(
+        () => NewsLocalDataSourceImpl(getIt()), // CacheService desde injection.config.dart
+      );
+      print('✅ [INJECTION] NewsLocalDataSource registered');
+    }
+    
+    // Repository
+    if (!getIt.isRegistered<NewsRepository>()) {
+      getIt.registerLazySingleton<NewsRepository>(
+        () => NewsRepositoryImpl(
+          getIt<NewsRemoteDataSource>(),
+          getIt<NewsLocalDataSource>(),
+          getIt(), // NetworkInfo desde injection.config.dart
+        ),
+      );
+      print('✅ [INJECTION] NewsRepository registered');
     }
     
     // Use Cases
-    if (!getIt.isRegistered<GetRandomTipUseCase>()) {
-      getIt.registerLazySingleton(() => GetRandomTipUseCase(getIt()));
-      print('✅ [INJECTION] GetRandomTipUseCase registered');
+    if (!getIt.isRegistered<GetClimateNewsUseCase>()) {
+      getIt.registerLazySingleton<GetClimateNewsUseCase>(
+        () => GetClimateNewsUseCase(getIt<NewsRepository>()),
+      );
+      print('✅ [INJECTION] GetClimateNewsUseCase registered');
+    }
+    
+    if (!getIt.isRegistered<GetCachedNewsUseCase>()) {
+      getIt.registerLazySingleton<GetCachedNewsUseCase>(
+        () => GetCachedNewsUseCase(getIt<NewsRepository>()),
+      );
+      print('✅ [INJECTION] GetCachedNewsUseCase registered');
+    }
+    
+    if (!getIt.isRegistered<RefreshNewsUseCase>()) {
+      getIt.registerLazySingleton<RefreshNewsUseCase>(
+        () => RefreshNewsUseCase(getIt<NewsRepository>()),
+      );
+      print('✅ [INJECTION] RefreshNewsUseCase registered');
     }
     
     // Cubit
-    getIt.registerFactory(() => TipsCubit(getIt()));
-    print('✅ [INJECTION] TipsCubit registered');
+    if (!getIt.isRegistered<NewsCubit>()) {
+      getIt.registerFactory<NewsCubit>(
+        () => NewsCubit(
+          getClimateNewsUseCase: getIt<GetClimateNewsUseCase>(),
+          getCachedNewsUseCase: getIt<GetCachedNewsUseCase>(),
+          refreshNewsUseCase: getIt<RefreshNewsUseCase>(),
+        ),
+      );
+      print('✅ [INJECTION] NewsCubit registered');
+    }
     
-    print('✅ [INJECTION] Tips dependencies setup completed');
+  } catch (e, stackTrace) {
+    print('❌ [INJECTION] Error in _registerNewsDependencies: $e');
+    print('❌ [INJECTION] Stack trace: $stackTrace');
+    rethrow;
   }
+}
 
-  // ==================== DEBUG HELPER ====================
+// ==================== VERIFICATION ====================
 
-  void debugDependencies() {
-    print('🔍 [INJECTION] === DEPENDENCY DEBUG ===');
+void _verifyDependencies() {
+  print('🔍 [INJECTION] === DEPENDENCY VERIFICATION ===');
+  
+  // Verificar dependencias críticas
+  final criticalDeps = [
+    'ApiClient',
+    'ContentRemoteDataSource',
+    'ContentRepository', 
+    'GetTopicsUseCase',
+    'GetContentByIdUseCase',
+    'GetContentsByTopicUseCase',
+    'ContentCubit',
+    'TopicContentsCubit', // CRÍTICO
+    'LearningCubit',
+    'NewsRemoteDataSource',
+    'NewsLocalDataSource',
+    'NewsRepository',
+    'GetClimateNewsUseCase',
+    'GetCachedNewsUseCase',
+    'RefreshNewsUseCase',
+    'NewsCubit',
+  ];
+  
+  for (final dep in criticalDeps) {
+    bool isRegistered = false;
     
-    // Content dependencies (para topics)
-    print('🔍 [INJECTION] ContentRemoteDataSource: ${getIt.isRegistered<ContentRemoteDataSource>()}');
-    print('🔍 [INJECTION] ContentRepository: ${getIt.isRegistered<ContentRepository>()}');
-    print('🔍 [INJECTION] GetTopicsUseCase: ${getIt.isRegistered<GetTopicsUseCase>()}');
-    print('🔍 [INJECTION] GetContentByIdUseCase: ${getIt.isRegistered<GetContentByIdUseCase>()}');
-    print('🔍 [INJECTION] GetContentsByTopicUseCase: ${getIt.isRegistered<GetContentsByTopicUseCase>()}'); // 🆕
-    print('🔍 [INJECTION] ContentCubit: ${getIt.isRegistered<ContentCubit>()}');
-    print('🔍 [INJECTION] TopicContentsCubit: ${getIt.isRegistered<TopicContentsCubit>()}'); // 🆕
+    switch (dep) {
+      case 'ApiClient':
+        isRegistered = getIt.isRegistered<ApiClient>();
+        break;
+      case 'ContentRemoteDataSource':
+        isRegistered = getIt.isRegistered<ContentRemoteDataSource>();
+        break;
+      case 'ContentRepository':
+        isRegistered = getIt.isRegistered<ContentRepository>();
+        break;
+      case 'GetTopicsUseCase':
+        isRegistered = getIt.isRegistered<GetTopicsUseCase>();
+        break;
+      case 'GetContentByIdUseCase':
+        isRegistered = getIt.isRegistered<GetContentByIdUseCase>();
+        break;
+      case 'GetContentsByTopicUseCase':
+        isRegistered = getIt.isRegistered<GetContentsByTopicUseCase>();
+        break;
+      case 'ContentCubit':
+        isRegistered = getIt.isRegistered<ContentCubit>();
+        break;
+      case 'TopicContentsCubit':
+        isRegistered = getIt.isRegistered<TopicContentsCubit>();
+        break;
+      case 'LearningCubit':
+        isRegistered = getIt.isRegistered<LearningCubit>();
+        break;
+      case 'NewsRemoteDataSource':
+        isRegistered = getIt.isRegistered<NewsRemoteDataSource>();
+        break;
+      case 'NewsLocalDataSource':
+        isRegistered = getIt.isRegistered<NewsLocalDataSource>();
+        break;
+      case 'NewsRepository':
+        isRegistered = getIt.isRegistered<NewsRepository>();
+        break;
+      case 'GetClimateNewsUseCase':
+        isRegistered = getIt.isRegistered<GetClimateNewsUseCase>();
+        break;
+      case 'GetCachedNewsUseCase':
+        isRegistered = getIt.isRegistered<GetCachedNewsUseCase>();
+        break;
+      case 'RefreshNewsUseCase':
+        isRegistered = getIt.isRegistered<RefreshNewsUseCase>();
+        break;
+      case 'NewsCubit':
+        isRegistered = getIt.isRegistered<NewsCubit>();
+        break;
+    }
     
-    // Learning dependencies (modificado para usar topics)
-    print('🔍 [INJECTION] LearningRepository: ${getIt.isRegistered<LearningRepository>()}');
-    print('🔍 [INJECTION] LearningCubit: ${getIt.isRegistered<LearningCubit>()}');
-    
-    // Tips dependencies
-    print('🔍 [INJECTION] TipsRemoteDataSource: ${getIt.isRegistered<TipsRemoteDataSource>()}');
-    print('🔍 [INJECTION] TipsRepository: ${getIt.isRegistered<TipsRepository>()}');
-    print('🔍 [INJECTION] GetRandomTipUseCase: ${getIt.isRegistered<GetRandomTipUseCase>()}');
-    print('🔍 [INJECTION] TipsCubit: ${getIt.isRegistered<TipsCubit>()}');
-    
-    print('🔍 [INJECTION] === END DEBUG ===');
+    if (isRegistered) {
+      print('✅ [INJECTION] $dep: REGISTERED');
+    } else {
+      print('❌ [INJECTION] $dep: NOT REGISTERED');
+      throw Exception('Critical dependency $dep is not registered');
+    }
   }
-
-  // ==================== CLEANUP ====================
-
-  void clearAllDependencies() {
-    getIt.reset();
-    print('🧹 [INJECTION] All dependencies cleared');
+  
+  // Test de resolución para TopicContentsCubit
+  try {
+    final testCubit = getIt<TopicContentsCubit>();
+    print('✅ [INJECTION] TopicContentsCubit can be resolved successfully');
+    testCubit.close(); // Cerrar el cubit de prueba
+  } catch (e) {
+    print('❌ [INJECTION] ERROR resolving TopicContentsCubit: $e');
+    throw Exception('Cannot resolve TopicContentsCubit: $e');
   }
+  
+  // Test de resolución para NewsCubit
+  try {
+    final testNewsCubit = getIt<NewsCubit>();
+    print('✅ [INJECTION] NewsCubit can be resolved successfully');
+    testNewsCubit.close(); // Cerrar el cubit de prueba
+  } catch (e) {
+    print('❌ [INJECTION] ERROR resolving NewsCubit: $e');
+    throw Exception('Cannot resolve NewsCubit: $e');
+  }
+  
+  print('🔍 [INJECTION] === VERIFICATION COMPLETED ===');
+}
+
+// ==================== DEBUG HELPERS ====================
+
+void debugDependencies() {
+  print('🔍 [INJECTION] === DEPENDENCY DEBUG ===');
+  print('🔍 ApiClient: ${getIt.isRegistered<ApiClient>()}');
+  print('🔍 ContentRemoteDataSource: ${getIt.isRegistered<ContentRemoteDataSource>()}');
+  print('🔍 ContentRepository: ${getIt.isRegistered<ContentRepository>()}');
+  print('🔍 GetTopicsUseCase: ${getIt.isRegistered<GetTopicsUseCase>()}');
+  print('🔍 GetContentByIdUseCase: ${getIt.isRegistered<GetContentByIdUseCase>()}');
+  print('🔍 GetContentsByTopicUseCase: ${getIt.isRegistered<GetContentsByTopicUseCase>()}');
+  print('🔍 ContentCubit: ${getIt.isRegistered<ContentCubit>()}');
+  print('🔍 TopicContentsCubit: ${getIt.isRegistered<TopicContentsCubit>()}');
+  print('🔍 LearningCubit: ${getIt.isRegistered<LearningCubit>()}');
+  print('🔍 NewsRemoteDataSource: ${getIt.isRegistered<NewsRemoteDataSource>()}');
+  print('🔍 NewsLocalDataSource: ${getIt.isRegistered<NewsLocalDataSource>()}');
+  print('🔍 NewsRepository: ${getIt.isRegistered<NewsRepository>()}');
+  print('🔍 GetClimateNewsUseCase: ${getIt.isRegistered<GetClimateNewsUseCase>()}');
+  print('🔍 GetCachedNewsUseCase: ${getIt.isRegistered<GetCachedNewsUseCase>()}');
+  print('🔍 RefreshNewsUseCase: ${getIt.isRegistered<RefreshNewsUseCase>()}');
+  print('🔍 NewsCubit: ${getIt.isRegistered<NewsCubit>()}');
+  print('🔍 [INJECTION] === END DEBUG ===');
+}
+
+void clearAllDependencies() {
+  getIt.reset();
+  print('🧹 [INJECTION] All dependencies cleared');
+}

@@ -109,6 +109,8 @@ import '../features/learning/domain/usecases/get_categories_usecase.dart'
     as _i80;
 import '../features/learning/domain/usecases/get_content_by_id_usecase.dart'
     as _i677;
+import '../features/learning/domain/usecases/get_contents_by_topic_usecase.dart'
+    as _i582;
 import '../features/learning/domain/usecases/get_lesson_content_usecase.dart'
     as _i391;
 import '../features/learning/domain/usecases/get_lessons_by_category_usecase.dart'
@@ -313,6 +315,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i677.GetContentByIdUseCase(gh<_i19.ContentRepository>()));
     gh.factory<_i175.GetTopicsUseCase>(
         () => _i175.GetTopicsUseCase(gh<_i19.ContentRepository>()));
+    gh.factory<_i582.GetContentsByTopicUseCase>(
+        () => _i582.GetContentsByTopicUseCase(gh<_i19.ContentRepository>()));
     gh.factory<_i252.ChallengesRemoteDataSource>(
         () => _i252.ChallengesRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.lazySingleton<_i92.ProfileService>(

@@ -1,3 +1,4 @@
+// lib/features/home/presentation/pages/home_page.dart - VERSIÓN CORREGIDA
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -6,7 +7,6 @@ import '../widgets/daily_tip_card.dart';
 import '../widgets/eco_stats_widget.dart';
 import '../widgets/quick_actions_grid.dart';
 import '../../../navigation/presentation/widgets/custom_app_bar.dart';
-import '../../../navigation/presentation/widgets/side_nav_bar.dart';
 import '../../../navigation/presentation/cubit/navigation_cubit.dart';
 
 class HomePage extends StatelessWidget {
@@ -18,7 +18,8 @@ class HomePage extends StatelessWidget {
       value: context.read<NavigationCubit>(),
       child: Scaffold(
         backgroundColor: AppColors.background,
-        drawer: const SideNavBar(),
+        // 🔧 REMOVIDO: drawer: const SideNavBar(),
+        // El drawer se maneja desde MainWrapperPage
         appBar: const CustomAppBar(
           title: 'XUMA\'A',
           showDrawerButton: true,

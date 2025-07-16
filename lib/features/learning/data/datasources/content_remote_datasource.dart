@@ -180,7 +180,6 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       print('🌐 [CONTENT API] Topic ID: $topicId');
       print('🌐 [CONTENT API] Page: $page, Limit: $limit');
       
-      // ENDPOINT SEGÚN TU ROUTER
       final endpoint = '/api/content/by-topic/$topicId?page=$page&limit=$limit';
       print('🌐 [CONTENT API] URL: ${ApiEndpoints.getContentUrl(endpoint)}');
       
@@ -190,7 +189,6 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       print('🌐 [CONTENT API] Response Type: ${response.data.runtimeType}');
       print('🌐 [CONTENT API] Response Data: ${response.data}');
       
-      // Extraer la lista de contenidos de forma robusta
       List<dynamic> contentsJson = [];
       
       if (response.data is Map<String, dynamic>) {
@@ -208,7 +206,6 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
           contentsJson = data['results'] as List<dynamic>;
           print('✅ [CONTENT API] Found contents in results field');
         } else {
-          // Si no encontramos una lista, usar toda la respuesta como un contenido
           contentsJson = [data];
           print('✅ [CONTENT API] Using whole response as single content');
         }
@@ -259,7 +256,7 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       print('🎉 [CONTENT API] === CONTENTS BY TOPIC PROCESSING COMPLETE ===');
       print('🎉 [CONTENT API] Successfully processed: ${contents.length}/${contentsJson.length} contents');
       
-      return contents; // Puede devolver lista vacía, está bien
+      return contents; 
       
     } catch (e, stackTrace) {
       print('❌ [CONTENT API] === CRITICAL ERROR FETCHING CONTENTS BY TOPIC ===');

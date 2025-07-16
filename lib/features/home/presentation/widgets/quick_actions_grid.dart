@@ -20,7 +20,7 @@ class QuickActionsGrid extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // 🔧 CORREGIDO: Grid con mejor aspect ratio para evitar overflow
         GridView.count(
           shrinkWrap: true,
@@ -28,7 +28,8 @@ class QuickActionsGrid extends StatelessWidget {
           crossAxisCount: 2,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: 1.3, // 🔧 AUMENTADO de 1.1 a 1.3 para dar más espacio horizontal
+          childAspectRatio:
+              1.3, // 🔧 AUMENTADO de 1.1 a 1.3 para dar más espacio horizontal
           children: [
             _buildActionCard(
               context,
@@ -68,6 +69,16 @@ class QuickActionsGrid extends StatelessWidget {
               AppColors.primaryLight,
               () {
                 context.read<NavigationCubit>().goToCompanion();
+              },
+            ),
+            _buildActionCard(
+              context,
+              'Noticias',
+              'Actualidad climática',
+              Icons.newspaper_rounded,
+              AppColors.info,
+              () {
+                context.read<NavigationCubit>().goToNews();
               },
             ),
             // 🆕 NUEVO: Botón de Contacto

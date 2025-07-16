@@ -9,7 +9,8 @@ enum NavigationTab {
   trivia,
   challenges,
   contact,
-  profile    // 🆕 AGREGADO PERFIL
+  profile,
+  news
 }
 
 // Navigation State - Simplificada y más consistente
@@ -72,6 +73,7 @@ class NavigationCubit extends Cubit<NavigationState> {
   void goToChallenges() => changeTab(NavigationTab.challenges);
   void goToContact() => changeTab(NavigationTab.contact);
   void goToProfile() => changeTab(NavigationTab.profile); // 🆕 NUEVO
+  void goToNews() => changeTab(NavigationTab.news); // 🆕 NUEVO
 
   // Helper methods para verificar el estado actual
   bool get isHome => state.currentTab == NavigationTab.home;
@@ -81,6 +83,7 @@ class NavigationCubit extends Cubit<NavigationState> {
   bool get isChallenges => state.currentTab == NavigationTab.challenges;
   bool get isContact => state.currentTab == NavigationTab.contact;
   bool get isProfile => state.currentTab == NavigationTab.profile; // 🆕 NUEVO
+  bool get isNews => state.currentTab == NavigationTab.news; // 🆕 NUEVO
 
   // Method para debugging
   void debugCurrentState() {

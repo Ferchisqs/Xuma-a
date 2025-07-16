@@ -1,4 +1,4 @@
-// lib/features/navigation/presentation/widgets/custom_app_bar.dart - SIN CONSEJOS POR DEFECTO
+// lib/features/navigation/presentation/widgets/custom_app_bar.dart - VERSIÓN SIMPLIFICADA Y CORREGIDA
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -45,8 +45,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        automaticallyImplyLeading: showDrawerButton,
-        leading: _buildLeading(context),
+        automaticallyImplyLeading: showDrawerButton, // 🔧 SIMPLIFICADO: Dejar que Flutter maneje esto
+        leading: leading ?? (showDrawerButton ? null : _buildBackButton(context)),
         title: Text(
           title,
           style: AppTextStyles.h3.copyWith(
@@ -62,44 +62,17 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  Widget? _buildLeading(BuildContext context) {
-    if (leading != null) return leading;
-    
-    if (!showDrawerButton) {
-      if (Navigator.of(context).canPop()) {
-        return IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_rounded,
-            color: Colors.white,
-          ),
-          onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
-        );
-      }
-      return null;
+  Widget? _buildBackButton(BuildContext context) {
+    if (Navigator.of(context).canPop()) {
+      return IconButton(
+        icon: const Icon(
+          Icons.arrow_back_ios_rounded,
+          color: Colors.white,
+        ),
+        onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
+      );
     }
-    
-    return Builder(
-      builder: (context) {
-        return IconButton(
-          icon: const Icon(
-            Icons.menu,
-            color: Colors.white,
-            size: 24,
-          ),
-          onPressed: () {
-            debugPrint('🔧 Intentando abrir drawer...');
-            final scaffoldState = Scaffold.of(context);
-            if (scaffoldState.hasDrawer) {
-              debugPrint('✅ Drawer encontrado, abriendo...');
-              scaffoldState.openDrawer();
-            } else {
-              debugPrint('❌ No se encontró drawer en el scaffold');
-              Navigator.of(context).pop();
-            }
-          },
-        );
-      },
-    );
+    return null;
   }
 
   List<Widget> _buildActions(BuildContext context) {

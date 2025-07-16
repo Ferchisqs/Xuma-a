@@ -66,7 +66,7 @@ class SideNavBar extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Navigation Items
           Expanded(
             child: SingleChildScrollView(
@@ -118,10 +118,21 @@ class SideNavBar extends StatelessWidget {
                       NavItemWidget(
                         icon: Icons.emoji_events_rounded,
                         title: 'Desafíos',
-                        isSelected: state.currentTab == NavigationTab.challenges,
+                        isSelected:
+                            state.currentTab == NavigationTab.challenges,
                         onTap: () {
                           debugPrint('🏆 Navegando a Desafíos...');
                           context.read<NavigationCubit>().goToChallenges();
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                      NavItemWidget(
+                        icon: Icons.newspaper_rounded,
+                        title: 'Noticias',
+                        isSelected: state.currentTab == NavigationTab.news,
+                        onTap: () {
+                          debugPrint('📰 Navegando a Noticias...');
+                          context.read<NavigationCubit>().goToNews();
                           Navigator.of(context).pop();
                         },
                       ),
@@ -141,7 +152,7 @@ class SideNavBar extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // User Profile at bottom
           BlocBuilder<AuthCubit, AuthState>(
             builder: (context, authState) {
@@ -159,11 +170,11 @@ class SideNavBar extends StatelessWidget {
       final user = authState.user;
       final fullProfile = authState.fullProfile;
       final isLoadingProfile = authState.isProfileLoading;
-      
+
       // Usar nombre del perfil completo si está disponible
       final firstName = fullProfile?.firstName ?? user.firstName;
       final userLevel = fullProfile?.level ?? _getUserLevelFromAge(user.age);
-      
+
       return Row(
         children: [
           // Xico icon con estado
@@ -173,26 +184,26 @@ class SideNavBar extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(20),
-              border: isLoadingProfile 
-                ? Border.all(color: Colors.white.withOpacity(0.5), width: 2)
-                : null,
+              border: isLoadingProfile
+                  ? Border.all(color: Colors.white.withOpacity(0.5), width: 2)
+                  : null,
             ),
             child: isLoadingProfile
-              ? const Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ? const Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
                     ),
+                  )
+                : const Icon(
+                    Icons.pets,
+                    color: Colors.white,
+                    size: 24,
                   ),
-                )
-              : const Icon(
-                  Icons.pets,
-                  color: Colors.white,
-                  size: 24,
-                ),
           ),
           const SizedBox(width: 12),
           Flexible(
@@ -242,7 +253,8 @@ class SideNavBar extends StatelessWidget {
                         height: 6,
                         child: CircularProgressIndicator(
                           strokeWidth: 1,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       ),
                     ],
