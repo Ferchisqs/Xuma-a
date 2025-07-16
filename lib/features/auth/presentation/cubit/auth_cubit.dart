@@ -149,8 +149,7 @@ class AuthCubit extends Cubit<AuthState> {
       emit(AuthError(userFriendlyMessage));
     }
   }
-
-  Future<void> register({
+Future<void> register({
   required String firstName,
   required String lastName,
   required String email,
@@ -184,18 +183,30 @@ class AuthCubit extends Cubit<AuthState> {
       (failure) async {
         print('❌ Registration failed: ${failure.message}');
         
-        // 🆕 MANEJO ESPECÍFICO DE ERRORES DE REGISTRO
+        // 🚫 AQUÍ ESTÁ EL PROBLEMA - ESTAS LÍNEAS DEBEN ELIMINARSE
+        /*
+        if (failure.message.toLowerCase().contains('password') && 
+            failure.message.toLowerCase().contains('mismo')) {
+          // Error específico de contraseñas duplicadas (problema del backend)
+          userFriendlyMessage = 'Esta contraseña ya está en uso. Por favor elige una contraseña diferente.';
+        }
+        */
+        
+        // ✅ MANEJO CORRECTO DE ERRORES DE REGISTRO
         String userFriendlyMessage;
         
         if (failure.message.toLowerCase().contains('already exists') ||
             failure.message.toLowerCase().contains('ya existe') ||
             failure.message.toLowerCase().contains('duplicate') ||
-            failure.message.toLowerCase().contains('email') && failure.message.toLowerCase().contains('use')) {
+            (failure.message.toLowerCase().contains('email') && 
+             failure.message.toLowerCase().contains('use'))) {
           userFriendlyMessage = 'Este email ya está registrado. Intenta iniciar sesión o usa otro email.';
-        } else if (failure.message.toLowerCase().contains('password') && 
-                   failure.message.toLowerCase().contains('mismo')) {
-          // Error específico de contraseñas duplicadas (problema del backend)
-          userFriendlyMessage = 'Esta contraseña ya está en uso. Por favor elige una contraseña diferente.';
+        } else if (failure.message.toLowerCase().contains('validation') ||
+                   failure.message.toLowerCase().contains('invalid')) {
+          userFriendlyMessage = 'Datos de registro inválidos. Verifica la información ingresada.';
+        } else if (failure.message.toLowerCase().contains('network') ||
+                   failure.message.toLowerCase().contains('connection')) {
+          userFriendlyMessage = 'Error de conexión. Verifica tu internet e intenta nuevamente.';
         } else {
           userFriendlyMessage = ErrorHandler.getErrorMessage(failure.message);
         }

@@ -255,37 +255,62 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
-  @override
-  Future<Either<Failure, bool>> isLoggedIn() async {
-    try {
-      print('🔐 [REPO] Checking if user is logged in...');
-      
-      // 🆕 USAR TOKEN MANAGER EN LUGAR DE TOKEN LOCAL
-      final hasValidToken = await _tokenManager.hasValidAccessToken();
-      final hasCachedUser = await _localDataSource.getCachedUser() != null;
-      
-      final isLoggedIn = hasValidToken && hasCachedUser;
-      
-      print('🔍 [REPO] Login status check:');
-      print('   - Has valid token: $hasValidToken');
-      print('   - Has cached user: $hasCachedUser');
-      print('   - Is logged in: $isLoggedIn');
-      
-      if (!isLoggedIn && (hasValidToken || hasCachedUser)) {
-        print('⚠️ [REPO] Inconsistent state detected, cleaning up...');
-        await _localDataSource.clearCache();
+ @override
+Future<Either<Failure, bool>> isLoggedIn() async {
+  try {
+    print('🔐 [REPO] Checking if user is logged in...');
+    
+    // 1. Verificar token válido
+    final hasValidToken = await _tokenManager.hasValidAccessToken();
+    
+    // 2. Verificar usuario en cache
+    final cachedUser = await _localDataSource.getCachedUser();
+    final hasCachedUser = cachedUser != null;
+    
+    print('🔍 [REPO] Login status check:');
+    print('   - Has valid token: $hasValidToken');
+    print('   - Has cached user: $hasCachedUser');
+    
+    // 3. Si tenemos ambos, verificar que sean consistentes
+    if (hasValidToken && hasCachedUser) {
+      try {
+        // Verificar con el servidor que el token sigue siendo válido
+        final remoteUser = await _remoteDataSource.getCurrentUser();
+        if (remoteUser != null && remoteUser.email == cachedUser.email) {
+          print('✅ [REPO] User is logged in and tokens are valid');
+          return const Right(true);
+        } else {
+          print('⚠️ [REPO] Token-user mismatch, cleaning state');
+          await _localDataSource.clearCache();
+          return const Right(false);
+        }
+      } catch (e) {
+        print('⚠️ [REPO] Cannot verify with server, using local state');
+        // Si no podemos verificar con el servidor, confiar en el estado local por ahora
+        return Right(hasValidToken && hasCachedUser);
       }
-      
-      return Right(isLoggedIn);
-    } on CacheException catch (e) {
-      print('❌ [REPO] Cache error checking login status: ${e.message}');
-      return Left(CacheFailure(e.message));
-    } catch (e) {
-      print('❌ [REPO] Error checking login status: $e');
-      return Left(CacheFailure('Error verificando sesión: $e'));
     }
+    
+    // 4. Si falta alguno, limpiar todo
+    if (hasValidToken != hasCachedUser) {
+      print('⚠️ [REPO] Inconsistent state detected, cleaning up...');
+      await _localDataSource.clearCache();
+      return const Right(false);
+    }
+    
+    // 5. Ninguno de los dos está presente
+    final isLoggedIn = hasValidToken && hasCachedUser;
+    print('🔍 [REPO] Final login status: $isLoggedIn');
+    
+    return Right(isLoggedIn);
+  } on CacheException catch (e) {
+    print('❌ [REPO] Cache error checking login status: ${e.message}');
+    return Left(CacheFailure(e.message));
+  } catch (e) {
+    print('❌ [REPO] Error checking login status: $e');
+    return Left(CacheFailure('Error verificando sesión: $e'));
   }
-
+}
   // 🆕 MÉTODO PARA DEBUG
   Future<void> debugAuthState() async {
     try {

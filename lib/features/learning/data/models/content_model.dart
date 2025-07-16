@@ -1,4 +1,4 @@
-// lib/features/learning/data/models/content_model.dart - SUPER ROBUSTO PARA API PROBLEMÁTICA
+// lib/features/learning/data/models/content_model.dart - CON MEDIA IDs
 import 'package:json_annotation/json_annotation.dart';
 import '../../domain/entities/content_entity.dart';
 
@@ -6,6 +6,12 @@ part 'content_model.g.dart';
 
 @JsonSerializable()
 class ContentModel extends ContentEntity {
+  // 🆕 CAMPOS DE MEDIA
+  final String? mainMediaId;
+  final String? thumbnailMediaId;
+  final String? mediaUrl; // URL resuelto del main_media
+  final String? thumbnailUrl; // URL resuelto del thumbnail_media
+
   const ContentModel({
     required String id,
     required String title,
@@ -16,22 +22,27 @@ class ContentModel extends ContentEntity {
     required bool isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
+    // 🆕 NUEVOS CAMPOS
+    this.mainMediaId,
+    this.thumbnailMediaId,
+    this.mediaUrl,
+    this.thumbnailUrl,
   }) : super(
           id: id,
           title: title,
           description: description,
           content: content,
-          imageUrl: imageUrl,
+          imageUrl: imageUrl ?? thumbnailUrl, // 🔧 Usar thumbnailUrl como fallback
           category: category,
           isActive: isActive,
           createdAt: createdAt,
           updatedAt: updatedAt,
         );
 
-  // 🔧 FACTORY ULTRA ROBUSTO PARA APIs PROBLEMÁTICAS
+  // 🔧 FACTORY ULTRA ROBUSTO PARA APIs PROBLEMÁTICAS + MEDIA IDs
   factory ContentModel.fromJson(Map<String, dynamic> json) {
     try {
-      print('🔍 [CONTENT MODEL] === PROCESSING CONTENT ===');
+      print('🔍 [CONTENT MODEL] === PROCESSING CONTENT WITH MEDIA ===');
       print('🔍 [CONTENT MODEL] Raw JSON: $json');
       print('🔍 [CONTENT MODEL] JSON keys: ${json.keys.toList()}');
       
@@ -50,17 +61,22 @@ class ContentModel extends ContentEntity {
       final content = _extractContent(json, description);
       print('🔍 [CONTENT MODEL] Extracted content length: ${content.length} chars');
       
-      // 5. EXTRAER URL DE IMAGEN
+      // 5. 🆕 EXTRAER MEDIA IDs
+      final mainMediaId = _extractStringOrNull(json, ['main_media_id', 'mainMediaId', 'media_id']);
+      final thumbnailMediaId = _extractStringOrNull(json, ['thumbnail_media_id', 'thumbnailMediaId', 'thumb_id']);
+      print('🔍 [CONTENT MODEL] Media IDs - Main: $mainMediaId, Thumbnail: $thumbnailMediaId');
+      
+      // 6. EXTRAER URL DE IMAGEN (fallback tradicional)
       final imageUrl = _extractStringOrNull(json, ['icon_url', 'image_url', 'imageUrl', 'thumbnail', 'image', 'media_url']);
       
-      // 6. EXTRAER CATEGORÍA - HEREDAR DEL TOPIC SI ES POSIBLE
+      // 7. EXTRAER CATEGORÍA
       final category = _extractCategoryFromContent(json);
       print('🔍 [CONTENT MODEL] Extracted category: $category');
       
-      // 7. EXTRAER ESTADO ACTIVO
+      // 8. EXTRAER ESTADO ACTIVO
       final isActive = _extractBool(json, ['is_active', 'active', 'enabled', 'published', 'is_published'], fallback: true);
       
-      // 8. EXTRAER FECHAS
+      // 9. EXTRAER FECHAS
       final createdAt = _extractDateTime(json, ['created_at', 'createdAt', 'date_created', 'published_at']);
       final updatedAt = _extractDateTime(json, ['updated_at', 'updatedAt', 'date_updated', 'modified_at']);
       
@@ -74,9 +90,15 @@ class ContentModel extends ContentEntity {
         isActive: isActive,
         createdAt: createdAt,
         updatedAt: updatedAt,
+        // 🆕 NUEVOS CAMPOS DE MEDIA
+        mainMediaId: mainMediaId,
+        thumbnailMediaId: thumbnailMediaId,
+        mediaUrl: null, // Se poblará por separado si se busca en API de media
+        thumbnailUrl: null, // Se poblará por separado si se busca en API de media
       );
       
       print('✅ [CONTENT MODEL] Successfully created content: "${contentModel.title}" (Category: ${contentModel.category})');
+      print('✅ [CONTENT MODEL] Media info - Main ID: ${contentModel.mainMediaId}, Thumbnail ID: ${contentModel.thumbnailMediaId}');
       return contentModel;
       
     } catch (e, stackTrace) {
@@ -98,6 +120,11 @@ class ContentModel extends ContentEntity {
           isActive: true,
           createdAt: DateTime.now().subtract(const Duration(days: 1)),
           updatedAt: DateTime.now(),
+          // Fallback sin media IDs
+          mainMediaId: null,
+          thumbnailMediaId: null,
+          mediaUrl: null,
+          thumbnailUrl: null,
         );
       } catch (fallbackError) {
         print('❌ [CONTENT MODEL] Even fallback failed: $fallbackError');
@@ -106,7 +133,73 @@ class ContentModel extends ContentEntity {
     }
   }
 
-  // 🔧 EXTRACTOR DE CONTENIDO ROBUSTO
+  // 🆕 FACTORY PARA CREAR CONTENT CON MEDIA URLs RESUELTOS
+  factory ContentModel.withResolvedMedia({
+    required ContentModel originalContent,
+    String? resolvedMediaUrl,
+    String? resolvedThumbnailUrl,
+  }) {
+    return ContentModel(
+      id: originalContent.id,
+      title: originalContent.title,
+      description: originalContent.description,
+      content: originalContent.content,
+      imageUrl: resolvedThumbnailUrl ?? originalContent.imageUrl,
+      category: originalContent.category,
+      isActive: originalContent.isActive,
+      createdAt: originalContent.createdAt,
+      updatedAt: originalContent.updatedAt,
+      mainMediaId: originalContent.mainMediaId,
+      thumbnailMediaId: originalContent.thumbnailMediaId,
+      mediaUrl: resolvedMediaUrl,
+      thumbnailUrl: resolvedThumbnailUrl,
+    );
+  }
+
+  // 🆕 GETTERS PARA VERIFICAR SI TIENE MEDIA IDs
+  bool get hasMainMedia => mainMediaId != null && mainMediaId!.isNotEmpty;
+  bool get hasThumbnailMedia => thumbnailMediaId != null && thumbnailMediaId!.isNotEmpty;
+  bool get hasAnyMedia => hasMainMedia || hasThumbnailMedia;
+
+  // 🆕 GETTER PARA URL DE IMAGEN FINAL
+  String? get finalImageUrl {
+    return thumbnailUrl ?? mediaUrl ?? imageUrl;
+  }
+
+  // [RESTO DE MÉTODOS IGUALES - SOLO AGREGO LOS NUEVOS CAMPOS AL toJson]
+
+  @override
+  Map<String, dynamic> toJson() {
+    final json = _$ContentModelToJson(this);
+    // Agregar campos personalizados que no están en el generador
+    json['mainMediaId'] = mainMediaId;
+    json['thumbnailMediaId'] = thumbnailMediaId;
+    json['mediaUrl'] = mediaUrl;
+    json['thumbnailUrl'] = thumbnailUrl;
+    return json;
+  }
+
+  factory ContentModel.fromEntity(ContentEntity entity) {
+    return ContentModel(
+      id: entity.id,
+      title: entity.title,
+      description: entity.description,
+      content: entity.content,
+      imageUrl: entity.imageUrl,
+      category: entity.category,
+      isActive: entity.isActive,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+      // Sin media IDs cuando se crea desde entity
+      mainMediaId: null,
+      thumbnailMediaId: null,
+      mediaUrl: null,
+      thumbnailUrl: null,
+    );
+  }
+
+  // === MÉTODOS HELPER REUTILIZADOS (IGUALES QUE ANTES) ===
+  
   static String _extractContent(Map<String, dynamic> json, String description) {
     final contentFields = [
       'content', 'body', 'text', 'article_content', 
@@ -124,16 +217,13 @@ class ContentModel extends ContentEntity {
       }
     }
     
-    // Si no hay contenido específico, usar descripción expandida
     if (description.isNotEmpty && description != 'Sin descripción disponible') {
       return _expandDescription(description, json);
     }
     
-    // Contenido por defecto basado en el JSON disponible
     return _createDefaultContent(json);
   }
 
-  // 🔧 EXPANDIR DESCRIPCIÓN A CONTENIDO COMPLETO
   static String _expandDescription(String description, Map<String, dynamic> json) {
     final title = json['name']?.toString() ?? json['title']?.toString() ?? 'Tema de aprendizaje';
     
@@ -159,7 +249,6 @@ Cada pequeña acción cuenta para proteger nuestro planeta. Al aprender sobre es
     ''';
   }
 
-  // 🔧 CREAR CONTENIDO POR DEFECTO
   static String _createDefaultContent(Map<String, dynamic> json) {
     final title = json['name']?.toString() ?? json['title']?.toString() ?? 'Contenido educativo';
     final category = _extractCategoryFromContent(json);
@@ -188,11 +277,9 @@ Cada persona puede hacer una diferencia significativa en el cuidado del medio am
     ''';
   }
 
-  // 🔧 EXTRACTOR DE CATEGORÍA ESPECÍFICO PARA CONTENIDO
   static String _extractCategoryFromContent(Map<String, dynamic> json) {
     print('🔍 [CONTENT MODEL] === EXTRACTING CATEGORY FROM CONTENT ===');
     
-    // 1. Buscar categoría directa en el contenido
     final categoryFields = [
       'category', 'categoria', 'type', 'content_type',
       'subject', 'topic', 'area', 'classification'
@@ -210,13 +297,12 @@ Cada persona puede hacer una diferencia significativa en el cuidado del medio am
       }
     }
     
-    // 2. Buscar en relaciones de topic (contentTopics, primaryTopic)
+    // Buscar en relaciones de topic
     if (json.containsKey('contentTopics')) {
       final contentTopics = json['contentTopics'];
       if (contentTopics is List && contentTopics.isNotEmpty) {
         final firstTopic = contentTopics[0];
         if (firstTopic is Map<String, dynamic>) {
-          print('🔍 [CONTENT MODEL] Checking contentTopics...');
           return _extractCategoryFromContent(firstTopic);
         }
       }
@@ -225,47 +311,39 @@ Cada persona puede hacer una diferencia significativa en el cuidado del medio am
     if (json.containsKey('primaryTopic')) {
       final primaryTopic = json['primaryTopic'];
       if (primaryTopic is Map<String, dynamic>) {
-        print('🔍 [CONTENT MODEL] Checking primaryTopic...');
         return _extractCategoryFromContent(primaryTopic);
       }
     }
     
-    // 3. Buscar por topic_id para hacer inferencia
+    // Buscar por topic_id para hacer inferencia
     if (json.containsKey('topic_id')) {
       final topicId = json['topic_id'].toString();
       final inferredCategory = _inferCategoryFromTopicId(topicId);
       if (inferredCategory != 'general') {
-        print('🧠 [CONTENT MODEL] Inferred category from topic_id: $inferredCategory');
         return inferredCategory;
       }
     }
     
-    // 4. Deducir de título o descripción
+    // Deducir de título o descripción
     final title = (json['name'] ?? json['title'] ?? '').toString().toLowerCase();
     final description = (json['description'] ?? '').toString().toLowerCase();
     final textCategory = _deduceCategoryFromText('$title $description');
     
     if (textCategory != 'general') {
-      print('🧠 [CONTENT MODEL] Deduced category from text: $textCategory');
       return textCategory;
     }
     
-    print('⚠️ [CONTENT MODEL] No category found, using default: educacion');
     return 'educacion';
   }
 
-  // 🗺️ MAPEAR CATEGORÍAS DE CONTENIDO
   static String _mapContentCategory(String category) {
     final mapping = {
-      // Tipos de contenido
       'article': 'educacion',
       'video': 'multimedia',
       'interactive': 'interactivo',
       'lesson': 'educacion',
       'tutorial': 'educacion',
       'guide': 'educacion',
-      
-      // Categorías temáticas
       'environment': 'medio-ambiente',
       'climate': 'clima',
       'recycling': 'reciclaje',
@@ -274,8 +352,6 @@ Cada persona puede hacer una diferencia significativa en el cuidado del medio am
       'nature': 'naturaleza',
       'conservation': 'conservacion',
       'sustainability': 'sostenibilidad',
-      
-      // En español
       'educacion': 'educacion',
       'medio-ambiente': 'medio-ambiente',
       'medioambiente': 'medio-ambiente',
@@ -290,9 +366,7 @@ Cada persona puede hacer una diferencia significativa en el cuidado del medio am
     return mapping[category] ?? category;
   }
 
-  // 🔍 INFERIR CATEGORÍA DESDE TOPIC ID
   static String _inferCategoryFromTopicId(String topicId) {
-    // Patrones comunes en IDs de topics
     final patterns = {
       'recicl': 'reciclaje',
       'water': 'agua',
@@ -319,7 +393,6 @@ Cada persona puede hacer una diferencia significativa en el cuidado del medio am
     return 'general';
   }
 
-  // 🧠 DEDUCIR CATEGORÍA DESDE TEXTO
   static String _deduceCategoryFromText(String text) {
     final keywords = {
       'reciclaje': ['recicl', 'reus', 'residuo', 'basura', 'desecho', 'waste'],
@@ -342,7 +415,6 @@ Cada persona puede hacer una diferencia significativa en el cuidado del medio am
     return 'general';
   }
 
-  // 🔧 HELPERS ROBUSTOS REUTILIZADOS
   static String _extractRequiredString(Map<String, dynamic> json, List<String> possibleKeys) {
     for (final key in possibleKeys) {
       final value = json[key];
@@ -401,27 +473,10 @@ Cada persona puede hacer una diferencia significativa en el cuidado del medio am
         try {
           return DateTime.parse(value.toString());
         } catch (e) {
-          print('⚠️ [CONTENT MODEL] Error parsing date from $key: $value');
           continue;
         }
       }
     }
     return DateTime.now();
-  }
-
-  Map<String, dynamic> toJson() => _$ContentModelToJson(this);
-
-  factory ContentModel.fromEntity(ContentEntity entity) {
-    return ContentModel(
-      id: entity.id,
-      title: entity.title,
-      description: entity.description,
-      content: entity.content,
-      imageUrl: entity.imageUrl,
-      category: entity.category,
-      isActive: entity.isActive,
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt,
-    );
   }
 }

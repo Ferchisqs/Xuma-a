@@ -1,4 +1,4 @@
-// lib/di/injection.dart - COMPLETO CON INTEGRACIÓN DE NEWS
+// lib/di/injection.dart - COMPLETO CON INTEGRACIÓN DE NEWS - SOLO CORRECCIONES MÍNIMAS
 import 'package:get_it/get_it.dart';
 import 'package:injectable/injectable.dart';
 import 'injection.config.dart';

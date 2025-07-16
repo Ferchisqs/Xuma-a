@@ -1,4 +1,4 @@
-// lib/features/learning/data/datasources/content_remote_datasource.dart - MEJORADO
+// lib/features/learning/data/datasources/content_remote_datasource.dart - MEJORADO - ENDPOINT CORREGIDO
 import 'package:injectable/injectable.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/config/api_endpoints.dart';
@@ -113,7 +113,8 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       print('🌐 [CONTENT API] === FETCHING CONTENT BY ID (IMPROVED) ===');
       print('🌐 [CONTENT API] Content ID: $id');
       
-      final response = await apiClient.getContent('/api/content/topics/$id');
+      // 🔧 ENDPOINT CORREGIDO: usar /api/content/{id} en lugar de /api/content/topics/{id}
+      final response = await apiClient.getContent('/api/content/$id');
       
       print('🌐 [CONTENT API] Response Status: ${response.statusCode}');
       

@@ -46,80 +46,81 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   // ==================== AUTENTICACIÓN BÁSICA ====================
   
-  @override
-  Future<UserModel> login(String email, String password) async {
-    try {
-      print('🔍 [AUTH] Starting login for: $email');
-      
-      final response = await _apiClient.post(
-        ApiEndpoints.login,
-        data: {
-          'email': email,
-          'password': password,
-        },
-      );
-
-      print('🔍 [AUTH] Login Response Status: ${response.statusCode}');
-      print('🔍 [AUTH] Login Response Data: ${response.data}');
-
-      if (response.statusCode == 200) {
-        final responseData = response.data;
-        
-        // Verificar que la respuesta sea exitosa
-        if (responseData['success'] != true) {
-          throw ServerException('Login no exitoso: ${responseData['message'] ?? 'Error desconocido'}');
-        }
-        
-        // 🆕 GUARDAR TOKENS EXPLÍCITAMENTE
-        try {
-          await _tokenManager.saveTokensFromResponse(responseData);
-          print('✅ [AUTH] Tokens saved after successful login');
-          
-          // Debug tokens
-          await _tokenManager.debugTokenInfo();
-        } catch (e) {
-          print('⚠️ [AUTH] Warning: Could not save tokens: $e');
-          // No fallar el login por esto
-        }
-        
-        // Extraer datos del usuario para LOGIN
-        Map<String, dynamic> userData = {};
-        
-        if (responseData['data'] != null) {
-          final data = responseData['data'];
-          
-          // Para LOGIN: combinar user info con datos adicionales
-          if (data['user'] != null) {
-            userData = Map<String, dynamic>.from(data['user']);
-            // Agregar el userId desde data
-            userData['userId'] = data['userId'];
-            userData['id'] = data['userId'];
-            
-            // Para login, si no viene age, usar un valor por defecto basado en email/perfil
-            if (userData['age'] == null) {
-              userData['age'] = 25; // Valor razonable para login existente
-            }
-          } else {
-            userData = Map<String, dynamic>.from(data);
-          }
-        } else {
-          throw ServerException('Datos de usuario no encontrados en la respuesta');
-        }
-        
-        print('🔍 [AUTH] Final user data for LOGIN model: $userData');
-        
-        return _createUserModelFromApiData(userData, isLogin: true);
-      } else {
-        throw ServerException('Error en el login: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
-      }
-    } catch (e) {
-      print('❌ [AUTH] Login Error Details: $e');
-      if (e is ServerException) rethrow;
-      throw ServerException('Error de conexión en login: $e');
-    }
-  }
-
  @override
+Future<UserModel> login(String email, String password) async {
+  try {
+    print('🔍 [AUTH] Starting login for: $email');
+    
+    final response = await _apiClient.post(
+      ApiEndpoints.login,
+      data: {
+        'email': email,
+        'password': password,
+      },
+    );
+
+    print('🔍 [AUTH] Login Response Status: ${response.statusCode}');
+    print('🔍 [AUTH] Login Response Data: ${response.data}');
+
+    if (response.statusCode == 200) {
+      final responseData = response.data;
+      
+      // Verificar que la respuesta sea exitosa
+      if (responseData['success'] != true) {
+        throw ServerException('Login no exitoso: ${responseData['message'] ?? 'Error desconocido'}');
+      }
+      
+      // 🆕 GUARDAR TOKENS CON VERIFICACIÓN MEJORADA
+      try {
+        await _tokenManager.saveTokensFromResponse(responseData);
+        print('✅ [AUTH] Tokens saved after successful login');
+        
+        // 🆕 VERIFICAR QUE LOS TOKENS SE GUARDARON CORRECTAMENTE
+        final savedToken = await _tokenManager.getAccessToken();
+        if (savedToken == null) {
+          throw ServerException('Error: Token no se guardó correctamente');
+        }
+        
+        // Debug tokens
+        await _tokenManager.debugTokenInfo();
+      } catch (e) {
+        print('❌ [AUTH] CRITICAL ERROR: Could not save tokens: $e');
+        throw ServerException('Error guardando tokens de sesión: $e');
+      }
+      
+      // Extraer datos del usuario
+      Map<String, dynamic> userData = {};
+      
+      if (responseData['data'] != null) {
+        final data = responseData['data'];
+        
+        if (data['user'] != null) {
+          userData = Map<String, dynamic>.from(data['user']);
+          userData['userId'] = data['userId'];
+          userData['id'] = data['userId'];
+        } else {
+          userData = Map<String, dynamic>.from(data);
+        }
+      } else {
+        throw ServerException('Datos de usuario no encontrados en la respuesta');
+      }
+      
+      print('🔍 [AUTH] Final user data for LOGIN model: $userData');
+      
+      return _createUserModelFromApiData(userData, isLogin: true);
+    } else {
+      throw ServerException('Error en el login: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
+    }
+  } catch (e) {
+    print('❌ [AUTH] Login Error Details: $e');
+    if (e is ServerException) rethrow;
+    throw ServerException('Error de conexión en login: $e');
+  }
+}
+
+// ==================== MÉTODO CORREGIDO PARA REGISTER ====================
+
+@override
 Future<UserModel> register(RegisterParams params) async {
   try {
     print('🔍 [AUTH] Starting registration for: ${params.email}');
@@ -147,7 +148,20 @@ Future<UserModel> register(RegisterParams params) async {
         throw ServerException('Registro no exitoso: ${responseData['message'] ?? 'Error desconocido'}');
       }
       
-      await _tokenManager.saveTokensFromResponse(responseData);
+      // 🆕 GUARDAR TOKENS CON VERIFICACIÓN
+      try {
+        await _tokenManager.saveTokensFromResponse(responseData);
+        
+        final savedToken = await _tokenManager.getAccessToken();
+        if (savedToken == null) {
+          throw ServerException('Error: Token de registro no se guardó correctamente');
+        }
+        
+        print('✅ [AUTH] Registration tokens saved successfully');
+      } catch (e) {
+        print('❌ [AUTH] CRITICAL ERROR: Could not save registration tokens: $e');
+        throw ServerException('Error guardando tokens de registro: $e');
+      }
       
       Map<String, dynamic> userData = {};
       
@@ -162,13 +176,11 @@ Future<UserModel> register(RegisterParams params) async {
           userData = Map<String, dynamic>.from(data);
         }
         
-        if (userData['age'] == null) {
-          userData['age'] = params.age;
-        }
-        
+        // 🆕 ASEGURAR DATOS DEL REGISTRO
         userData['firstName'] = userData['firstName'] ?? params.firstName;
         userData['lastName'] = userData['lastName'] ?? params.lastName;
         userData['email'] = userData['email'] ?? params.email;
+        userData['age'] = userData['age'] ?? params.age;
         
       } else {
         throw ServerException('Datos de usuario no encontrados en la respuesta de registro');

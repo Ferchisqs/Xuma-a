@@ -1,4 +1,4 @@
-// lib/features/learning/presentation/widgets/content_item_widget.dart
+// lib/features/learning/presentation/widgets/content_item_widget.dart - CORREGIDO
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
@@ -22,17 +22,25 @@ class ContentItemWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        debugPrint('🎯 Navegando al contenido: ${content.title}');
+        debugPrint('🎯 [CONTENT ITEM] Navegando al contenido específico:');
+        debugPrint('🎯 [CONTENT ITEM] - Content ID: ${content.id}');
+        debugPrint('🎯 [CONTENT ITEM] - Content Title: ${content.title}');
+        debugPrint('🎯 [CONTENT ITEM] - Topic ID: ${topic.id}');
+        debugPrint('🎯 [CONTENT ITEM] - Topic Title: ${topic.title}');
         
         try {
+          // 🔧 PASAR TANTO TOPIC COMO CONTENT ESPECÍFICO
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ContentPage(topic: topic),
+              builder: (context) => ContentPage(
+                topic: topic,
+                content: content, // 🆕 PASAR EL CONTENT ESPECÍFICO
+              ),
             ),
           );
         } catch (e) {
-          debugPrint('❌ Error navegando al contenido: $e');
+          debugPrint('❌ [CONTENT ITEM] Error navegando al contenido: $e');
           
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -174,7 +182,9 @@ class ContentItemWidget extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        content.content,
+                        content.content.length > 100 
+                            ? '${content.content.substring(0, 100)}...'
+                            : content.content,
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                           height: 1.4,
@@ -209,7 +219,28 @@ class ContentItemWidget extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       
+                      // 🆕 CONTENT ID (para debug)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.info.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'ID: ${content.id.substring(0, 8)}',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.info,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 8,
+                          ),
+                        ),
+                      ),
+                      
                       // Fecha
+                      const SizedBox(width: 8),
                       Text(
                         _formatDate(content.createdAt),
                         style: AppTextStyles.caption.copyWith(

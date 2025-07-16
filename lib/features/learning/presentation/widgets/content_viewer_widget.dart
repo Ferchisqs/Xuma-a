@@ -1,8 +1,10 @@
+// lib/features/learning/presentation/widgets/content_viewer_widget.dart - CON MEDIA SUPPORT
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../domain/entities/content_entity.dart';
 import '../../domain/entities/topic_entity.dart';
+import '../../../learning/data/models/content_model.dart';
 
 class ContentViewerWidget extends StatefulWidget {
   final ContentEntity content;
@@ -23,6 +25,9 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
   
   @override
   Widget build(BuildContext context) {
+    // 🆕 VERIFICAR SI ES ContentModel PARA ACCEDER A MEDIA
+    final contentModel = widget.content is ContentModel ? widget.content as ContentModel : null;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -84,6 +89,75 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
                               ),
                             ),
                           ),
+                          
+                          // 🆕 MOSTRAR INFO DE MEDIA SI EXISTE
+                          if (contentModel != null && contentModel.hasAnyMedia) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                if (contentModel.hasMainMedia)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.videocam,
+                                          color: Colors.white,
+                                          size: 12,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Media',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: Colors.white,
+                                            fontSize: 8,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                if (contentModel.hasMainMedia && contentModel.hasThumbnailMedia)
+                                  const SizedBox(width: 4),
+                                if (contentModel.hasThumbnailMedia)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.image,
+                                          color: Colors.white,
+                                          size: 12,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Imagen',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: Colors.white,
+                                            fontSize: 8,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -96,58 +170,8 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
                 ),
               ),
               
-              // Imagen del contenido (si existe)
-              if (widget.content.imageUrl != null && widget.content.imageUrl!.isNotEmpty)
-                Container(
-                  height: 200,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: NetworkImage(widget.content.imageUrl!),
-                      fit: BoxFit.cover,
-                      onError: (exception, stackTrace) {
-                        print('❌ Error loading image: $exception');
-                      },
-                    ),
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.3),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
-              else
-                // Placeholder si no hay imagen
-                Container(
-                  height: 200,
-                  width: double.infinity,
-                  color: AppColors.primaryLight.withOpacity(0.1),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.eco,
-                        size: 64,
-                        color: AppColors.primary.withOpacity(0.5),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'XUMA\'A',
-                        style: AppTextStyles.h4.copyWith(
-                          color: AppColors.primary.withOpacity(0.7),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              // 🔧 IMAGEN DEL CONTENIDO CON SOPORTE PARA MEDIA RESUELTO
+              _buildContentImage(contentModel),
               
               // Contenido principal
               Padding(
@@ -218,6 +242,71 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
                           ),
                           const SizedBox(height: 20),
                           
+                          // 🆕 MOSTRAR INFORMACIÓN DE MEDIA SI ESTÁ DISPONIBLE
+                          if (contentModel != null && contentModel.hasAnyMedia) ...[
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColors.info.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppColors.info.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.perm_media,
+                                        color: AppColors.info,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Recursos multimedia',
+                                        style: AppTextStyles.bodyMedium.copyWith(
+                                          color: AppColors.info,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  
+                                  if (contentModel.mediaUrl != null) ...[
+                                    Text(
+                                      '📹 Media principal disponible',
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                  
+                                  if (contentModel.thumbnailUrl != null) ...[
+                                    Text(
+                                      '🖼️ Imagen de portada disponible',
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                  
+                                  if (contentModel.hasAnyMedia && contentModel.mediaUrl == null && contentModel.thumbnailUrl == null) ...[
+                                    Text(
+                                      '⏳ Multimedia en proceso de carga...',
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                          
                           // Información adicional
                           Container(
                             padding: const EdgeInsets.all(16),
@@ -270,42 +359,101 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
               color: AppColors.primaryLight.withOpacity(0.3),
             ),
           ),
-          child: Row(
+          child: Column(
             children: [
-              Icon(
-                Icons.info_outline,
-                color: AppColors.primary,
-                size: 20,
+              Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Información del contenido',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Actualizado: ${_formatDate(widget.content.updatedAt)}',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Información del contenido',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+              
+              // 🆕 DEBUG INFO PARA MEDIA IDs
+              if (contentModel != null && contentModel.hasAnyMedia) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.textHint.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Debug Media Info:',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Actualizado: ${_formatDate(widget.content.updatedAt)}',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      if (contentModel.mainMediaId != null)
+                        Text(
+                          'Main Media ID: ${contentModel.mainMediaId}',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textHint,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      if (contentModel.thumbnailMediaId != null)
+                        Text(
+                          'Thumbnail Media ID: ${contentModel.thumbnailMediaId}',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textHint,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      if (contentModel.mediaUrl != null)
+                        Text(
+                          'Resolved Media URL: ✅',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.success,
+                          ),
+                        ),
+                      if (contentModel.thumbnailUrl != null)
+                        Text(
+                          'Resolved Thumbnail URL: ✅',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.success,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
         
         const SizedBox(height: 24),
         
-        // Botón de completado (opcional para futuras funcionalidades)
+        // Botón de completado
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
@@ -346,6 +494,118 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
         const SizedBox(height: 32),
       ],
     );
+  }
+
+  // 🆕 MÉTODO PARA CONSTRUIR IMAGEN CON SOPORTE DE MEDIA
+  Widget _buildContentImage(ContentModel? contentModel) {
+    String? imageUrl;
+    
+    // Prioridad: thumbnailUrl > mediaUrl > imageUrl tradicional
+    if (contentModel != null) {
+      imageUrl = contentModel.thumbnailUrl ?? contentModel.mediaUrl ?? contentModel.imageUrl;
+    } else {
+      imageUrl = widget.content.imageUrl;
+    }
+    
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return Container(
+        height: 200,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: NetworkImage(imageUrl),
+            fit: BoxFit.cover,
+            onError: (exception, stackTrace) {
+              print('❌ Error loading image: $exception');
+            },
+          ),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.transparent,
+                Colors.black.withOpacity(0.3),
+              ],
+            ),
+          ),
+          child: Stack(
+            children: [
+              // 🆕 BADGE PARA INDICAR TIPO DE MEDIA
+              if (contentModel != null && contentModel.hasAnyMedia)
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          contentModel.mediaUrl != null ? Icons.videocam : Icons.image,
+                          color: Colors.white,
+                          size: 12,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          contentModel.mediaUrl != null ? 'Video' : 'Imagen',
+                          style: AppTextStyles.caption.copyWith(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      // Placeholder si no hay imagen
+      return Container(
+        height: 200,
+        width: double.infinity,
+        color: AppColors.primaryLight.withOpacity(0.1),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.eco,
+              size: 64,
+              color: AppColors.primary.withOpacity(0.5),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'XUMA\'A',
+              style: AppTextStyles.h4.copyWith(
+                color: AppColors.primary.withOpacity(0.7),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (contentModel != null && contentModel.hasAnyMedia) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Multimedia en proceso...',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.primary.withOpacity(0.6),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
   }
 
   String _getDefaultContent() {

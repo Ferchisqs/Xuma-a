@@ -49,6 +49,118 @@ class TokenManager {
       throw Exception('Failed to save tokens: $e');
     }
   }
+  Future<void> saveTokensFromResponse(Map<String, dynamic> response) async {
+  try {
+    print('🔐 [TOKEN] Extracting tokens from response...');
+    print('🔐 [TOKEN] Response keys: ${response.keys.toList()}');
+    
+    String? accessToken;
+    String? refreshToken;
+    String? userId;
+    DateTime? expiresAt;
+    
+    // Buscar access token en diferentes campos
+    accessToken = response['token'] ?? 
+                 response['accessToken'] ?? 
+                 response['access_token'];
+    
+    // Buscar refresh token
+    refreshToken = response['refreshToken'] ?? 
+                  response['refresh_token'];
+    
+    // Buscar user ID
+    userId = response['userId']?.toString() ?? 
+            response['user_id']?.toString() ??
+            response['id']?.toString();
+    
+    // Si hay datos anidados, buscar ahí también
+    if (response.containsKey('data')) {
+      final data = response['data'] as Map<String, dynamic>?;
+      if (data != null) {
+        accessToken ??= data['token'] ?? data['accessToken'] ?? data['access_token'];
+        refreshToken ??= data['refreshToken'] ?? data['refresh_token'];
+        userId ??= data['userId']?.toString() ?? data['user_id']?.toString() ?? data['id']?.toString();
+      }
+    }
+    
+    // Si hay tokens anidados
+    if (response.containsKey('tokens')) {
+      final tokens = response['tokens'] as Map<String, dynamic>?;
+      if (tokens != null) {
+        accessToken ??= tokens['accessToken'] ?? tokens['access_token'];
+        refreshToken ??= tokens['refreshToken'] ?? tokens['refresh_token'];
+      }
+    }
+    
+    // Calcular fecha de expiración (por defecto 1 hora)
+    if (response.containsKey('expiresIn')) {
+      final expiresIn = response['expiresIn'];
+      if (expiresIn is int) {
+        expiresAt = DateTime.now().add(Duration(seconds: expiresIn));
+      } else if (expiresIn is String) {
+        final seconds = int.tryParse(expiresIn);
+        if (seconds != null) {
+          expiresAt = DateTime.now().add(Duration(seconds: seconds));
+        }
+      }
+    } else {
+      // Por defecto, 24 horas de vida (más tiempo para evitar expiraciones frecuentes)
+      expiresAt = DateTime.now().add(const Duration(hours: 24));
+    }
+    
+    if (accessToken != null && accessToken.isNotEmpty) {
+      await saveTokens(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        expiresAt: expiresAt,
+        userId: userId,
+      );
+      
+      // 🆕 VERIFICAR QUE SE GUARDÓ CORRECTAMENTE
+      final verifyToken = await getAccessToken();
+      if (verifyToken == null) {
+        throw Exception('Token no se guardó correctamente en SharedPreferences');
+      }
+      
+      print('✅ [TOKEN] Tokens extracted and saved successfully');
+      print('✅ [TOKEN] Token verification passed');
+    } else {
+      print('⚠️ [TOKEN] No access token found in response');
+      print('🔍 [TOKEN] Response structure: ${response.toString()}');
+      throw Exception('No access token found in server response');
+    }
+  } catch (e) {
+    print('❌ [TOKEN] Error extracting tokens from response: $e');
+    throw Exception('Failed to extract tokens: $e');
+  }
+}
+
+Future<bool> hasValidAccessToken() async {
+  try {
+    final token = await getAccessToken();
+    if (token == null || token.isEmpty) {
+      print('⚠️ [TOKEN] No access token found');
+      return false;
+    }
+    
+    // Verificar que no haya expirado
+    if (await isTokenExpired()) {
+      print('⚠️ [TOKEN] Token has expired');
+      await clearAllTokens(); // Limpiar token expirado
+      return false;
+    }
+    
+    print('✅ [TOKEN] Valid access token found');
+    return true;
+  } catch (e) {
+    print('❌ [TOKEN] Error checking token validity: $e');
+    return false;
+  }
+}
+
+// MÉTODO mejorado  guardar tokens
+
+
 
   // ==================== GET TOKENS ====================
   
@@ -107,10 +219,7 @@ class TokenManager {
 
   // ==================== TOKEN VALIDATION ====================
   
-  Future<bool> hasValidAccessToken() async {
-    final token = await getAccessToken();
-    return token != null && !await isTokenExpired();
-  }
+  
 
   Future<bool> isTokenExpired() async {
     try {
@@ -172,82 +281,7 @@ class TokenManager {
   // ==================== HELPERS ====================
   
   /// Extrae tokens de una respuesta JSON del servidor
-  Future<void> saveTokensFromResponse(Map<String, dynamic> response) async {
-    try {
-      print('🔐 [TOKEN] Extracting tokens from response...');
-      print('🔐 [TOKEN] Response keys: ${response.keys.toList()}');
-      
-      String? accessToken;
-      String? refreshToken;
-      String? userId;
-      DateTime? expiresAt;
-      
-      // Buscar access token en diferentes campos
-      accessToken = response['token'] ?? 
-                   response['accessToken'] ?? 
-                   response['access_token'];
-      
-      // Buscar refresh token
-      refreshToken = response['refreshToken'] ?? 
-                    response['refresh_token'];
-      
-      // Buscar user ID
-      userId = response['userId']?.toString() ?? 
-              response['user_id']?.toString() ??
-              response['id']?.toString();
-      
-      // Si hay datos anidados, buscar ahí también
-      if (response.containsKey('data')) {
-        final data = response['data'] as Map<String, dynamic>?;
-        if (data != null) {
-          accessToken ??= data['token'] ?? data['accessToken'] ?? data['access_token'];
-          refreshToken ??= data['refreshToken'] ?? data['refresh_token'];
-          userId ??= data['userId']?.toString() ?? data['user_id']?.toString() ?? data['id']?.toString();
-        }
-      }
-      
-      // Si hay tokens anidados
-      if (response.containsKey('tokens')) {
-        final tokens = response['tokens'] as Map<String, dynamic>?;
-        if (tokens != null) {
-          accessToken ??= tokens['accessToken'] ?? tokens['access_token'];
-          refreshToken ??= tokens['refreshToken'] ?? tokens['refresh_token'];
-        }
-      }
-      
-      // Calcular fecha de expiración (por defecto 1 hora)
-      if (response.containsKey('expiresIn')) {
-        final expiresIn = response['expiresIn'];
-        if (expiresIn is int) {
-          expiresAt = DateTime.now().add(Duration(seconds: expiresIn));
-        } else if (expiresIn is String) {
-          final seconds = int.tryParse(expiresIn);
-          if (seconds != null) {
-            expiresAt = DateTime.now().add(Duration(seconds: seconds));
-          }
-        }
-      } else {
-        // Por defecto, 1 hora de vida
-        expiresAt = DateTime.now().add(const Duration(hours: 1));
-      }
-      
-      if (accessToken != null) {
-        await saveTokens(
-          accessToken: accessToken,
-          refreshToken: refreshToken,
-          expiresAt: expiresAt,
-          userId: userId,
-        );
-        print('✅ [TOKEN] Tokens extracted and saved successfully');
-      } else {
-        print('⚠️ [TOKEN] No access token found in response');
-        throw Exception('No access token found in server response');
-      }
-    } catch (e) {
-      print('❌ [TOKEN] Error extracting tokens from response: $e');
-      throw Exception('Failed to extract tokens: $e');
-    }
-  }
+  
 
   /// Debug: Imprime toda la información de tokens
   Future<void> debugTokenInfo() async {
