@@ -92,18 +92,7 @@ class QuickActionsGrid extends StatelessWidget {
                 context.read<NavigationCubit>().goToContact();
               },
             ),
-            // 🆕 NUEVO: Botón adicional (puede ser configuración o perfil)
-            _buildActionCard(
-              context,
-              'Mi Progreso',
-              'Ve tu avance completo',
-              Icons.trending_up_rounded,
-              AppColors.success,
-              () {
-                // Por ahora redirige a home, puedes cambiarlo más tarde
-                context.read<NavigationCubit>().goToHome();
-              },
-            ),
+          
           ],
         ),
       ],

@@ -11,7 +11,7 @@ import '../../../trivia/presentation/pages/trivia_main_page.dart';
 import '../../../companion/presentation/pages/companion_main_page.dart';
 import '../../../contact/presentation/pages/contact_main_page.dart';
 import '../../../profile/presentation/pages/profile_main_page.dart';
-import '../../../news/presentation/pages/news_main_page.dart'; // 🆕 AGREGADO
+import '../../../news/presentation/pages/news_main_page.dart';
 import '../widgets/side_nav_bar.dart';
 
 class MainWrapperPage extends StatelessWidget {
@@ -49,18 +49,16 @@ class _MainWrapperContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<NavigationCubit, NavigationState>(
       builder: (context, state) {
-        // 🔧 SOLUCION: El Scaffold principal SIEMPRE tiene drawer
-        // y cada página individual NO tiene drawer
+        // 🔧 SOLUCIÓN: Scaffold principal con drawer que se pasa a las páginas
         return Scaffold(
-          drawer: const SideNavBar(), // 🔧 DRAWER PRINCIPAL AQUÍ
-          body: _buildCurrentPage(context, state.currentTab),
-          // 🔧 OPCIONAL: Agregar listener para cerrar drawer automáticamente
+          // 🔧 MANTENER EL DRAWER EN EL SCAFFOLD PRINCIPAL
+          drawer: const SideNavBar(),
+          // 🔧 IMPORTANTE: NO poner body aquí, sino delegar a cada página
+          body: _buildCurrentPageWithDrawer(context, state.currentTab),
           onDrawerChanged: (isOpened) {
             if (!isOpened) {
-              // Drawer se cerró
               context.read<NavigationCubit>().closeDrawer();
             } else {
-              // Drawer se abrió
               context.read<NavigationCubit>().openDrawer();
             }
           },
@@ -69,35 +67,69 @@ class _MainWrapperContent extends StatelessWidget {
     );
   }
 
-  Widget _buildCurrentPage(BuildContext context, NavigationTab currentTab) {
-    // 🔧 IMPORTANTE: Todas estas páginas NO deben tener drawer propio
+  // 🔧 CONSTRUIR PÁGINA ACTUAL PERO PASANDO EL CONTEXTO CON DRAWER
+  Widget _buildCurrentPageWithDrawer(BuildContext context, NavigationTab currentTab) {
+    // 🔧 CADA PÁGINA TENDRÁ ACCESO AL DRAWER A TRAVÉS DEL CONTEXTO
     switch (currentTab) {
       case NavigationTab.home:
-        return const HomePage();
+        return const _PageWrapper(child: HomePage());
       
       case NavigationTab.learn:
-        return const LearningMainPage();
+        return const _PageWrapper(child: LearningMainPage());
       
       case NavigationTab.companion:
-        return const CompanionMainPage();
+        return const _PageWrapper(child: CompanionMainPage());
         
       case NavigationTab.trivia:
-        return const TriviaMainPage();
+        return const _PageWrapper(child: TriviaMainPage());
         
       case NavigationTab.challenges:
-        return const ChallengesMainPage();
+        return const _PageWrapper(child: ChallengesMainPage());
         
       case NavigationTab.contact:
-        return const ContactMainPage();
+        return const _PageWrapper(child: ContactMainPage());
         
       case NavigationTab.profile:
-        return const ProfileMainPage();
+        return const _PageWrapper(child: ProfileMainPage());
       
-      case NavigationTab.news: // 🆕 AGREGADO
-        return const NewsMainPage();
+      case NavigationTab.news:
+        return const _PageWrapper(child: NewsMainPage());
       
       default:
-        return const HomePage();
+        return const _PageWrapper(child: HomePage());
     }
+  }
+}
+
+// 🔧 WRAPPER QUE ELIMINA SCAFFOLD DE LAS PÁGINAS PERO MANTIENE EL CONTENIDO
+class _PageWrapper extends StatelessWidget {
+  final Widget child;
+  
+  const _PageWrapper({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    // 🔧 SI LA PÁGINA CHILD ES UN SCAFFOLD, EXTRAER SU CONTENIDO
+    if (child is Scaffold) {
+      final scaffold = child as Scaffold;
+      
+      return Column(
+        children: [
+          // AppBar de la página
+          if (scaffold.appBar != null)
+            PreferredSize(
+              preferredSize: scaffold.appBar!.preferredSize,
+              child: scaffold.appBar!,
+            ),
+          // Body de la página
+          Expanded(
+            child: scaffold.body ?? const SizedBox.shrink(),
+          ),
+        ],
+      );
+    }
+    
+    // Si no es Scaffold, devolver tal como está
+    return child;
   }
 }
