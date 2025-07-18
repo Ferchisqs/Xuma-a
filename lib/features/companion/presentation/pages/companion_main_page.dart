@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../di/injection.dart';
@@ -14,7 +13,7 @@ import 'companion_shop_page.dart';
 
 class CompanionMainPage extends StatelessWidget {
   const CompanionMainPage({Key? key}) : super(key: key);
-  
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
@@ -33,7 +32,7 @@ class CompanionMainPage extends StatelessWidget {
 
 class _CompanionMainView extends StatelessWidget {
   const _CompanionMainView({Key? key}) : super(key: key);
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,8 +42,14 @@ class _CompanionMainView extends StatelessWidget {
         title: const Text('Compañeros'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(
+        color: Colors.white), 
+        titleTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
         actions: [
-          // 🔧 BOTÓN DE RESET PARA DESARROLLO
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             tooltip: 'Reset de Desarrollo - Desbloquear Todo',
@@ -65,7 +70,7 @@ class _CompanionMainView extends StatelessWidget {
             } else if (state is CompanionLoaded) {
               return _LoadedView(state: state);
             }
-            
+
             return const _LoadingView();
           },
         ),
@@ -73,12 +78,10 @@ class _CompanionMainView extends StatelessWidget {
     );
   }
 
-  // 🔧 MÉTODO DE RESET PARA DESARROLLO
   Future<void> _resetCompanionSystem(BuildContext context) async {
     debugPrint('🗑️ [RESET] === REINICIANDO SISTEMA DE COMPAÑEROS ===');
-    
+
     try {
-      // Mostrar diálogo de confirmación
       final shouldReset = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -105,7 +108,8 @@ class _CompanionMainView extends StatelessWidget {
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-              child: const Text('🚀 Reset Todo', style: TextStyle(color: Colors.white)),
+              child: const Text('🚀 Reset Todo',
+                  style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -113,8 +117,7 @@ class _CompanionMainView extends StatelessWidget {
 
       if (shouldReset == true) {
         debugPrint('🗑️ [RESET] Usuario confirmó reset');
-        
-        // Mostrar loading con mensaje motivador
+
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -133,23 +136,19 @@ class _CompanionMainView extends StatelessWidget {
           ),
         );
 
-        // Simular reset con tiempo realista
         await Future.delayed(const Duration(milliseconds: 1500));
-        
-        // Cerrar loading
+
         if (context.mounted) {
           Navigator.of(context).pop();
         }
-        
-        // Recargar todo el sistema
+
         if (context.mounted) {
           debugPrint('🔄 [RESET] Recargando CompanionCubit...');
           context.read<CompanionCubit>().loadCompanions();
-          
-          // Pequeña pausa para asegurar que se cargue
+
           await Future.delayed(const Duration(milliseconds: 500));
-          
-          // Mostrar mensaje de éxito
+
+          // Mostrar  de éxito
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Row(
@@ -176,7 +175,7 @@ class _CompanionMainView extends StatelessWidget {
             ),
           );
         }
-        
+
         debugPrint('✅ [RESET] === RESET COMPLETADO EXITOSAMENTE ===');
       } else {
         debugPrint('❌ [RESET] Usuario canceló el reset');
@@ -185,8 +184,9 @@ class _CompanionMainView extends StatelessWidget {
       debugPrint('❌ [RESET] Error durante reset: $e');
       if (context.mounted) {
         // Cerrar cualquier diálogo abierto
-        Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
-        
+        Navigator.of(context, rootNavigator: true)
+            .popUntil((route) => route.isFirst);
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -209,7 +209,7 @@ class _CompanionMainView extends StatelessWidget {
 
 class _LoadingView extends StatelessWidget {
   const _LoadingView({Key? key}) : super(key: key);
-  
+
   @override
   Widget build(BuildContext context) {
     return const Center(
@@ -236,13 +236,13 @@ class _LoadingView extends StatelessWidget {
 class _ErrorView extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
-  
+
   const _ErrorView({
     Key? key,
     required this.message,
     required this.onRetry,
   }) : super(key: key);
-  
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -291,13 +291,14 @@ class _ErrorView extends StatelessWidget {
 
 class _LoadedView extends StatelessWidget {
   final CompanionLoaded state;
-  
+
   const _LoadedView({Key? key, required this.state}) : super(key: key);
-  
+
   @override
   Widget build(BuildContext context) {
-    debugPrint('📱 [MAIN] Mostrando vista cargada con ${state.ownedCompanions.length} compañeros');
-    
+    debugPrint(
+        '📱 [MAIN] Mostrando vista cargada con ${state.ownedCompanions.length} compañeros');
+
     return CustomScrollView(
       slivers: [
         // Estadísticas del usuario
@@ -310,7 +311,7 @@ class _LoadedView extends StatelessWidget {
             ),
           ),
         ),
-        
+
         // Compañero activo (si existe)
         if (state.activeCompanion != null) ...[
           SliverToBoxAdapter(
@@ -347,7 +348,7 @@ class _LoadedView extends StatelessWidget {
             ),
           ),
         ],
-        
+
         // Lista de compañeros propios
         SliverToBoxAdapter(
           child: Padding(
@@ -375,7 +376,7 @@ class _LoadedView extends StatelessWidget {
             ),
           ),
         ),
-        
+
         // Grid de compañeros
         if (state.ownedCompanions.isNotEmpty)
           _buildCompanionsGrid(context, state.ownedCompanions)
@@ -384,7 +385,7 @@ class _LoadedView extends StatelessWidget {
       ],
     );
   }
-  
+
   Widget _buildActiveCompanionCard(BuildContext context, companion) {
     return GestureDetector(
       onTap: () => _navigateToDetail(context, companion),
@@ -411,12 +412,12 @@ class _LoadedView extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // Nombre del compañero en la esquina superior izquierda
             Positioned(
               top: 0,
               left: 0,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(15),
@@ -431,8 +432,7 @@ class _LoadedView extends StatelessWidget {
                 ),
               ),
             ),
-            
-            // Información en la esquina superior derecha
+
             Positioned(
               top: 0,
               right: 0,
@@ -457,8 +457,7 @@ class _LoadedView extends StatelessWidget {
                 ],
               ),
             ),
-            
-            // Mascota grande en el centro
+
             Positioned.fill(
               child: Padding(
                 padding: const EdgeInsets.only(top: 40, bottom: 20),
@@ -468,7 +467,7 @@ class _LoadedView extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // Botón para ir al detalle en la parte inferior derecha
             Positioned(
               bottom: 0,
@@ -491,7 +490,7 @@ class _LoadedView extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildCompanionsGrid(BuildContext context, List companions) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -516,7 +515,7 @@ class _LoadedView extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildEmptyCompanionsView(BuildContext context) {
     return SliverToBoxAdapter(
       child: Padding(
@@ -553,7 +552,8 @@ class _LoadedView extends StatelessWidget {
               label: const Text('Ir a la Tienda'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
           ],
@@ -561,28 +561,32 @@ class _LoadedView extends StatelessWidget {
       ),
     );
   }
-  
+
   void _navigateToDetail(BuildContext context, companion) {
-    Navigator.of(context).push(
+    Navigator.of(context)
+        .push(
       MaterialPageRoute(
         builder: (context) => CompanionDetailPage(companion: companion),
       ),
-    ).then((_) {
+    )
+        .then((_) {
       // Refrescar cuando regrese del detalle
       context.read<CompanionCubit>().refreshCompanions();
     });
   }
-  
+
   void _navigateToShop(BuildContext context) {
     debugPrint('🏪 [MAIN] Navegando a la tienda...');
-    Navigator.of(context).push(
+    Navigator.of(context)
+        .push(
       MaterialPageRoute(
         builder: (context) => const CompanionShopPage(),
       ),
-    ).then((_) {
+    )
+        .then((_) {
       debugPrint('🔄 [MAIN] Regresando de la tienda - REFRESCANDO TODO...');
       context.read<CompanionCubit>().refreshCompanions();
-      
+
       Future.delayed(const Duration(milliseconds: 500), () {
         if (context.mounted) {
           debugPrint('🔄 [MAIN] Refresh adicional...');

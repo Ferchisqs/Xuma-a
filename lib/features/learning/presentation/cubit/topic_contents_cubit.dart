@@ -1,7 +1,6 @@
 // lib/features/learning/presentation/cubit/topic_contents_cubit.dart - CORREGIDO
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-// 🔧 REMOVED @injectable - Se registra manualmente
 import '../../domain/entities/content_entity.dart';
 import '../../domain/entities/topic_entity.dart';
 import '../../domain/usecases/get_contents_by_topic_usecase.dart';

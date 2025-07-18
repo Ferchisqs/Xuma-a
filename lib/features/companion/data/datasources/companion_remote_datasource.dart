@@ -1,4 +1,3 @@
-// lib/features/companion/data/datasources/companion_remote_datasource.dart
 import 'package:injectable/injectable.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/errors/exceptions.dart';

@@ -1,6 +1,3 @@
-// 🔧 ARREGLO COMPLETO DEL SISTEMA DE COMPAÑEROS
-// lib/features/companion/data/datasources/companion_local_datasource.dart
-
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/services/cache_service.dart';

@@ -1,4 +1,3 @@
-// lib/features/learning/data/models/content_model.g.dart - ACTUALIZADO
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'content_model.dart';
@@ -17,7 +16,6 @@ ContentModel _$ContentModelFromJson(Map<String, dynamic> json) => ContentModel(
       isActive: json['isActive'] as bool,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
-      // 🆕 NUEVOS CAMPOS DE MEDIA
       mainMediaId: json['mainMediaId'] as String?,
       thumbnailMediaId: json['thumbnailMediaId'] as String?,
       mediaUrl: json['mediaUrl'] as String?,
@@ -35,7 +33,6 @@ Map<String, dynamic> _$ContentModelToJson(ContentModel instance) =>
       'isActive': instance.isActive,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
-      // 🆕 NUEVOS CAMPOS DE MEDIA INCLUIDOS
       'mainMediaId': instance.mainMediaId,
       'thumbnailMediaId': instance.thumbnailMediaId,
       'mediaUrl': instance.mediaUrl,

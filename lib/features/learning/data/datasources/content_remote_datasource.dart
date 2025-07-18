@@ -1,10 +1,11 @@
-// lib/features/learning/data/datasources/content_remote_datasource.dart - MEJORADO - ENDPOINT CORREGIDO
+// lib/features/learning/data/datasources/content_remote_datasource.dart - CORREGIDO
 import 'package:injectable/injectable.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/config/api_endpoints.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../models/topic_model.dart';
 import '../models/content_model.dart';
+import 'media_remote_datasource.dart';
 
 abstract class ContentRemoteDataSource {
   Future<List<TopicModel>> getTopics();
@@ -15,11 +16,13 @@ abstract class ContentRemoteDataSource {
 @Injectable(as: ContentRemoteDataSource)
 class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
   final ApiClient apiClient;
+  final MediaRemoteDataSource mediaDataSource;
 
-  ContentRemoteDataSourceImpl(this.apiClient);
+  ContentRemoteDataSourceImpl(this.apiClient, this.mediaDataSource);
 
   @override
   Future<List<TopicModel>> getTopics() async {
+    // [TODO EL CÓDIGO ORIGINAL SIN CAMBIOS]
     try {
       print('🌐 [CONTENT API] === FETCHING TOPICS (IMPROVED) ===');
       print('🌐 [CONTENT API] URL: ${ApiEndpoints.getContentUrl('/api/content/topics')}');
@@ -29,14 +32,12 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       print('🌐 [CONTENT API] Response Status: ${response.statusCode}');
       print('🌐 [CONTENT API] Response Type: ${response.data.runtimeType}');
       
-      // Log de respuesta más detallado
       if (response.data is Map) {
         final dataMap = response.data as Map<String, dynamic>;
         print('🌐 [CONTENT API] Response Keys: ${dataMap.keys.toList()}');
         print('🌐 [CONTENT API] Response Sample: ${_getSafeResponseSample(dataMap)}');
       }
       
-      // Extraer lista de topics de forma super robusta
       List<dynamic> topicsJson = _extractTopicsFromResponse(response.data);
       
       print('🔍 [CONTENT API] Found ${topicsJson.length} raw topics to process');
@@ -46,7 +47,6 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
         return _createMockTopics();
       }
       
-      // Procesar cada topic con manejo de errores individual
       final topics = <TopicModel>[];
       
       for (int i = 0; i < topicsJson.length; i++) {
@@ -74,14 +74,12 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
           print('❌ [CONTENT API] Topic $i data: ${_getSafeTopicSample(topicsJson[i])}');
           print('❌ [CONTENT API] Stack trace: $stackTrace');
           
-          // 🔧 CREAR TOPIC FALLBACK EN LUGAR DE FALLAR TODO
           try {
             final fallbackTopic = _createFallbackTopic(i, topicsJson[i]);
             topics.add(fallbackTopic);
             print('🆘 [CONTENT API] Created fallback topic for index $i');
           } catch (fallbackError) {
             print('❌ [CONTENT API] Even fallback failed for topic $i: $fallbackError');
-            // Continuar sin este topic
           }
         }
       }
@@ -101,7 +99,6 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       print('❌ [CONTENT API] Error: $e');
       print('❌ [CONTENT API] Stack trace: $stackTrace');
       
-      // En lugar de fallar completamente, devolver topics mock
       print('🆘 [CONTENT API] Returning mock topics due to API error');
       return _createMockTopics();
     }
@@ -110,10 +107,9 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
   @override
   Future<ContentModel> getContentById(String id) async {
     try {
-      print('🌐 [CONTENT API] === FETCHING CONTENT BY ID (IMPROVED) ===');
+      print('🌐 [CONTENT API] === FETCHING CONTENT BY ID WITH MEDIA ===');
       print('🌐 [CONTENT API] Content ID: $id');
       
-      // 🔧 ENDPOINT CORREGIDO: usar /api/content/{id} en lugar de /api/content/topics/{id}
       final response = await apiClient.getContent('/api/content/$id');
       
       print('🌐 [CONTENT API] Response Status: ${response.statusCode}');
@@ -125,14 +121,53 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       final content = ContentModel.fromJson(contentJson);
       
       print('✅ [CONTENT API] Successfully parsed content: "${content.title}"');
-      return content;
+      
+      // 🔧 RESOLVER MEDIA URLS USANDO MÉTODOS EXISTENTES
+      if (content.hasAnyMedia) {
+        print('🎬 [CONTENT API] Content has media, resolving URLs...');
+        print('🎬 [CONTENT API] Main Media ID: ${content.mainMediaId}');
+        print('🎬 [CONTENT API] Thumbnail Media ID: ${content.thumbnailMediaId}');
+        
+        try {
+          String? resolvedMediaUrl;
+          String? resolvedThumbnailUrl;
+          
+          // Resolver main media si existe
+          if (content.mainMediaId != null && content.mainMediaId!.isNotEmpty) {
+            resolvedMediaUrl = await mediaDataSource.getMediaUrl(content.mainMediaId!);
+            print('🎬 [CONTENT API] Main media URL resolved: ${resolvedMediaUrl != null ? "✅" : "❌"}');
+          }
+          
+          // Resolver thumbnail si existe
+          if (content.thumbnailMediaId != null && content.thumbnailMediaId!.isNotEmpty) {
+            resolvedThumbnailUrl = await mediaDataSource.getMediaUrl(content.thumbnailMediaId!);
+            print('🎬 [CONTENT API] Thumbnail URL resolved: ${resolvedThumbnailUrl != null ? "✅" : "❌"}');
+          }
+          
+          // Crear content con URLs resueltos
+          final resolvedContent = ContentModel.withResolvedMedia(
+            originalContent: content,
+            resolvedMediaUrl: resolvedMediaUrl,
+            resolvedThumbnailUrl: resolvedThumbnailUrl,
+          );
+          
+          print('✅ [CONTENT API] Media resolution complete');
+          return resolvedContent;
+          
+        } catch (mediaError) {
+          print('⚠️ [CONTENT API] Failed to resolve media: $mediaError');
+          return content;
+        }
+      } else {
+        print('ℹ️ [CONTENT API] Content has no media IDs to resolve');
+        return content;
+      }
       
     } catch (e, stackTrace) {
       print('❌ [CONTENT API] === ERROR FETCHING CONTENT BY ID ===');
       print('❌ [CONTENT API] Content ID: $id');
       print('❌ [CONTENT API] Error: $e');
       
-      // Crear contenido mock basado en el ID
       return _createMockContent(id);
     }
   }
@@ -140,7 +175,7 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
   @override
   Future<List<ContentModel>> getContentsByTopicId(String topicId, int page, int limit) async {
     try {
-      print('🌐 [CONTENT API] === FETCHING CONTENTS BY TOPIC (IMPROVED) ===');
+      print('🌐 [CONTENT API] === FETCHING CONTENTS BY TOPIC ===');
       print('🌐 [CONTENT API] Topic ID: $topicId, Page: $page, Limit: $limit');
       
       final endpoint = '/api/content/by-topic/$topicId?page=$page&limit=$limit';
@@ -157,7 +192,6 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
         return _createMockContentsForTopic(topicId);
       }
       
-      // Procesar cada contenido con manejo robusto
       final contents = <ContentModel>[];
       
       for (int i = 0; i < contentsJson.length; i++) {
@@ -172,14 +206,42 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
           print('🔍 [CONTENT API] Processing content $i: ${contentJson['name'] ?? 'NO_NAME'}');
           
           final content = ContentModel.fromJson(contentJson);
-          contents.add(content);
           
-          print('✅ [CONTENT API] Successfully parsed content $i: "${content.title}"');
+          // 🔧 RESOLVER MEDIA SI EXISTE USANDO MÉTODOS EXISTENTES
+          ContentModel finalContent = content;
+          if (content.hasAnyMedia) {
+            print('🎬 [CONTENT API] Content $i has media, resolving...');
+            try {
+              String? resolvedMediaUrl;
+              String? resolvedThumbnailUrl;
+              
+              if (content.mainMediaId != null && content.mainMediaId!.isNotEmpty) {
+                resolvedMediaUrl = await mediaDataSource.getMediaUrl(content.mainMediaId!);
+              }
+              
+              if (content.thumbnailMediaId != null && content.thumbnailMediaId!.isNotEmpty) {
+                resolvedThumbnailUrl = await mediaDataSource.getMediaUrl(content.thumbnailMediaId!);
+              }
+              
+              finalContent = ContentModel.withResolvedMedia(
+                originalContent: content,
+                resolvedMediaUrl: resolvedMediaUrl,
+                resolvedThumbnailUrl: resolvedThumbnailUrl,
+              );
+              
+              print('✅ [CONTENT API] Content $i media resolved');
+            } catch (mediaError) {
+              print('⚠️ [CONTENT API] Failed to resolve media for content $i: $mediaError');
+            }
+          }
+          
+          contents.add(finalContent);
+          
+          print('✅ [CONTENT API] Successfully processed content $i: "${finalContent.title}"');
           
         } catch (e) {
           print('❌ [CONTENT API] Failed to parse content $i: $e');
           
-          // Crear contenido fallback
           try {
             final fallbackContent = _createFallbackContent(i, topicId, contentsJson[i]);
             contents.add(fallbackContent);
@@ -203,26 +265,22 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       print('❌ [CONTENT API] Topic ID: $topicId');
       print('❌ [CONTENT API] Error: $e');
       
-      // Devolver contenidos mock para el topic
       return _createMockContentsForTopic(topicId);
     }
   }
 
-  // 🔧 HELPERS PARA EXTRAER DATOS DE RESPUESTAS
+  // [RESTO DE MÉTODOS HELPER IGUALES QUE ANTES]
   List<dynamic> _extractTopicsFromResponse(dynamic responseData) {
     if (responseData is List) {
       return responseData;
     }
     
     if (responseData is Map<String, dynamic>) {
-      // Buscar en diferentes campos posibles
       for (final key in ['data', 'topics', 'results', 'items']) {
         if (responseData.containsKey(key) && responseData[key] is List) {
           return responseData[key] as List<dynamic>;
         }
       }
-      
-      // Si no es una lista, asumir que es un topic único
       return [responseData];
     }
     
@@ -251,14 +309,12 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
           return responseData[key] as List<dynamic>;
         }
       }
-      
       return [responseData];
     }
     
     return [];
   }
 
-  // 🔧 HELPERS PARA DATOS MOCK
   List<TopicModel> _createMockTopics() {
     return [
       TopicModel(
@@ -387,11 +443,9 @@ Este contenido te ayudará a aprender sobre la importancia del cuidado del medio
     );
   }
 
-  // 🔧 HELPERS PARA LOGGING SEGURO
   String _getSafeResponseSample(Map<String, dynamic> data) {
     try {
       final sample = Map<String, dynamic>.from(data);
-      // Limitar el tamaño del sample
       if (sample.toString().length > 500) {
         return '${sample.toString().substring(0, 500)}...';
       }

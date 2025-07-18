@@ -1,15 +1,100 @@
-// lib/features/navigation/presentation/widgets/side_nav_bar.dart - VERSIÓN MEJORADA
+// lib/features/navigation/presentation/widgets/side_nav_bar.dart - NOMBRE PERSISTENTE
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../core/services/cache_service.dart';
+import '../../../../di/injection.dart';
 import '../cubit/navigation_cubit.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import 'nav_item_widget.dart';
 import 'user_profile_widget.dart';
 
-class SideNavBar extends StatelessWidget {
+class SideNavBar extends StatefulWidget {
   const SideNavBar({Key? key}) : super(key: key);
+
+  @override
+  State<SideNavBar> createState() => _SideNavBarState();
+}
+
+class _SideNavBarState extends State<SideNavBar> {
+  // 🆕 CACHE SERVICE PARA PERSISTIR DATOS
+  final CacheService _cacheService = getIt<CacheService>();
+  
+  // 🆕 DATOS PERSISTENTES DEL USUARIO
+  String _cachedFirstName = '';
+  String _cachedLevel = '';
+  String _cachedEmail = '';
+  bool _hasLoadedCache = false;
+
+  // 🆕 KEYS PARA CACHE
+  static const String _firstNameKey = 'cached_user_first_name';
+  static const String _levelKey = 'cached_user_level';
+  static const String _emailKey = 'cached_user_email';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCachedUserData();
+  }
+
+  // 🆕 CARGAR DATOS DEL CACHE AL INICIAR
+  Future<void> _loadCachedUserData() async {
+    try {
+      final firstName = await _cacheService.get<String>(_firstNameKey);
+      final level = await _cacheService.get<String>(_levelKey);
+      final email = await _cacheService.get<String>(_emailKey);
+      
+      if (mounted) {
+        setState(() {
+          _cachedFirstName = firstName ?? '';
+          _cachedLevel = level ?? '';
+          _cachedEmail = email ?? '';
+          _hasLoadedCache = true;
+        });
+        
+        print('✅ [SIDE NAV] Cached data loaded:');
+        print('   - FirstName: $_cachedFirstName');
+        print('   - Level: $_cachedLevel');
+        print('   - Email: $_cachedEmail');
+      }
+    } catch (e) {
+      print('❌ [SIDE NAV] Error loading cached data: $e');
+      if (mounted) {
+        setState(() {
+          _hasLoadedCache = true;
+        });
+      }
+    }
+  }
+
+  // 🆕 GUARDAR DATOS EN CACHE
+  Future<void> _saveUserDataToCache({
+    String? firstName,
+    String? level,
+    String? email,
+  }) async {
+    try {
+      if (firstName != null && firstName.isNotEmpty) {
+        await _cacheService.set(_firstNameKey, firstName, duration: const Duration(days: 30));
+        _cachedFirstName = firstName;
+      }
+      
+      if (level != null && level.isNotEmpty) {
+        await _cacheService.set(_levelKey, level, duration: const Duration(days: 30));
+        _cachedLevel = level;
+      }
+      
+      if (email != null && email.isNotEmpty) {
+        await _cacheService.set(_emailKey, email, duration: const Duration(days: 30));
+        _cachedEmail = email;
+      }
+      
+      print('✅ [SIDE NAV] User data cached successfully');
+    } catch (e) {
+      print('❌ [SIDE NAV] Error caching user data: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +140,7 @@ class SideNavBar extends StatelessWidget {
                       ],
                     ),
                     const Spacer(),
-                    // 🆕 SALUDO DINÁMICO MEJORADO
+                    // 🔧 SALUDO DINÁMICO CON PERSISTENCIA
                     BlocBuilder<AuthCubit, AuthState>(
                       builder: (context, authState) {
                         return _buildDynamicGreeting(authState);
@@ -164,16 +249,51 @@ class SideNavBar extends StatelessWidget {
     );
   }
 
-  // 🆕 MÉTODO MEJORADO PARA CONSTRUIR SALUDO DINÁMICO
+  // 🔧 MÉTODO MEJORADO PARA CONSTRUIR SALUDO CON PERSISTENCIA
   Widget _buildDynamicGreeting(AuthState authState) {
+    // 🔧 SI NO HA CARGADO EL CACHE, MOSTRAR LOADING
+    if (!_hasLoadedCache) {
+      return _buildLoadingGreeting('Cargando...');
+    }
+
     if (authState is AuthAuthenticated) {
       final user = authState.user;
       final fullProfile = authState.fullProfile;
       final isLoadingProfile = authState.isProfileLoading;
 
-      // Usar nombre del perfil completo si está disponible
-      final firstName = fullProfile?.firstName ?? user.firstName;
-      final userLevel = fullProfile?.level ?? _getUserLevelFromAge(user.age);
+      // 🔧 USAR DATOS PERSISTENTES COMO PRIORIDAD
+      String firstName = _cachedFirstName;
+      String userLevel = _cachedLevel;
+
+      // 🔧 ACTUALIZAR CON DATOS FRESCOS SI ESTÁN DISPONIBLES
+      if (fullProfile != null && fullProfile.firstName.isNotEmpty) {
+        firstName = fullProfile.firstName;
+        userLevel = fullProfile.level ?? _getUserLevelFromAge(user.age);
+        
+        // 🔧 GUARDAR EN CACHE LOS DATOS FRESCOS
+        _saveUserDataToCache(
+          firstName: firstName,
+          level: userLevel,
+          email: user.email,
+        );
+      } else if (user.firstName.isNotEmpty && firstName.isEmpty) {
+        // Si no hay datos en cache, usar los del usuario básico
+        firstName = user.firstName;
+        userLevel = _getUserLevelFromAge(user.age);
+        
+        // 🔧 GUARDAR EN CACHE
+        _saveUserDataToCache(
+          firstName: firstName,
+          level: userLevel,
+          email: user.email,
+        );
+      }
+
+      // 🔧 FALLBACK SI NO HAY DATOS EN NINGÚN LADO
+      if (firstName.isEmpty) {
+        firstName = user.email.split('@')[0]; // Usar parte del email
+        _saveUserDataToCache(firstName: firstName);
+      }
 
       return Row(
         children: [
@@ -211,7 +331,7 @@ class SideNavBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '¡Hola ${firstName.isNotEmpty ? firstName : 'eco-explorador'}!',
+                  '¡Hola $firstName!',
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -228,33 +348,32 @@ class SideNavBar extends StatelessWidget {
                     const SizedBox(width: 4),
                     Flexible(
                       child: Text(
-                        isLoadingProfile ? 'Cargando nivel...' : userLevel,
+                        userLevel.isNotEmpty ? userLevel : 'Eco Explorer',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: Colors.white.withOpacity(0.8),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    // 🆕 INDICADOR DE PERFIL COMPLETO
-                    if (fullProfile != null) ...[
+                    // 🆕 INDICADOR DE DATOS PERSISTENTES
+                    if (_cachedFirstName.isNotEmpty && !isLoadingProfile) ...[
                       const SizedBox(width: 6),
                       Container(
                         width: 6,
                         height: 6,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Colors.green,
                           shape: BoxShape.circle,
                         ),
                       ),
                     ] else if (isLoadingProfile) ...[
                       const SizedBox(width: 6),
-                      SizedBox(
+                      const SizedBox(
                         width: 6,
                         height: 6,
                         child: CircularProgressIndicator(
                           strokeWidth: 1,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       ),
                     ],
@@ -371,5 +490,24 @@ class SideNavBar extends StatelessWidget {
     if (age < 18) return 'Eco Guardian';
     if (age < 25) return 'Eco Warrior';
     return 'Eco Master';
+  }
+
+  // 🆕 MÉTODO PARA LIMPIAR CACHE (OPCIONAL)
+  Future<void> _clearCache() async {
+    try {
+      await _cacheService.remove(_firstNameKey);
+      await _cacheService.remove(_levelKey);
+      await _cacheService.remove(_emailKey);
+      
+      setState(() {
+        _cachedFirstName = '';
+        _cachedLevel = '';
+        _cachedEmail = '';
+      });
+      
+      print('✅ [SIDE NAV] Cache cleared successfully');
+    } catch (e) {
+      print('❌ [SIDE NAV] Error clearing cache: $e');
+    }
   }
 }

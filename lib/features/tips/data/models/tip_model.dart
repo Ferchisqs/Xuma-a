@@ -5,7 +5,7 @@ class TipModel extends TipEntity {
   const TipModel({
     required String id,
     required String title,
-    required String content,
+    required String description,
     required String category,
     required String icon,
     required bool isActive,
@@ -15,7 +15,7 @@ class TipModel extends TipEntity {
   }) : super(
           id: id,
           title: title,
-          content: content,
+          description: description,
           category: category,
           icon: icon,
           isActive: isActive,
@@ -29,7 +29,7 @@ class TipModel extends TipEntity {
     return TipModel(
       id: json['id']?.toString() ?? '',
       title: json['title'] ?? '',
-      content: json['content'] ?? '',
+      description: json['description'] ?? '',
       category: json['category'] ?? 'general',
       icon: json['icon'] ?? '💡',
       isActive: json['isActive'] ?? true,
@@ -48,7 +48,7 @@ class TipModel extends TipEntity {
     return {
       'id': id,
       'title': title,
-      'content': content,
+      'content': description,
       'category': category,
       'icon': icon,
       'isActive': isActive,
@@ -63,7 +63,7 @@ class TipModel extends TipEntity {
     return TipModel(
       id: entity.id,
       title: entity.title,
-      content: entity.content,
+      description: entity.description,
       category: entity.category,
       icon: entity.icon,
       isActive: entity.isActive,
@@ -76,17 +76,17 @@ class TipModel extends TipEntity {
   // Helper para obtener tip formateado para mostrar
   String get formattedContent {
     // Si el contenido ya tiene emoji al inicio, lo devolvemos tal como está
-    if (content.trim().startsWith(RegExp(r'[\u{1F300}-\u{1F9FF}]', unicode: true))) {
-      return content;
+    if (description.trim().startsWith(RegExp(r'[\u{1F300}-\u{1F9FF}]', unicode: true))) {
+      return description;
     }
     
     // Si no, agregamos el icono al inicio
-    return '$icon $content';
+    return '$icon $description';
   }
 
   // Helper para verificar si es un tip de Xico
   bool get isXicoTip => category.toLowerCase() == 'xico' || 
-                       content.toLowerCase().contains('xico');
+                       description.toLowerCase().contains('xico');
 
   @override
   String toString() {

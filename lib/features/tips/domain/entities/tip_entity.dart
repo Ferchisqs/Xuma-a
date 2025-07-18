@@ -1,10 +1,10 @@
-// lib/features/tips/domain/entities/tip_entity.dart
+// lib/features/tips/domain/entities/tip_entity.dart - CORREGIDO
 import 'package:equatable/equatable.dart';
 
 class TipEntity extends Equatable {
   final String id;
   final String title;
-  final String content;
+  final String description; // 🔧 CAMBIADO de content a description
   final String category;
   final String icon;
   final bool isActive;
@@ -15,7 +15,7 @@ class TipEntity extends Equatable {
   const TipEntity({
     required this.id,
     required this.title,
-    required this.content,
+    required this.description, // 🔧 CAMBIADO
     required this.category,
     required this.icon,
     required this.isActive,
@@ -28,7 +28,7 @@ class TipEntity extends Equatable {
   List<Object?> get props => [
         id,
         title,
-        content,
+        description, // 🔧 CAMBIADO
         category,
         icon,
         isActive,
@@ -38,11 +38,11 @@ class TipEntity extends Equatable {
       ];
 
   // Helper getters
-  String get formattedContent => '$icon $content';
+  String get formattedDescription => '$icon $description'; // 🔧 CAMBIADO
   
   bool get isEcoTip => category.toLowerCase().contains('eco') || 
                       category.toLowerCase().contains('ambiente');
   
   bool get isXicoTip => category.toLowerCase() == 'xico' || 
-                       content.toLowerCase().contains('xico');
+                       description.toLowerCase().contains('xico'); // 🔧 CAMBIADO
 }

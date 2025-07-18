@@ -319,9 +319,9 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
             return Transform.scale(
               scale: scale,
               child: Container(
-                width: double.infinity, // 🔧 ANCHO COMPLETO
+                width: double.infinity, 
                 constraints: const BoxConstraints(
-                  maxWidth: 280, // 🔧 MÁXIMO ANCHO PARA EVITAR DESBORDAMIENTO
+                  maxWidth: 280, 
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // 🔧 PADDING REDUCIDO
                 decoration: BoxDecoration(
@@ -338,8 +338,8 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
                   ),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center, // 🔧 CENTRADO
-                  mainAxisSize: MainAxisSize.min, // 🔧 TAMAÑO MÍNIMO
+                  mainAxisAlignment: MainAxisAlignment.center, 
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     TweenAnimationBuilder<double>(
                       duration: const Duration(milliseconds: 500),
@@ -359,12 +359,12 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
                     Flexible( // 🔧 FLEXIBLE EN LUGAR DE EXPANDED
                       child: Text(
                         '+ ${_pointsCountAnimation.value} pts',
-                        style: AppTextStyles.h4.copyWith( // 🔧 TEXTO MÁS PEQUEÑO
+                        style: AppTextStyles.h4.copyWith( 
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                         ),
                         textAlign: TextAlign.center,
-                        overflow: TextOverflow.ellipsis, // 🔧 PREVENIR OVERFLOW
+                        overflow: TextOverflow.ellipsis, 
                       ),
                     ),
                   ],
@@ -506,11 +506,9 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
     );
   }
 
-  // 🔧 BOTONES DE ACCIÓN CORREGIDOS - NAVEGACIÓN ARREGLADA
   Widget _buildActionButtons(BuildContext context) {
     return Column(
       children: [
-        // Botón para ir a compañeros con animación de pulso
         TweenAnimationBuilder<double>(
           duration: const Duration(seconds: 2),
           tween: Tween(begin: 1.0, end: 1.05),
@@ -521,11 +519,8 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    // 🔧 NAVEGACIÓN CORRECTA A COMPAÑEROS
-                    Navigator.of(context).pop(); // Cerrar diálogo
-                    // Usar Navigator.pop hasta llegar al MainWrapper y luego navegar
+                    Navigator.of(context).pop(); 
                     Navigator.of(context).popUntil((route) => route.isFirst);
-                    // Cambiar a la pestaña de compañeros
                     context.read<NavigationCubit>().goToCompanion();
                   },
                   style: ElevatedButton.styleFrom(
@@ -575,15 +570,12 @@ class _AnimatedTriviaCompletionDialogState extends State<AnimatedTriviaCompletio
         
         const SizedBox(height: 8),
         
-        // Botón continuar con trivias
         SizedBox(
           width: double.infinity,
           child: OutlinedButton(
             onPressed: () {
-              // 🔧 NAVEGACIÓN CORRECTA PARA CONTINUAR CON TRIVIAS
-              Navigator.of(context).pop(); // Cerrar diálogo
-              widget.onContinue(); // Cerrar página de juego actual
-              // El usuario regresará a la página de categorías de trivia
+              Navigator.of(context).pop(); 
+              widget.onContinue(); 
             },
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: AppColors.primary),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/companion_entity.dart';
-import 'companion_animation_widget.dart';
 
 class CompanionCardWidget extends StatelessWidget {
   final CompanionEntity companion;
@@ -44,7 +43,6 @@ class CompanionCardWidget extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // 🔧 CONTENIDO PRINCIPAL DE LA TARJETA
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -53,13 +51,11 @@ class CompanionCardWidget extends StatelessWidget {
                   // Header compacto
                   _buildCompactHeader(),
                   
-                  // 🔧 ÁREA DE LA MASCOTA CON FONDO
                   Expanded(
                     flex: 4,
                     child: _buildPetWithBackground(),
                   ),
                   
-                  // Información compacta en la parte inferior
                   if (showDetails)
                     Expanded(
                       flex: 1,
@@ -77,14 +73,12 @@ class CompanionCardWidget extends StatelessWidget {
     );
   }
   
-  // 🔧 NUEVO WIDGET PARA MOSTRAR MASCOTA CON FONDO EN LA TIENDA
   Widget _buildPetWithBackground() {
     return LayoutBuilder(
       builder: (context, constraints) {
         return Stack(
           alignment: Alignment.center,
           children: [
-            // 🔧 FONDO ESPECÍFICO PARA CADA MASCOTA
             Container(
               width: constraints.maxWidth,
               height: constraints.maxHeight,
@@ -98,7 +92,6 @@ class CompanionCardWidget extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     debugPrint('🔧 Error loading shop background: ${_getBackgroundImagePath()}');
-                    // Gradiente de respaldo
                     return Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(

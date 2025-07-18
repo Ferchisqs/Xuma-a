@@ -9,9 +9,9 @@ import 'network_info.dart';
 
 @lazySingleton
 class ApiClient {
-  late final Dio _authDio;     // Para servicio de auth
-  late final Dio _userDio;     // Para servicio de usuarios
-  late final Dio _contentDio;  // 🆕 Para servicio de contenido
+  late final Dio _authDio;     
+  late final Dio _userDio;     
+  late final Dio _contentDio;  
   final NetworkInfo _networkInfo;
   final CacheService _cacheService;
   final TokenManager _tokenManager;

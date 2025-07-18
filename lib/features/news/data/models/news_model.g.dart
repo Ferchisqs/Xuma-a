@@ -1,4 +1,3 @@
-// lib/features/news/data/models/news_model.g.dart
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'news_model.dart';
@@ -14,9 +13,8 @@ NewsModel _$NewsModelFromJson(Map<String, dynamic> json) => NewsModel(
       keywordsJson: (json['keywords'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
-      creatorJson: (json['creator'] as List<dynamic>?)
-          ?.map((e) => e as String)
-          .toList(),
+      creatorJson:
+          (json['creator'] as List<dynamic>?)?.map((e) => e as String).toList(),
       videoUrlJson: json['video_url'] as String?,
       descriptionJson: json['description'] as String?,
       contentJson: json['content'] as String?,
@@ -28,12 +26,10 @@ NewsModel _$NewsModelFromJson(Map<String, dynamic> json) => NewsModel(
       sourceUrlJson: json['source_url'] as String?,
       sourceIconJson: json['source_icon'] as String?,
       languageJson: json['language'] as String,
-      countryJson: (json['country'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList(),
-      categoryJson: (json['category'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList(),
+      countryJson:
+          (json['country'] as List<dynamic>).map((e) => e as String).toList(),
+      categoryJson:
+          (json['category'] as List<dynamic>).map((e) => e as String).toList(),
       aiTagJson: json['ai_tag'] as String?,
       sentimentJson: json['sentiment'] as String?,
       sentimentStatsJson: json['sentiment_stats'] as String?,
@@ -42,8 +38,7 @@ NewsModel _$NewsModelFromJson(Map<String, dynamic> json) => NewsModel(
       duplicateJson: json['duplicate'] as bool,
     );
 
-Map<String, dynamic> _$NewsModelToJson(NewsModel instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$NewsModelToJson(NewsModel instance) => <String, dynamic>{
       'article_id': instance.articleIdJson,
       'title': instance.titleJson,
       'link': instance.linkJson,

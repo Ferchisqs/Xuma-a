@@ -1,4 +1,3 @@
-// lib/features/news/data/repositories/news_repository_impl.dart
 import 'package:injectable/injectable.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -106,16 +105,13 @@ class NewsRepositoryImpl implements NewsRepository {
     
     if (await _networkInfo.isConnected) {
       try {
-        // Limpiar cache actual
         await _localDataSource.clearNewsCache();
         
-        // Obtener noticias frescas
         final remoteNews = await _remoteDataSource.getClimateNews(
           page: 1,
           limit: 20,
         );
         
-        // Cachear las nuevas noticias
         await _localDataSource.cacheNews(remoteNews);
         
         print('✅ [NEWS REPO] News refreshed successfully: ${remoteNews.length} articles');
@@ -134,7 +130,6 @@ class NewsRepositoryImpl implements NewsRepository {
     }
   }
 
-  // Helper method para debugging
   Future<void> debugCacheInfo() async {
     try {
       final cacheInfo = await (_localDataSource as NewsLocalDataSourceImpl).getCacheInfo();

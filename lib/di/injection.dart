@@ -1,4 +1,4 @@
-// lib/di/injection.dart - COMPLETO CON INTEGRACIÓN DE NEWS - SOLO CORRECCIONES MÍNIMAS
+// lib/di/injection.dart - DEPENDENCY INJECTION CORREGIDO PARA MEDIA
 import 'package:get_it/get_it.dart';
 import 'package:injectable/injectable.dart';
 import 'injection.config.dart';
@@ -30,6 +30,9 @@ import '../features/learning/presentation/cubit/learning_cubit.dart';
 import '../features/learning/presentation/cubit/lesson_list_cubit.dart';
 import '../features/learning/presentation/cubit/lesson_content_cubit.dart';
 
+// 🔧 IMPORTACIÓN CORREGIDA - MediaRemoteDataSource
+import '../features/learning/data/datasources/media_remote_datasource.dart';
+
 // News feature imports
 import '../features/news/data/datasources/news_remote_datasource.dart';
 import '../features/news/data/datasources/news_local_datasource.dart';
@@ -56,25 +59,30 @@ Future<void> configureDependencies() async {
     await getIt.init();
     print('✅ [INJECTION] Step 1: Auto-generated dependencies configured');
     
-    // 2. SEGUNDO: Registrar dependencias de contenido manualmente
-    print('🔧 [INJECTION] Step 2: Registering content dependencies manually...');
+    // 2. SEGUNDO: Registrar MediaRemoteDataSource ANTES de usarlo
+    print('🔧 [INJECTION] Step 2: Registering media dependencies...');
+    _registerMediaDependencies();
+    print('✅ [INJECTION] Step 2: Media dependencies registered');
+    
+    // 3. TERCERO: Registrar dependencias de contenido con media
+    print('🔧 [INJECTION] Step 3: Registering content dependencies with media...');
     _registerContentDependencies();
-    print('✅ [INJECTION] Step 2: Content dependencies registered');
+    print('✅ [INJECTION] Step 3: Content dependencies registered');
     
-    // 3. TERCERO: Registrar dependencias de learning modificadas
-    print('🔧 [INJECTION] Step 3: Registering learning dependencies...');
+    // 4. CUARTO: Registrar dependencias de learning modificadas
+    print('🔧 [INJECTION] Step 4: Registering learning dependencies...');
     _registerLearningDependencies();
-    print('✅ [INJECTION] Step 3: Learning dependencies registered');
+    print('✅ [INJECTION] Step 4: Learning dependencies registered');
     
-    // 4. CUARTO: Registrar dependencias de news
-    print('🔧 [INJECTION] Step 4: Registering news dependencies...');
+    // 5. QUINTO: Registrar dependencias de news
+    print('🔧 [INJECTION] Step 5: Registering news dependencies...');
     _registerNewsDependencies();
-    print('✅ [INJECTION] Step 4: News dependencies registered');
+    print('✅ [INJECTION] Step 5: News dependencies registered');
     
-    // 5. VERIFICACIÓN FINAL
-    print('🔍 [INJECTION] Step 5: Final verification...');
+    // 6. VERIFICACIÓN FINAL
+    print('🔍 [INJECTION] Step 6: Final verification...');
     _verifyDependencies();
-    print('✅ [INJECTION] Step 5: All dependencies verified');
+    print('✅ [INJECTION] Step 6: All dependencies verified');
     
     print('🎉 [INJECTION] === DEPENDENCY CONFIGURATION COMPLETED ===');
     
@@ -85,16 +93,38 @@ Future<void> configureDependencies() async {
   }
 }
 
-// ==================== CONTENT DEPENDENCIES ====================
+// ==================== MEDIA DEPENDENCIES - PRIMERO ====================
+
+void _registerMediaDependencies() {
+  try {
+    // 🆕 REGISTRAR MediaRemoteDataSource PRIMERO
+    if (!getIt.isRegistered<MediaRemoteDataSource>()) {
+      getIt.registerLazySingleton<MediaRemoteDataSource>(
+        () => MediaRemoteDataSourceImpl(getIt<ApiClient>()),
+      );
+      print('✅ [INJECTION] MediaRemoteDataSource registered');
+    }
+    
+  } catch (e, stackTrace) {
+    print('❌ [INJECTION] Error in _registerMediaDependencies: $e');
+    print('❌ [INJECTION] Stack trace: $stackTrace');
+    rethrow;
+  }
+}
+
+// ==================== CONTENT DEPENDENCIES - CON MEDIA ====================
 
 void _registerContentDependencies() {
   try {
-    // Data Sources
+    // Data Sources - AHORA CON MEDIA DEPENDENCY
     if (!getIt.isRegistered<ContentRemoteDataSource>()) {
       getIt.registerLazySingleton<ContentRemoteDataSource>(
-        () => ContentRemoteDataSourceImpl(getIt<ApiClient>()),
+        () => ContentRemoteDataSourceImpl(
+          getIt<ApiClient>(),
+          getIt<MediaRemoteDataSource>(), // 🆕 INYECTAR MEDIA DATASOURCE
+        ),
       );
-      print('✅ [INJECTION] ContentRemoteDataSource registered');
+      print('✅ [INJECTION] ContentRemoteDataSource registered WITH MEDIA');
     }
     
     // Repository
@@ -351,6 +381,7 @@ void _verifyDependencies() {
   // Verificar dependencias críticas
   final criticalDeps = [
     'ApiClient',
+    'MediaRemoteDataSource', // 🔧 VERIFICAR PRIMERO
     'ContentRemoteDataSource',
     'ContentRepository', 
     'GetTopicsUseCase',
@@ -374,6 +405,9 @@ void _verifyDependencies() {
     switch (dep) {
       case 'ApiClient':
         isRegistered = getIt.isRegistered<ApiClient>();
+        break;
+      case 'MediaRemoteDataSource': // 🆕 NUEVO
+        isRegistered = getIt.isRegistered<MediaRemoteDataSource>();
         break;
       case 'ContentRemoteDataSource':
         isRegistered = getIt.isRegistered<ContentRemoteDataSource>();
@@ -450,6 +484,24 @@ void _verifyDependencies() {
     throw Exception('Cannot resolve NewsCubit: $e');
   }
   
+  // 🆕 Test de resolución para MediaRemoteDataSource
+  try {
+    final testMediaDataSource = getIt<MediaRemoteDataSource>();
+    print('✅ [INJECTION] MediaRemoteDataSource can be resolved successfully');
+  } catch (e) {
+    print('❌ [INJECTION] ERROR resolving MediaRemoteDataSource: $e');
+    throw Exception('Cannot resolve MediaRemoteDataSource: $e');
+  }
+  
+  // 🆕 Test de resolución para ContentRemoteDataSource CON MEDIA
+  try {
+    final testContentDataSource = getIt<ContentRemoteDataSource>();
+    print('✅ [INJECTION] ContentRemoteDataSource can be resolved successfully WITH MEDIA');
+  } catch (e) {
+    print('❌ [INJECTION] ERROR resolving ContentRemoteDataSource: $e');
+    throw Exception('Cannot resolve ContentRemoteDataSource: $e');
+  }
+  
   print('🔍 [INJECTION] === VERIFICATION COMPLETED ===');
 }
 
@@ -458,6 +510,7 @@ void _verifyDependencies() {
 void debugDependencies() {
   print('🔍 [INJECTION] === DEPENDENCY DEBUG ===');
   print('🔍 ApiClient: ${getIt.isRegistered<ApiClient>()}');
+  print('🔍 MediaRemoteDataSource: ${getIt.isRegistered<MediaRemoteDataSource>()}'); // 🆕 NUEVO
   print('🔍 ContentRemoteDataSource: ${getIt.isRegistered<ContentRemoteDataSource>()}');
   print('🔍 ContentRepository: ${getIt.isRegistered<ContentRepository>()}');
   print('🔍 GetTopicsUseCase: ${getIt.isRegistered<GetTopicsUseCase>()}');

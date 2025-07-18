@@ -231,7 +231,7 @@ class TipsRepositoryImpl implements TipsRepository {
       TipEntity(
         id: 'fallback_1',
         title: 'Consejo de Xico',
-        content: '💡 Apaga luces y dispositivos que no uses. ¡Pequeños cambios, gran impacto!',
+        description: 'Apaga luces y dispositivos que no uses. ¡Pequeños cambios, gran impacto!',
         category: 'energia',
         icon: '💡',
         isActive: true,
@@ -240,7 +240,7 @@ class TipsRepositoryImpl implements TipsRepository {
       TipEntity(
         id: 'fallback_2',
         title: 'Consejo de Xico',
-        content: '🚿 Cierra la llave mientras te cepillas los dientes. Ahorras hasta 6 litros por minuto.',
+        description: 'Cierra la llave mientras te cepillas los dientes. Ahorras hasta 6 litros por minuto.',
         category: 'agua',
         icon: '🚿',
         isActive: true,
@@ -249,7 +249,7 @@ class TipsRepositoryImpl implements TipsRepository {
       TipEntity(
         id: 'fallback_3',
         title: 'Consejo de Xico',
-        content: '♻️ Separa tu basura: orgánica, inorgánica y reciclables. ¡La Tierra te lo agradece!',
+        description: 'Separa tu basura: orgánica, inorgánica y reciclables. ¡La Tierra te lo agradece!',
         category: 'reciclaje',
         icon: '♻️',
         isActive: true,
@@ -258,7 +258,7 @@ class TipsRepositoryImpl implements TipsRepository {
       TipEntity(
         id: 'fallback_4',
         title: 'Consejo de Xico',
-        content: '🌱 Planta una semilla hoy. En el futuro será un árbol que purifique el aire.',
+        description: 'Planta una semilla hoy. En el futuro será un árbol que purifique el aire.',
         category: 'naturaleza',
         icon: '🌱',
         isActive: true,
@@ -267,7 +267,7 @@ class TipsRepositoryImpl implements TipsRepository {
       TipEntity(
         id: 'fallback_5',
         title: 'Consejo de Xico',
-        content: '🚗 Camina, usa bici o transporte público. ¡Tu planeta y tu salud lo agradecerán!',
+        description: 'Camina, usa bici o transporte público. ¡Tu planeta y tu salud lo agradecerán!',
         category: 'transporte',
         icon: '🚗',
         isActive: true,
