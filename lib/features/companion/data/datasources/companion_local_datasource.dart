@@ -1,3 +1,4 @@
+// lib/features/companion/data/datasources/companion_local_datasource.dart - ACTUALIZADO PARA API
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/services/cache_service.dart';
@@ -13,6 +14,7 @@ abstract class CompanionLocalDataSource {
   Future<void> cacheCompanion(CompanionModel companion);
   Future<CompanionStatsModel?> getCachedStats(String userId);
   Future<void> cacheStats(CompanionStatsModel stats);
+  Future<void> clearCache();
 }
 
 @Injectable(as: CompanionLocalDataSource)
@@ -23,32 +25,81 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
   static const String _companionPrefix = 'companion_';
   static const String _statsPrefix = 'companion_stats_';
 
+  // 🔧 CONFIGURACIÓN DE MODO
+  static const bool useApiMode = true; // 🆕 CAMBIAR A true PARA USAR API
+  static const bool useMockData = false; // 🆕 false PARA DATOS REALES
+
   CompanionLocalDataSourceImpl(this.cacheService);
 
   @override
   Future<List<CompanionModel>> getCachedCompanions(String userId) async {
     try {
       debugPrint('🐾 [LOCAL_DS] Obteniendo compañeros para usuario: $userId');
+      debugPrint('🌐 [LOCAL_DS] Modo API: $useApiMode');
+      debugPrint('🎮 [LOCAL_DS] Usar Mock: $useMockData');
       
-      // 🔧 SIEMPRE DEVOLVER MOCK CON TODOS DESBLOQUEADOS
-      final mockCompanions = _getMockCompanionsAllUnlocked(userId);
+      if (!useApiMode || useMockData) {
+        // 🔧 MODO DESARROLLO: TODOS DESBLOQUEADOS
+        debugPrint('🎮 [LOCAL_DS] Devolviendo mock con todos desbloqueados');
+        final mockCompanions = _getMockCompanionsAllUnlocked(userId);
+        debugPrint('✅ [LOCAL_DS] Devolviendo ${mockCompanions.length} compañeros mock');
+        return mockCompanions;
+      }
       
-      debugPrint('✅ [LOCAL_DS] Devolviendo ${mockCompanions.length} compañeros mock');
-      debugPrint('🔓 [LOCAL_DS] Todos los compañeros están DESBLOQUEADOS');
+      // 🆕 MODO API: INTENTAR OBTENER DESDE CACHE
+      debugPrint('💾 [LOCAL_DS] Intentando obtener desde cache...');
+      final companionsJson = await cacheService.getList<Map<String, dynamic>>('$_companionsPrefix$userId');
       
-      return mockCompanions;
+      if (companionsJson != null && companionsJson.isNotEmpty) {
+        debugPrint('✅ [LOCAL_DS] Cache encontrado: ${companionsJson.length} mascotas');
+        
+        final companions = <CompanionModel>[];
+        for (final json in companionsJson) {
+          try {
+            final companion = CompanionModel.fromJson(json);
+            companions.add(companion);
+          } catch (e) {
+            debugPrint('❌ [LOCAL_DS] Error parseando mascota desde cache: $e');
+          }
+        }
+        
+        debugPrint('📊 [LOCAL_DS] ${companions.length} mascotas parseadas exitosamente');
+        return companions;
+      } else {
+        debugPrint('⚠️ [LOCAL_DS] No hay cache, devolviendo lista vacía');
+        return [];
+      }
     } catch (e) {
       debugPrint('❌ [LOCAL_DS] Error: $e');
-      return _getMockCompanionsAllUnlocked(userId);
+      if (useMockData) {
+        return _getMockCompanionsAllUnlocked(userId);
+      } else {
+        return [];
+      }
     }
   }
 
   @override
   Future<void> cacheCompanions(String userId, List<CompanionModel> companions) async {
     try {
+      debugPrint('💾 [LOCAL_DS] Guardando ${companions.length} compañeros en caché');
+      
       final companionsJson = companions.map((companion) => companion.toJson()).toList();
-      await cacheService.setList('$_companionsPrefix$userId', companionsJson);
-      debugPrint('💾 [LOCAL_DS] ${companions.length} compañeros guardados en caché');
+      
+      await cacheService.setList(
+        '$_companionsPrefix$userId', 
+        companionsJson,
+        duration: const Duration(hours: 24), // Cache por 24 horas
+      );
+      
+      debugPrint('✅ [LOCAL_DS] ${companions.length} compañeros guardados en caché');
+      
+      // 🆕 GUARDAR ESTADÍSTICAS TAMBIÉN
+      if (companions.isNotEmpty) {
+        final stats = _calculateStatsFromCompanions(userId, companions);
+        await cacheStats(stats);
+        debugPrint('📊 [LOCAL_DS] Estadísticas calculadas y guardadas');
+      }
     } catch (e) {
       debugPrint('❌ [LOCAL_DS] Error guardando compañeros: $e');
       throw CacheException('Error caching companions: ${e.toString()}');
@@ -58,10 +109,19 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
   @override
   Future<CompanionModel?> getCachedCompanion(String companionId) async {
     try {
-      final companionJson = await cacheService.get('$_companionPrefix$companionId');
-      if (companionJson == null) return null;
-      return CompanionModel.fromJson(companionJson);
+      debugPrint('🔍 [LOCAL_DS] Buscando compañero: $companionId');
+      
+      final companionJson = await cacheService.get<Map<String, dynamic>>('$_companionPrefix$companionId');
+      if (companionJson == null) {
+        debugPrint('⚠️ [LOCAL_DS] Compañero no encontrado en cache individual');
+        return null;
+      }
+      
+      final companion = CompanionModel.fromJson(companionJson);
+      debugPrint('✅ [LOCAL_DS] Compañero encontrado: ${companion.displayName}');
+      return companion;
     } catch (e) {
+      debugPrint('❌ [LOCAL_DS] Error obteniendo compañero: $e');
       return null;
     }
   }
@@ -69,8 +129,17 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
   @override
   Future<void> cacheCompanion(CompanionModel companion) async {
     try {
-      await cacheService.set('$_companionPrefix${companion.id}', companion.toJson());
+      debugPrint('💾 [LOCAL_DS] Guardando compañero individual: ${companion.displayName}');
+      
+      await cacheService.set(
+        '$_companionPrefix${companion.id}', 
+        companion.toJson(),
+        duration: const Duration(hours: 24),
+      );
+      
+      debugPrint('✅ [LOCAL_DS] Compañero individual guardado');
     } catch (e) {
+      debugPrint('❌ [LOCAL_DS] Error guardando compañero individual: $e');
       throw CacheException('Error caching companion: ${e.toString()}');
     }
   }
@@ -79,18 +148,41 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
   Future<CompanionStatsModel?> getCachedStats(String userId) async {
     try {
       debugPrint('📊 [LOCAL_DS] Obteniendo stats para usuario: $userId');
+      debugPrint('🌐 [LOCAL_DS] Modo API: $useApiMode');
+      debugPrint('🎮 [LOCAL_DS] Usar Mock: $useMockData');
       
-      // 🔧 SIEMPRE DEVOLVER STATS GENEROSOS
-      final stats = _getMockStatsAllUnlocked(userId);
+      if (!useApiMode || useMockData) {
+        // 🔧 MODO DESARROLLO: STATS GENEROSOS
+        debugPrint('🎮 [LOCAL_DS] Generando stats generosos para desarrollo');
+        final stats = _getMockStatsAllUnlocked(userId);
+        debugPrint('📊 [LOCAL_DS] Stats generados:');
+        debugPrint('💰 Total: ${stats.totalPoints}, Gastados: ${stats.spentPoints}, Disponibles: ${stats.availablePoints}');
+        debugPrint('🐾 Poseídos: ${stats.ownedCompanions}/${stats.totalCompanions}');
+        return stats;
+      }
       
-      debugPrint('📊 [LOCAL_DS] Stats generados:');
-      debugPrint('💰 Total: ${stats.totalPoints}, Gastados: ${stats.spentPoints}, Disponibles: ${stats.availablePoints}');
-      debugPrint('🐾 Poseídos: ${stats.ownedCompanions}/${stats.totalCompanions}');
+      // 🆕 MODO API: INTENTAR OBTENER DESDE CACHE
+      debugPrint('💾 [LOCAL_DS] Intentando obtener stats desde cache...');
+      final statsJson = await cacheService.get<Map<String, dynamic>>('$_statsPrefix$userId');
       
-      return stats;
+      if (statsJson != null) {
+        debugPrint('✅ [LOCAL_DS] Stats encontrados en cache');
+        final stats = CompanionStatsModel.fromJson(statsJson);
+        debugPrint('📊 [LOCAL_DS] Stats desde cache:');
+        debugPrint('💰 Total: ${stats.totalPoints}, Disponibles: ${stats.availablePoints}');
+        debugPrint('🐾 Poseídos: ${stats.ownedCompanions}/${stats.totalCompanions}');
+        return stats;
+      } else {
+        debugPrint('⚠️ [LOCAL_DS] No hay stats en cache');
+        return null;
+      }
     } catch (e) {
-      debugPrint('❌ [LOCAL_DS] Error: $e');
-      return _getMockStatsAllUnlocked(userId);
+      debugPrint('❌ [LOCAL_DS] Error obteniendo stats: $e');
+      if (useMockData) {
+        return _getMockStatsAllUnlocked(userId);
+      } else {
+        return null;
+      }
     }
   }
 
@@ -101,11 +193,36 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
       debugPrint('💰 Total: ${stats.totalPoints}, Gastados: ${stats.spentPoints}, Disponibles: ${stats.availablePoints}');
       debugPrint('🐾 Poseídos: ${stats.ownedCompanions}');
       
-      await cacheService.set('$_statsPrefix${stats.userId}', stats.toJson());
+      await cacheService.set(
+        '$_statsPrefix${stats.userId}', 
+        stats.toJson(),
+        duration: const Duration(hours: 12), // Cache por 12 horas
+      );
+      
       debugPrint('✅ [LOCAL_DS] Stats guardados correctamente');
     } catch (e) {
       debugPrint('❌ [LOCAL_DS] Error guardando stats: $e');
       throw CacheException('Error caching companion stats: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<void> clearCache() async {
+    try {
+      debugPrint('🗑️ [LOCAL_DS] Limpiando todo el cache de compañeros...');
+      
+      // Limpiar todas las claves relacionadas con compañeros
+      final allKeys = await cacheService.getKeysWithPrefix(_companionsPrefix);
+      final companionKeys = await cacheService.getKeysWithPrefix(_companionPrefix);
+      final statsKeys = await cacheService.getKeysWithPrefix(_statsPrefix);
+      
+      for (final key in [...allKeys, ...companionKeys, ...statsKeys]) {
+        await cacheService.remove(key);
+      }
+      
+      debugPrint('✅ [LOCAL_DS] Cache limpiado completamente');
+    } catch (e) {
+      debugPrint('❌ [LOCAL_DS] Error limpiando cache: $e');
     }
   }
 
@@ -114,11 +231,32 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
       await cacheService.remove('$_statsPrefix$userId');
       debugPrint('🗑️ [LOCAL_DS] Cache de stats limpiado para usuario: $userId');
     } catch (e) {
-      debugPrint('❌ [LOCAL_DS] Error limpiando cache: $e');
+      debugPrint('❌ [LOCAL_DS] Error limpiando cache de stats: $e');
     }
   }
 
-  // 🔧 MÉTODO ACTUALIZADO: TODOS LOS COMPAÑEROS DESBLOQUEADOS
+  // 🆕 MÉTODO PARA CALCULAR STATS DESDE LISTA DE COMPAÑEROS
+  CompanionStatsModel _calculateStatsFromCompanions(String userId, List<CompanionModel> companions) {
+    final ownedCount = companions.where((c) => c.isOwned).length;
+    final activeCompanionId = companions.where((c) => c.isSelected).isNotEmpty 
+        ? companions.firstWhere((c) => c.isSelected).id 
+        : '';
+    
+    return CompanionStatsModel(
+      userId: userId,
+      totalCompanions: 12, // 4 tipos x 3 etapas
+      ownedCompanions: ownedCount,
+      totalPoints: 1000, // TODO: Obtener desde API de puntos
+      spentPoints: ownedCount * 50, // Estimado basado en compras
+      activeCompanionId: activeCompanionId,
+      totalFeedCount: 0, // TODO: Implementar contador
+      totalLoveCount: 0, // TODO: Implementar contador
+      totalEvolutions: 0, // TODO: Implementar contador
+      lastActivity: DateTime.now(),
+    );
+  }
+
+  // 🔧 MÉTODO ACTUALIZADO: TODOS LOS COMPAÑEROS DESBLOQUEADOS (SOLO PARA DESARROLLO)
   List<CompanionModel> _getMockCompanionsAllUnlocked(String userId) {
     final now = DateTime.now();
     debugPrint('🎮 [LOCAL_DS] Generando mock con TODOS los compañeros DESBLOQUEADOS');
@@ -202,7 +340,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isSelected: false,
         purchasedAt: now,
         currentMood: CompanionMood.happy,
-        purchasePrice: 0,
+        purchasePrice: 50,
         evolutionPrice: 50,
         unlockedAnimations: ['idle', 'blink', 'happy', 'eating'],
         createdAt: now,
@@ -222,7 +360,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isSelected: false,
         purchasedAt: now,
         currentMood: CompanionMood.excited,
-        purchasePrice: 0,
+        purchasePrice: 100,
         evolutionPrice: 75,
         unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'eating', 'loving'],
         createdAt: now,
@@ -242,7 +380,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isSelected: false,
         purchasedAt: now,
         currentMood: CompanionMood.happy,
-        purchasePrice: 0,
+        purchasePrice: 150,
         evolutionPrice: 0,
         unlockedAnimations: ['idle', 'blink', 'happy', 'sleeping', 'eating', 'loving', 'excited'],
         createdAt: now,
@@ -264,7 +402,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isSelected: false,
         purchasedAt: now,
         currentMood: CompanionMood.excited,
-        purchasePrice: 0,
+        purchasePrice: 100,
         evolutionPrice: 100,
         unlockedAnimations: ['idle', 'blink', 'happy', 'eating'],
         createdAt: now,
@@ -284,7 +422,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isSelected: false,
         purchasedAt: now,
         currentMood: CompanionMood.happy,
-        purchasePrice: 0,
+        purchasePrice: 150,
         evolutionPrice: 150,
         unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'eating', 'loving'],
         createdAt: now,
@@ -304,7 +442,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isSelected: false,
         purchasedAt: now,
         currentMood: CompanionMood.excited,
-        purchasePrice: 0,
+        purchasePrice: 200,
         evolutionPrice: 0,
         unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'eating', 'loving', 'sleeping'],
         createdAt: now,
@@ -326,7 +464,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isSelected: false,
         purchasedAt: now,
         currentMood: CompanionMood.excited,
-        purchasePrice: 0,
+        purchasePrice: 200,
         evolutionPrice: 200,
         unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'eating'],
         createdAt: now,
@@ -346,7 +484,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isSelected: false,
         purchasedAt: now,
         currentMood: CompanionMood.happy,
-        purchasePrice: 0,
+        purchasePrice: 300,
         evolutionPrice: 300,
         unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'eating', 'loving'],
         createdAt: now,
@@ -366,7 +504,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         isSelected: false,
         purchasedAt: now,
         currentMood: CompanionMood.excited,
-        purchasePrice: 0,
+        purchasePrice: 400,
         evolutionPrice: 0,
         unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'loving', 'sleeping', 'eating'],
         createdAt: now,
@@ -390,5 +528,48 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
       totalEvolutions: 12,
       lastActivity: DateTime.now(),
     );
+  }
+
+  // 🆕 MÉTODO PARA SINCRONIZAR CON API
+  Future<void> syncWithApiData(String userId, List<CompanionModel> apiCompanions) async {
+    try {
+      debugPrint('🔄 [LOCAL_DS] Sincronizando con datos de API...');
+      
+      // Si no hay datos de API, mantener cache actual
+      if (apiCompanions.isEmpty) {
+        debugPrint('⚠️ [LOCAL_DS] No hay datos de API para sincronizar');
+        return;
+      }
+      
+      // Limpiar cache existente
+      await clearCache();
+      
+      // Guardar nuevos datos de API
+      await cacheCompanions(userId, apiCompanions);
+      
+      debugPrint('✅ [LOCAL_DS] Sincronización completada: ${apiCompanions.length} mascotas');
+    } catch (e) {
+      debugPrint('❌ [LOCAL_DS] Error sincronizando con API: $e');
+    }
+  }
+
+  // 🆕 MÉTODO PARA VERIFICAR SI NECESITA ACTUALIZACIÓN
+  Future<bool> needsRefresh(String userId) async {
+    try {
+      final cacheInfo = await cacheService.getCacheInfo('$_companionsPrefix$userId');
+      
+      if (!cacheInfo.containsKey('exists') || cacheInfo['exists'] != true) {
+        debugPrint('📅 [LOCAL_DS] No hay cache, necesita refresh');
+        return true;
+      }
+      
+      final isExpired = cacheInfo['isExpired'] ?? true;
+      debugPrint('📅 [LOCAL_DS] Cache expirado: $isExpired');
+      
+      return isExpired;
+    } catch (e) {
+      debugPrint('❌ [LOCAL_DS] Error verificando refresh: $e');
+      return true; // En caso de error, refrescar
+    }
   }
 }

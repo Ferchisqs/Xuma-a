@@ -1,4 +1,4 @@
-// lib/core/network/api_client.dart - ACTUALIZADO CON CONTENT SERVICE
+// lib/core/network/api_client.dart - ACTUALIZADO CON GAMIFICATION SERVICE
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 import '../config/api_endpoints.dart';
@@ -12,6 +12,7 @@ class ApiClient {
   late final Dio _authDio;     
   late final Dio _userDio;     
   late final Dio _contentDio;  
+  late final Dio _gamificationDio; // 🆕 NUEVO DIO PARA GAMIFICACIÓN
   final NetworkInfo _networkInfo;
   final CacheService _cacheService;
   final TokenManager _tokenManager;
@@ -23,7 +24,8 @@ class ApiClient {
   ) {
     _setupAuthDio();
     _setupUserDio();
-    _setupContentDio(); // 🆕
+    _setupContentDio();
+    _setupGamificationDio(); // 🆕
   }
 
   void _setupAuthDio() {
@@ -50,7 +52,6 @@ class ApiClient {
     _setupInterceptors(_userDio, 'USER');
   }
 
-  // 🆕 CONFIGURAR DIO PARA CONTENT SERVICE
   void _setupContentDio() {
     _contentDio = Dio(BaseOptions(
       baseUrl: ApiEndpoints.contentServiceUrl,
@@ -61,6 +62,19 @@ class ApiClient {
     ));
 
     _setupInterceptors(_contentDio, 'CONTENT');
+  }
+
+  // 🆕 CONFIGURAR DIO PARA GAMIFICATION SERVICE
+  void _setupGamificationDio() {
+    _gamificationDio = Dio(BaseOptions(
+      baseUrl: ApiEndpoints.gamificationServiceUrl,
+      connectTimeout: Duration(milliseconds: ApiEndpoints.connectTimeout),
+      receiveTimeout: Duration(milliseconds: ApiEndpoints.receiveTimeout),
+      sendTimeout: Duration(milliseconds: ApiEndpoints.sendTimeout),
+      headers: ApiEndpoints.gamificationHeaders,
+    ));
+
+    _setupInterceptors(_gamificationDio, 'GAMIFICATION');
   }
 
   void _setupInterceptors(Dio dio, String serviceName) {
@@ -96,7 +110,7 @@ class ApiClient {
       ),
     );
 
-    // 3. Logging Interceptor
+    // Logging Interceptor
     dio.interceptors.add(
       LogInterceptor(
         requestBody: true,
@@ -105,7 +119,6 @@ class ApiClient {
       ),
     );
   }
-
 
   Future<Response> get(
     String path, {
@@ -193,12 +206,38 @@ class ApiClient {
     }
   }
 
+  // 🆕 MÉTODO PATCH PARA GAMIFICACIÓN
+  Future<Response> patch(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    await _checkConnection();
+    
+    final dio = _getDioForPath(path, options);
+    
+    try {
+      return await dio.patch(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
 
+  // 🔧 ACTUALIZADO PARA INCLUIR GAMIFICACIÓN
   Dio _getDioForPath(String path, Options? options) {
     final baseUrl = options?.extra?['baseUrl'] as String?;
     
     if (baseUrl != null) {
-      if (baseUrl.contains('content-service')) {
+      if (baseUrl.contains('gamification-service')) {
+        print('🎮 [API CLIENT] Using GAMIFICATION service for: $path');
+        return _gamificationDio;
+      } else if (baseUrl.contains('content-service')) {
         print('🎯 [API CLIENT] Using CONTENT service for: $path');
         return _contentDio;
       } else if (baseUrl.contains('user-service')) {
@@ -210,7 +249,10 @@ class ApiClient {
       }
     }
 
-    if (ApiEndpoints.isContentEndpoint(path)) {
+    if (ApiEndpoints.isGamificationEndpoint(path)) {
+      print('🎮 [API CLIENT] Auto-detected GAMIFICATION service for: $path');
+      return _gamificationDio;
+    } else if (ApiEndpoints.isContentEndpoint(path)) {
       print('🎯 [API CLIENT] Auto-detected CONTENT service for: $path');
       return _contentDio;
     } else if (ApiEndpoints.isUserEndpoint(path)) {
@@ -225,7 +267,6 @@ class ApiClient {
     return _authDio;
   }
 
-
   Future<void> _addAuthToken(RequestOptions options, String serviceName) async {
     final authEndpoints = [
       ApiEndpoints.login,
@@ -236,7 +277,6 @@ class ApiClient {
     final isAuthEndpoint = authEndpoints.any((endpoint) => 
       options.path.contains(endpoint));
     
-   
     if (!isAuthEndpoint) {
       final token = await _tokenManager.getAccessToken();
       if (token != null) {
@@ -245,9 +285,10 @@ class ApiClient {
       } else {
         print('⚠️ [$serviceName] No access token available for: ${options.path}');
         
-        // Para content service, esto podría ser normal (contenido público)
-        if (serviceName == 'CONTENT') {
-          print('ℹ️ [$serviceName] Content request without token (public content)');
+        // Para gamification service, algunos endpoints pueden ser públicos
+        if (serviceName == 'GAMIFICATION' && 
+            (options.path.contains('/available') || options.path.contains('/store'))) {
+          print('ℹ️ [$serviceName] Public gamification endpoint (no token required)');
         }
       }
     } else {
@@ -332,19 +373,55 @@ class ApiClient {
     }
   }
 
-  Future<void> clearTokens() async {
-    await _tokenManager.clearAllTokens();
+  // 🆕 MÉTODOS ESPECÍFICOS PARA GAMIFICACIÓN
+  Future<Response> getGamification(
+    String endpoint, {
+    Map<String, dynamic>? queryParameters,
+    bool requireAuth = true,
+  }) async {
+    print('🎮 [API CLIENT] Gamification request: $endpoint');
+    
+    return await get(
+      endpoint,
+      queryParameters: queryParameters,
+      options: Options(
+        extra: {'baseUrl': ApiEndpoints.gamificationServiceUrl},
+        headers: requireAuth ? null : {'Authorization': null},
+      ),
+    );
   }
 
-  Future<void> debugTokens() async {
-    await _tokenManager.debugTokenInfo();
+  Future<Response> postGamification(
+    String endpoint, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    print('🎮 [API CLIENT] Gamification post: $endpoint');
+    
+    return await post(
+      endpoint,
+      data: data,
+      queryParameters: queryParameters,
+      options: Options(extra: {'baseUrl': ApiEndpoints.gamificationServiceUrl}),
+    );
   }
 
-  Future<bool> hasValidToken() async {
-    return await _tokenManager.hasValidAccessToken();
+  Future<Response> patchGamification(
+    String endpoint, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    print('🎮 [API CLIENT] Gamification patch: $endpoint');
+    
+    return await patch(
+      endpoint,
+      data: data,
+      queryParameters: queryParameters,
+      options: Options(extra: {'baseUrl': ApiEndpoints.gamificationServiceUrl}),
+    );
   }
 
-  
+  // Métodos existentes de contenido
   Future<Response> getContent(
     String endpoint, {
     Map<String, dynamic>? queryParameters,
@@ -435,5 +512,17 @@ class ApiClient {
       default:
         return ServerException('$message (Código: $statusCode)');
     }
+  }
+
+  Future<void> clearTokens() async {
+    await _tokenManager.clearAllTokens();
+  }
+
+  Future<void> debugTokens() async {
+    await _tokenManager.debugTokenInfo();
+  }
+
+  Future<bool> hasValidToken() async {
+    return await _tokenManager.hasValidAccessToken();
   }
 }
