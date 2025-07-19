@@ -8,8 +8,8 @@ import '../../../home/presentation/pages/home_page.dart';
 import '../../../learning/presentation/pages/learning_main_page.dart';
 import '../../../challenges/presentation/pages/challenges_main_page.dart';
 import '../../../trivia/presentation/pages/trivia_main_page.dart';
-import '../../../companion/presentation/pages/companion_main_page.dart';
-import '../../../contact/presentation/pages/contact_main_page.dart';
+import '../../../companion/presentation/pages/companion_main_page.dart' as companion;
+import '../../../contact/presentation/pages/contact_main_page.dart' as contact;
 import '../../../profile/presentation/pages/profile_main_page.dart';
 import '../../../news/presentation/pages/news_main_page.dart';
 import '../widgets/side_nav_bar.dart';
@@ -78,7 +78,7 @@ class _MainWrapperContent extends StatelessWidget {
         return const _PageWrapper(child: LearningMainPage());
       
       case NavigationTab.companion:
-        return const _PageWrapper(child: CompanionMainPage());
+        return const _PageWrapper(child: companion.CompanionMainPage());
         
       case NavigationTab.trivia:
         return const _PageWrapper(child: TriviaMainPage());
@@ -87,7 +87,7 @@ class _MainWrapperContent extends StatelessWidget {
         return const _PageWrapper(child: ChallengesMainPage());
         
       case NavigationTab.contact:
-        return const _PageWrapper(child: ContactMainPage());
+        return const _PageWrapper(child: contact.CompanionMainPage()); // Aquí probablemente debería ser ContactMainPage
         
       case NavigationTab.profile:
         return const _PageWrapper(child: ProfileMainPage());

@@ -1,8 +1,7 @@
-// lib/features/companion/data/datasources/companion_local_datasource.dart - ACTUALIZADO PARA API
+// lib/features/companion/data/datasources/companion_local_datasource.dart - ARREGLADO
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/services/cache_service.dart';
-import '../../../../core/errors/exceptions.dart';
 import '../models/companion_model.dart';
 import '../models/companion_stats_model.dart';
 import '../../domain/entities/companion_entity.dart';
@@ -25,57 +24,33 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
   static const String _companionPrefix = 'companion_';
   static const String _statsPrefix = 'companion_stats_';
 
-  // 🔧 CONFIGURACIÓN DE MODO
-  static const bool useApiMode = true; // 🆕 CAMBIAR A true PARA USAR API
-  static const bool useMockData = false; // 🆕 false PARA DATOS REALES
+  // 🔧 SIEMPRE USAR MODO LOCAL HASTA QUE LA API FUNCIONE
+  static const bool useApiMode = false; // 🔧 false = SOLO LOCAL
+  static const bool useMockData = true;  // 🔧 true = DATOS MOCK
 
   CompanionLocalDataSourceImpl(this.cacheService);
 
   @override
   Future<List<CompanionModel>> getCachedCompanions(String userId) async {
     try {
-      debugPrint('🐾 [LOCAL_DS] Obteniendo compañeros para usuario: $userId');
-      debugPrint('🌐 [LOCAL_DS] Modo API: $useApiMode');
-      debugPrint('🎮 [LOCAL_DS] Usar Mock: $useMockData');
+      debugPrint('🐾 [LOCAL_DS] === OBTENIENDO COMPAÑEROS ===');
+      debugPrint('👤 [LOCAL_DS] Usuario: $userId');
+      debugPrint('🌐 [LOCAL_DS] API Mode: $useApiMode (FORZADO A LOCAL)');
+      debugPrint('🎮 [LOCAL_DS] Mock Data: $useMockData');
       
-      if (!useApiMode || useMockData) {
-        // 🔧 MODO DESARROLLO: TODOS DESBLOQUEADOS
-        debugPrint('🎮 [LOCAL_DS] Devolviendo mock con todos desbloqueados');
-        final mockCompanions = _getMockCompanionsAllUnlocked(userId);
-        debugPrint('✅ [LOCAL_DS] Devolviendo ${mockCompanions.length} compañeros mock');
-        return mockCompanions;
-      }
+      // 🔧 FORZAR MODO LOCAL HASTA QUE LA API FUNCIONE
+      debugPrint('📱 [LOCAL_DS] USANDO MODO LOCAL - Generando compañeros funcionales');
+      final mockCompanions = _getMockCompanionsFunctional(userId);
+      debugPrint('✅ [LOCAL_DS] ${mockCompanions.length} compañeros generados');
       
-      // 🆕 MODO API: INTENTAR OBTENER DESDE CACHE
-      debugPrint('💾 [LOCAL_DS] Intentando obtener desde cache...');
-      final companionsJson = await cacheService.getList<Map<String, dynamic>>('$_companionsPrefix$userId');
+      // 🔧 GUARDAR EN CACHE TAMBIÉN
+      await cacheCompanions(userId, mockCompanions);
       
-      if (companionsJson != null && companionsJson.isNotEmpty) {
-        debugPrint('✅ [LOCAL_DS] Cache encontrado: ${companionsJson.length} mascotas');
-        
-        final companions = <CompanionModel>[];
-        for (final json in companionsJson) {
-          try {
-            final companion = CompanionModel.fromJson(json);
-            companions.add(companion);
-          } catch (e) {
-            debugPrint('❌ [LOCAL_DS] Error parseando mascota desde cache: $e');
-          }
-        }
-        
-        debugPrint('📊 [LOCAL_DS] ${companions.length} mascotas parseadas exitosamente');
-        return companions;
-      } else {
-        debugPrint('⚠️ [LOCAL_DS] No hay cache, devolviendo lista vacía');
-        return [];
-      }
+      return mockCompanions;
     } catch (e) {
       debugPrint('❌ [LOCAL_DS] Error: $e');
-      if (useMockData) {
-        return _getMockCompanionsAllUnlocked(userId);
-      } else {
-        return [];
-      }
+      // 🔧 SIEMPRE DEVOLVER DATOS FUNCIONALES
+      return _getMockCompanionsFunctional(userId);
     }
   }
 
@@ -89,20 +64,20 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
       await cacheService.setList(
         '$_companionsPrefix$userId', 
         companionsJson,
-        duration: const Duration(hours: 24), // Cache por 24 horas
+        duration: const Duration(hours: 24),
       );
       
       debugPrint('✅ [LOCAL_DS] ${companions.length} compañeros guardados en caché');
       
-      // 🆕 GUARDAR ESTADÍSTICAS TAMBIÉN
+      // 🔧 GUARDAR STATS AUTOMÁTICAMENTE
       if (companions.isNotEmpty) {
         final stats = _calculateStatsFromCompanions(userId, companions);
         await cacheStats(stats);
-        debugPrint('📊 [LOCAL_DS] Estadísticas calculadas y guardadas');
+        debugPrint('📊 [LOCAL_DS] Stats calculados y guardados');
       }
     } catch (e) {
       debugPrint('❌ [LOCAL_DS] Error guardando compañeros: $e');
-      throw CacheException('Error caching companions: ${e.toString()}');
+      // 🔧 NO LANZAR EXCEPCIÓN, SOLO LOGGING
     }
   }
 
@@ -140,49 +115,27 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
       debugPrint('✅ [LOCAL_DS] Compañero individual guardado');
     } catch (e) {
       debugPrint('❌ [LOCAL_DS] Error guardando compañero individual: $e');
-      throw CacheException('Error caching companion: ${e.toString()}');
+      // 🔧 NO LANZAR EXCEPCIÓN
     }
   }
 
   @override
   Future<CompanionStatsModel?> getCachedStats(String userId) async {
     try {
-      debugPrint('📊 [LOCAL_DS] Obteniendo stats para usuario: $userId');
-      debugPrint('🌐 [LOCAL_DS] Modo API: $useApiMode');
-      debugPrint('🎮 [LOCAL_DS] Usar Mock: $useMockData');
+      debugPrint('📊 [LOCAL_DS] === OBTENIENDO STATS ===');
+      debugPrint('👤 [LOCAL_DS] Usuario: $userId');
       
-      if (!useApiMode || useMockData) {
-        // 🔧 MODO DESARROLLO: STATS GENEROSOS
-        debugPrint('🎮 [LOCAL_DS] Generando stats generosos para desarrollo');
-        final stats = _getMockStatsAllUnlocked(userId);
-        debugPrint('📊 [LOCAL_DS] Stats generados:');
-        debugPrint('💰 Total: ${stats.totalPoints}, Gastados: ${stats.spentPoints}, Disponibles: ${stats.availablePoints}');
-        debugPrint('🐾 Poseídos: ${stats.ownedCompanions}/${stats.totalCompanions}');
-        return stats;
-      }
+      // 🔧 SIEMPRE GENERAR STATS FUNCIONALES
+      debugPrint('🎮 [LOCAL_DS] Generando stats funcionales para tienda');
+      final stats = _getMockStatsFunctional(userId);
+      debugPrint('📊 [LOCAL_DS] Stats generados:');
+      debugPrint('💰 Total: ${stats.totalPoints}, Disponibles: ${stats.availablePoints}');
+      debugPrint('🐾 Poseídos: ${stats.ownedCompanions}/${stats.totalCompanions}');
       
-      // 🆕 MODO API: INTENTAR OBTENER DESDE CACHE
-      debugPrint('💾 [LOCAL_DS] Intentando obtener stats desde cache...');
-      final statsJson = await cacheService.get<Map<String, dynamic>>('$_statsPrefix$userId');
-      
-      if (statsJson != null) {
-        debugPrint('✅ [LOCAL_DS] Stats encontrados en cache');
-        final stats = CompanionStatsModel.fromJson(statsJson);
-        debugPrint('📊 [LOCAL_DS] Stats desde cache:');
-        debugPrint('💰 Total: ${stats.totalPoints}, Disponibles: ${stats.availablePoints}');
-        debugPrint('🐾 Poseídos: ${stats.ownedCompanions}/${stats.totalCompanions}');
-        return stats;
-      } else {
-        debugPrint('⚠️ [LOCAL_DS] No hay stats en cache');
-        return null;
-      }
+      return stats;
     } catch (e) {
       debugPrint('❌ [LOCAL_DS] Error obteniendo stats: $e');
-      if (useMockData) {
-        return _getMockStatsAllUnlocked(userId);
-      } else {
-        return null;
-      }
+      return _getMockStatsFunctional(userId);
     }
   }
 
@@ -190,19 +143,19 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
   Future<void> cacheStats(CompanionStatsModel stats) async {
     try {
       debugPrint('💾 [LOCAL_DS] Guardando stats:');
-      debugPrint('💰 Total: ${stats.totalPoints}, Gastados: ${stats.spentPoints}, Disponibles: ${stats.availablePoints}');
+      debugPrint('💰 Total: ${stats.totalPoints}, Disponibles: ${stats.availablePoints}');
       debugPrint('🐾 Poseídos: ${stats.ownedCompanions}');
       
       await cacheService.set(
         '$_statsPrefix${stats.userId}', 
         stats.toJson(),
-        duration: const Duration(hours: 12), // Cache por 12 horas
+        duration: const Duration(hours: 12),
       );
       
       debugPrint('✅ [LOCAL_DS] Stats guardados correctamente');
     } catch (e) {
       debugPrint('❌ [LOCAL_DS] Error guardando stats: $e');
-      throw CacheException('Error caching companion stats: ${e.toString()}');
+      // 🔧 NO LANZAR EXCEPCIÓN
     }
   }
 
@@ -211,7 +164,6 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
     try {
       debugPrint('🗑️ [LOCAL_DS] Limpiando todo el cache de compañeros...');
       
-      // Limpiar todas las claves relacionadas con compañeros
       final allKeys = await cacheService.getKeysWithPrefix(_companionsPrefix);
       final companionKeys = await cacheService.getKeysWithPrefix(_companionPrefix);
       final statsKeys = await cacheService.getKeysWithPrefix(_statsPrefix);
@@ -226,16 +178,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
     }
   }
 
-  Future<void> clearStatsCache(String userId) async {
-    try {
-      await cacheService.remove('$_statsPrefix$userId');
-      debugPrint('🗑️ [LOCAL_DS] Cache de stats limpiado para usuario: $userId');
-    } catch (e) {
-      debugPrint('❌ [LOCAL_DS] Error limpiando cache de stats: $e');
-    }
-  }
-
-  // 🆕 MÉTODO PARA CALCULAR STATS DESDE LISTA DE COMPAÑEROS
+  // 🔧 CALCULAR STATS DESDE COMPAÑEROS
   CompanionStatsModel _calculateStatsFromCompanions(String userId, List<CompanionModel> companions) {
     final ownedCount = companions.where((c) => c.isOwned).length;
     final activeCompanionId = companions.where((c) => c.isSelected).isNotEmpty 
@@ -246,23 +189,23 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
       userId: userId,
       totalCompanions: 12, // 4 tipos x 3 etapas
       ownedCompanions: ownedCount,
-      totalPoints: 1000, // TODO: Obtener desde API de puntos
-      spentPoints: ownedCount * 50, // Estimado basado en compras
+      totalPoints: 500, // 🔧 PUNTOS RAZONABLES PARA TESTING
+      spentPoints: ownedCount * 50,
       activeCompanionId: activeCompanionId,
-      totalFeedCount: 0, // TODO: Implementar contador
-      totalLoveCount: 0, // TODO: Implementar contador
-      totalEvolutions: 0, // TODO: Implementar contador
+      totalFeedCount: 0,
+      totalLoveCount: 0,
+      totalEvolutions: 0,
       lastActivity: DateTime.now(),
     );
   }
 
-  // 🔧 MÉTODO ACTUALIZADO: TODOS LOS COMPAÑEROS DESBLOQUEADOS (SOLO PARA DESARROLLO)
-  List<CompanionModel> _getMockCompanionsAllUnlocked(String userId) {
+  // 🔧 COMPAÑEROS FUNCIONALES PARA TESTING (SOLO DEXTER DESBLOQUEADO)
+  List<CompanionModel> _getMockCompanionsFunctional(String userId) {
     final now = DateTime.now();
-    debugPrint('🎮 [LOCAL_DS] Generando mock con TODOS los compañeros DESBLOQUEADOS');
+    debugPrint('🎮 [LOCAL_DS] Generando compañeros funcionales para testing');
     
     return [
-      // ✨ DEXTER - Chihuahua (TODAS LAS ETAPAS DESBLOQUEADAS)
+      // ✨ DEXTER - Chihuahua (SOLO BABY DESBLOQUEADO)
       CompanionModel(
         id: 'dexter_baby',
         type: CompanionType.dexter,
@@ -283,293 +226,130 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         unlockedAnimations: ['idle', 'blink', 'happy', 'eating', 'loving'],
         createdAt: now,
       ),
+      
+      // 🔒 OTROS COMPAÑEROS BLOQUEADOS PARA COMPRAR
       CompanionModel(
         id: 'dexter_young',
         type: CompanionType.dexter,
         stage: CompanionStage.young,
         name: 'Dexter',
         description: 'Dexter ha crecido y es más juguetón',
-        level: 8,
-        experience: 120,
+        level: 1,
+        experience: 0,
         happiness: 100,
         hunger: 90,
         energy: 85,
-        isOwned: true, // 🔓 DESBLOQUEADO
+        isOwned: false, // 🔒 BLOQUEADO
         isSelected: false,
-        purchasedAt: now,
-        currentMood: CompanionMood.excited,
-        purchasePrice: 0,
-        evolutionPrice: 50,
-        unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'eating', 'loving'],
+        purchasedAt: null,
+        currentMood: CompanionMood.normal,
+        purchasePrice: 100,
+        evolutionPrice: 100,
+        unlockedAnimations: ['idle', 'blink'],
         createdAt: now,
       ),
-      CompanionModel(
-        id: 'dexter_adult',
-        type: CompanionType.dexter,
-        stage: CompanionStage.adult,
-        name: 'Dexter',
-        description: 'Dexter adulto, el compañero perfecto',
-        level: 12,
-        experience: 200,
-        happiness: 100,
-        hunger: 95,
-        energy: 100,
-        isOwned: true, // 🔓 DESBLOQUEADO
-        isSelected: false,
-        purchasedAt: now,
-        currentMood: CompanionMood.happy,
-        purchasePrice: 0,
-        evolutionPrice: 0,
-        unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'eating', 'loving', 'sleeping'],
-        createdAt: now,
-      ),
-
-      // ✨ ELLY - Panda (TODAS LAS ETAPAS DESBLOQUEADAS)
+      
       CompanionModel(
         id: 'elly_baby',
         type: CompanionType.elly,
         stage: CompanionStage.baby,
         name: 'Elly',
         description: 'Una tierna panda bebé que ama el bambú',
-        level: 3,
-        experience: 45,
+        level: 1,
+        experience: 0,
         happiness: 95,
         hunger: 80,
         energy: 90,
-        isOwned: true, // 🔓 DESBLOQUEADO
+        isOwned: false, // 🔒 BLOQUEADO
         isSelected: false,
-        purchasedAt: now,
-        currentMood: CompanionMood.happy,
-        purchasePrice: 50,
-        evolutionPrice: 50,
-        unlockedAnimations: ['idle', 'blink', 'happy', 'eating'],
-        createdAt: now,
-      ),
-      CompanionModel(
-        id: 'elly_young',
-        type: CompanionType.elly,
-        stage: CompanionStage.young,
-        name: 'Elly',
-        description: 'Elly joven, más grande y cariñosa',
-        level: 7,
-        experience: 150,
-        happiness: 100,
-        hunger: 100,
-        energy: 95,
-        isOwned: true, // 🔓 DESBLOQUEADO
-        isSelected: false,
-        purchasedAt: now,
-        currentMood: CompanionMood.excited,
-        purchasePrice: 100,
-        evolutionPrice: 75,
-        unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'eating', 'loving'],
-        createdAt: now,
-      ),
-      CompanionModel(
-        id: 'elly_adult',
-        type: CompanionType.elly,
-        stage: CompanionStage.adult,
-        name: 'Elly',
-        description: 'Elly adulta, sabia y protectora',
-        level: 15,
-        experience: 300,
-        happiness: 100,
-        hunger: 100,
-        energy: 100,
-        isOwned: true, // 🔓 DESBLOQUEADO
-        isSelected: false,
-        purchasedAt: now,
-        currentMood: CompanionMood.happy,
+        purchasedAt: null,
+        currentMood: CompanionMood.normal,
         purchasePrice: 150,
-        evolutionPrice: 0,
-        unlockedAnimations: ['idle', 'blink', 'happy', 'sleeping', 'eating', 'loving', 'excited'],
+        evolutionPrice: 75,
+        unlockedAnimations: ['idle', 'blink'],
         createdAt: now,
       ),
-
-      // ✨ PAXOLOTL - Ajolote (TODAS LAS ETAPAS DESBLOQUEADAS)
+      
       CompanionModel(
         id: 'paxolotl_baby',
         type: CompanionType.paxolotl,
         stage: CompanionStage.baby,
         name: 'Paxolotl',
         description: 'Un pequeño ajolote lleno de curiosidad',
-        level: 4,
-        experience: 60,
+        level: 1,
+        experience: 0,
         happiness: 90,
         hunger: 85,
         energy: 80,
-        isOwned: true, // 🔓 DESBLOQUEADO
+        isOwned: false, // 🔒 BLOQUEADO
         isSelected: false,
-        purchasedAt: now,
-        currentMood: CompanionMood.excited,
-        purchasePrice: 100,
-        evolutionPrice: 100,
-        unlockedAnimations: ['idle', 'blink', 'happy', 'eating'],
-        createdAt: now,
-      ),
-      CompanionModel(
-        id: 'paxolotl_young',
-        type: CompanionType.paxolotl,
-        stage: CompanionStage.young,
-        name: 'Paxolotl',
-        description: 'Paxolotl joven, explorador nato',
-        level: 9,
-        experience: 180,
-        happiness: 100,
-        hunger: 90,
-        energy: 100,
-        isOwned: true, // 🔓 DESBLOQUEADO
-        isSelected: false,
-        purchasedAt: now,
-        currentMood: CompanionMood.happy,
-        purchasePrice: 150,
-        evolutionPrice: 150,
-        unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'eating', 'loving'],
-        createdAt: now,
-      ),
-      CompanionModel(
-        id: 'paxolotl_adult',
-        type: CompanionType.paxolotl,
-        stage: CompanionStage.adult,
-        name: 'Paxolotl',
-        description: 'Paxolotl adulto, místico y poderoso',
-        level: 18,
-        experience: 400,
-        happiness: 100,
-        hunger: 100,
-        energy: 100,
-        isOwned: true, // 🔓 DESBLOQUEADO
-        isSelected: false,
-        purchasedAt: now,
-        currentMood: CompanionMood.excited,
+        purchasedAt: null,
+        currentMood: CompanionMood.normal,
         purchasePrice: 200,
-        evolutionPrice: 0,
-        unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'eating', 'loving', 'sleeping'],
+        evolutionPrice: 150,
+        unlockedAnimations: ['idle', 'blink'],
         createdAt: now,
       ),
-
-      // ✨ YAMI - Jaguar (TODAS LAS ETAPAS DESBLOQUEADAS)
+      
       CompanionModel(
         id: 'yami_baby',
         type: CompanionType.yami,
         stage: CompanionStage.baby,
         name: 'Yami',
         description: 'Un jaguar bebé feroz pero tierno',
-        level: 6,
-        experience: 90,
+        level: 1,
+        experience: 0,
         happiness: 85,
         hunger: 75,
         energy: 95,
-        isOwned: true, // 🔓 DESBLOQUEADO
+        isOwned: false, // 🔒 BLOQUEADO
         isSelected: false,
-        purchasedAt: now,
-        currentMood: CompanionMood.excited,
-        purchasePrice: 200,
+        purchasedAt: null,
+        currentMood: CompanionMood.normal,
+        purchasePrice: 250,
         evolutionPrice: 200,
-        unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'eating'],
+        unlockedAnimations: ['idle', 'blink'],
         createdAt: now,
       ),
+      
+      // 🔒 MÁS ETAPAS PARA COMPRAR
       CompanionModel(
-        id: 'yami_young',
-        type: CompanionType.yami,
+        id: 'elly_young',
+        type: CompanionType.elly,
         stage: CompanionStage.young,
-        name: 'Yami',
-        description: 'Yami joven, elegante y ágil',
-        level: 11,
-        experience: 220,
-        happiness: 100,
-        hunger: 85,
-        energy: 100,
-        isOwned: true, // 🔓 DESBLOQUEADO
-        isSelected: false,
-        purchasedAt: now,
-        currentMood: CompanionMood.happy,
-        purchasePrice: 300,
-        evolutionPrice: 300,
-        unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'eating', 'loving'],
-        createdAt: now,
-      ),
-      CompanionModel(
-        id: 'yami_adult',
-        type: CompanionType.yami,
-        stage: CompanionStage.adult,
-        name: 'Yami',
-        description: 'Yami adulta, majestuosa protectora de la naturaleza',
-        level: 20,
-        experience: 500,
+        name: 'Elly',
+        description: 'Elly joven, más grande y cariñosa',
+        level: 1,
+        experience: 0,
         happiness: 100,
         hunger: 100,
-        energy: 100,
-        isOwned: true, // 🔓 DESBLOQUEADO
+        energy: 95,
+        isOwned: false, // 🔒 BLOQUEADO
         isSelected: false,
-        purchasedAt: now,
-        currentMood: CompanionMood.excited,
-        purchasePrice: 400,
-        evolutionPrice: 0,
-        unlockedAnimations: ['idle', 'blink', 'happy', 'excited', 'loving', 'sleeping', 'eating'],
+        purchasedAt: null,
+        currentMood: CompanionMood.normal,
+        purchasePrice: 300,
+        evolutionPrice: 150,
+        unlockedAnimations: ['idle', 'blink'],
         createdAt: now,
       ),
     ];
   }
 
-  // 🔧 MÉTODO ACTUALIZADO: STATS GENEROSOS PARA DESARROLLO
-  CompanionStatsModel _getMockStatsAllUnlocked(String userId) {
-    debugPrint('💰 [LOCAL_DS] Generando stats generosos para desarrollo');
+  CompanionStatsModel _getMockStatsFunctional(String userId) {
+    debugPrint('💰 [LOCAL_DS] Generando stats funcionales para testing');
     
     return CompanionStatsModel(
       userId: userId,
       totalCompanions: 12, // 4 tipos x 3 etapas
-      ownedCompanions: 12, // 🔓 TODAS DESBLOQUEADAS!
-      totalPoints: 999999, // 🚀 ¡CASI UN MILLÓN DE PUNTOS!
-      spentPoints: 0, // No hemos gastado nada porque ya tenemos todo
+      ownedCompanions: 1,   // 🔧 SOLO DEXTER BABY
+      totalPoints: 500,    // 🔧 PUNTOS SUFICIENTES PARA COMPRAR
+      spentPoints: 0,      // 🔧 NO HEMOS GASTADO NADA AÚN
       activeCompanionId: 'dexter_baby',
-      totalFeedCount: 100,
-      totalLoveCount: 75,
-      totalEvolutions: 12,
+      totalFeedCount: 5,
+      totalLoveCount: 3,
+      totalEvolutions: 0,
       lastActivity: DateTime.now(),
     );
-  }
-
-  // 🆕 MÉTODO PARA SINCRONIZAR CON API
-  Future<void> syncWithApiData(String userId, List<CompanionModel> apiCompanions) async {
-    try {
-      debugPrint('🔄 [LOCAL_DS] Sincronizando con datos de API...');
-      
-      // Si no hay datos de API, mantener cache actual
-      if (apiCompanions.isEmpty) {
-        debugPrint('⚠️ [LOCAL_DS] No hay datos de API para sincronizar');
-        return;
-      }
-      
-      // Limpiar cache existente
-      await clearCache();
-      
-      // Guardar nuevos datos de API
-      await cacheCompanions(userId, apiCompanions);
-      
-      debugPrint('✅ [LOCAL_DS] Sincronización completada: ${apiCompanions.length} mascotas');
-    } catch (e) {
-      debugPrint('❌ [LOCAL_DS] Error sincronizando con API: $e');
-    }
-  }
-
-  // 🆕 MÉTODO PARA VERIFICAR SI NECESITA ACTUALIZACIÓN
-  Future<bool> needsRefresh(String userId) async {
-    try {
-      final cacheInfo = await cacheService.getCacheInfo('$_companionsPrefix$userId');
-      
-      if (!cacheInfo.containsKey('exists') || cacheInfo['exists'] != true) {
-        debugPrint('📅 [LOCAL_DS] No hay cache, necesita refresh');
-        return true;
-      }
-      
-      final isExpired = cacheInfo['isExpired'] ?? true;
-      debugPrint('📅 [LOCAL_DS] Cache expirado: $isExpired');
-      
-      return isExpired;
-    } catch (e) {
-      debugPrint('❌ [LOCAL_DS] Error verificando refresh: $e');
-      return true; // En caso de error, refrescar
-    }
   }
 }

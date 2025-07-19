@@ -51,9 +51,10 @@ class CompanionCardWidget extends StatelessWidget {
                   // Header compacto
                   _buildCompactHeader(),
                   
+                  // 🔧 SOLO MASCOTA PNG - SIN FONDO
                   Expanded(
                     flex: 4,
-                    child: _buildPetWithBackground(),
+                    child: _buildPetOnly(),
                   ),
                   
                   if (showDetails)
@@ -73,105 +74,79 @@ class CompanionCardWidget extends StatelessWidget {
     );
   }
   
-  Widget _buildPetWithBackground() {
+  // 🔧 NUEVO WIDGET PARA MOSTRAR SOLO LA MASCOTA PNG
+  Widget _buildPetOnly() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: constraints.maxWidth,
-              height: constraints.maxHeight,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  _getBackgroundImagePath(),
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    debugPrint('🔧 Error loading shop background: ${_getBackgroundImagePath()}');
-                    return Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: _getDefaultGradient(),
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            
-            // 🔧 MASCOTA SUPERPUESTA
-            Container(
-              width: constraints.maxWidth * 0.8,
-              height: constraints.maxHeight * 0.8,
-              child: Image.asset(
-                _getPetImagePath(),
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  debugPrint('🔧 Error loading shop pet: ${_getPetImagePath()}');
-                  // Placeholder mejorado
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: _getCompanionColor().withOpacity(0.5),
-                        width: 1,
-                      ),
+        return Center(
+          child: Container(
+            width: constraints.maxWidth * 0.9,
+            height: constraints.maxHeight * 0.9,
+            // 🔧 SIN FONDO - SOLO LA MASCOTA
+            child: Image.asset(
+              _getPetImagePath(),
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                debugPrint('🔧 Error loading companion image: ${_getPetImagePath()}');
+                // 🔧 PLACEHOLDER SIMPLE PARA LA MASCOTA
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _getCompanionColor().withOpacity(0.3),
+                      width: 1,
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _getCompanionColor().withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
                           _getCompanionIcon(),
-                          size: 30,
+                          size: 24,
                           color: _getCompanionColor(),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          companion.displayName,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: _getCompanionColor(),
-                          ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        companion.displayName,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: _getCompanionColor(),
                         ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'PNG no encontrado',
+                        style: TextStyle(
+                          fontSize: 8,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-          ],
+          ),
         );
       },
     );
   }
   
-  // 🔧 RUTAS DE IMÁGENES PARA LA TIENDA
-  String _getBackgroundImagePath() {
-    switch (companion.type) {
-      case CompanionType.dexter:
-        return 'assets/images/companions/backgrounds/dexter_bg.png';
-      case CompanionType.elly:
-        return 'assets/images/companions/backgrounds/elly_bg.png';
-      case CompanionType.paxolotl:
-        return 'assets/images/companions/backgrounds/paxolotl_bg.png';
-      case CompanionType.yami:
-        return 'assets/images/companions/backgrounds/yami_bg.png';
-    }
-  }
-  
+  // 🔧 RUTA SIMPLE DE LA MASCOTA (SOLO PNG)
   String _getPetImagePath() {
     final name = '${companion.type.name}_${companion.stage.name}';
-    return 'assets/images/companions/$name.png';
+    final path = 'assets/images/companions/$name.png';
+    debugPrint('🐾 Loading companion PNG: $path');
+    return path;
   }
   
   Widget _buildCompactHeader() {
@@ -414,19 +389,6 @@ class CompanionCardWidget extends StatelessWidget {
         return Icons.water;
       case CompanionType.yami:
         return Icons.nature;
-    }
-  }
-  
-  List<Color> _getDefaultGradient() {
-    switch (companion.type) {
-      case CompanionType.dexter:
-        return [Colors.brown[200]!, Colors.brown[400]!];
-      case CompanionType.elly:
-        return [Colors.green[200]!, Colors.green[400]!];
-      case CompanionType.paxolotl:
-        return [Colors.cyan[200]!, Colors.cyan[400]!];
-      case CompanionType.yami:
-        return [Colors.purple[200]!, Colors.purple[400]!];
     }
   }
   

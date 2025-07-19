@@ -12,7 +12,7 @@ class CompanionAnimationWidget extends StatefulWidget {
   const CompanionAnimationWidget({
     Key? key,
     required this.companion,
-    this.size = 350, // 🔧 TAMAÑO BASE AUMENTADO (antes 300)
+    this.size = 350,
     this.isInteracting = false,
     this.currentAction,
   }) : super(key: key);
@@ -64,34 +64,34 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     
     // 🦘 Animación de rebote (cuando interactúa)
     _bounceController = AnimationController(
-      duration: const Duration(milliseconds: 3000), // 🔧 DURACIÓN AUMENTADA
+      duration: const Duration(milliseconds: 3000),
       vsync: this,
     );
     _bounceAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _bounceController, curve: Curves.elasticOut),
     );
     
-    // 💕 Animación de corazones (amor) - MEJORADA
+    // 💕 Animación de corazones (amor)
     _heartController = AnimationController(
-      duration: const Duration(milliseconds: 3000), // 🔧 MÁS LARGA
+      duration: const Duration(milliseconds: 3000),
       vsync: this,
     );
     _heartAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _heartController, curve: Curves.easeOut),
     );
     
-    // 🍎 Animación de alimentación - MEJORADA
+    // 🍎 Animación de alimentación
     _feedController = AnimationController(
-      duration: const Duration(milliseconds: 6500), // 🔧 MÁS LARGA
+      duration: const Duration(milliseconds: 6500),
       vsync: this,
     );
     _feedAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _feedController, curve: Curves.easeInOut),
     );
     
-    // 😊 Animación de felicidad - MEJORADA
+    // 😊 Animación de felicidad
     _happyController = AnimationController(
-      duration: const Duration(milliseconds: 6000), // 🔧 MÁS LARGA
+      duration: const Duration(milliseconds: 6000),
       vsync: this,
     );
     _happyAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -110,7 +110,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   
   void _startBlinkTimer() {
     _blinkTimer = Timer.periodic(
-      Duration(milliseconds: Random().nextInt(3000) + 2000), // 2-5 segundos
+      Duration(milliseconds: Random().nextInt(3000) + 2000),
       (timer) {
         if (mounted && !_isBlinking && !widget.isInteracting) {
           _blink();
@@ -144,7 +144,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   }
   
   void _handleInteraction() {
-    // 🦘 Rebote universal MÁS VISIBLE
+    // 🦘 Rebote universal
     _bounceController.forward().then((_) {
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) _bounceController.reverse();
@@ -159,7 +159,6 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   }
   
   void _handleLoveAction() {
-    // 🔧 CANCELAR TIMERS ANTERIORES PARA EVITAR CONFLICTOS
     _actionTimer?.cancel();
     
     setState(() {
@@ -167,7 +166,6 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       _isHappy = true;
     });
     
-    // 🎨 Animación de corazones mejorada
     _heartController.reset();
     _heartController.forward().then((_) {
       _heartController.reverse().then((_) {
@@ -179,7 +177,6 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       });
     });
     
-    // 😊 Animación de felicidad MÁS VISIBLE
     _happyController.reset();
     _happyController.forward().then((_) {
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -187,14 +184,12 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       });
     });
     
-    // ⏰ Mantener feliz por MÁS TIEMPO
-    _actionTimer = Timer(const Duration(milliseconds: 4000), () { // 🔧 4 SEGUNDOS
+    _actionTimer = Timer(const Duration(milliseconds: 4000), () {
       if (mounted) setState(() => _isHappy = false);
     });
   }
   
   void _handleFeedAction() {
-    // 🔧 CANCELAR TIMERS ANTERIORES PARA EVITAR CONFLICTOS
     _actionTimer?.cancel();
     
     setState(() {
@@ -202,7 +197,6 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       _isHappy = true;
     });
     
-    // 🍎 Animación de alimentación MÁS VISIBLE
     _feedController.reset();
     _feedController.forward().then((_) {
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -216,7 +210,6 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       });
     });
     
-    // 😊 Animación de felicidad SIMULTÁNEA
     _happyController.reset();
     _happyController.forward().then((_) {
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -224,13 +217,12 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       });
     });
     
-    // ⏰ Mantener feliz por MÁS TIEMPO después de comer
-    _actionTimer = Timer(const Duration(milliseconds: 4000), () { // 🔧 4 SEGUNDOS
+    _actionTimer = Timer(const Duration(milliseconds: 4000), () {
       if (mounted) setState(() => _isHappy = false);
     });
   }
   
-  // 🔧 MÉTODO PARA OBTENER LA IMAGEN DE LA MASCOTA
+  // 🔧 MÉTODO PARA OBTENER SOLO LA IMAGEN DE LA MASCOTA (SIN FONDO)
   String get _petImagePath {
     final baseName = '${widget.companion.type.name}_${widget.companion.stage.name}';
     
@@ -239,107 +231,87 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       return 'assets/images/companions/animations/${baseName}_closed.png';
     }
     
-    // 🍎 Comiendo - PRIORIDAD ALTA
+    // 🍎 Comiendo
     if (_isFeeding && widget.isInteracting) {
       return 'assets/images/companions/animations/${baseName}_eating.png';
     }
     
-    // 😊 Feliz por interacción - PRIORIDAD MEDIA
+    // 😊 Feliz por interacción
     if (_isHappy && widget.isInteracting) {
       return 'assets/images/companions/animations/${baseName}_happy.png';
     }
     
-    // 🔧 Imagen normal
+    // 🔧 Imagen normal DE LA MASCOTA SOLAMENTE
     return 'assets/images/companions/${baseName}.png';
   }
-  
-  // 🔧 FONDO ESPECÍFICO POR TIPO
-  String get _backgroundImagePath {
-    switch (widget.companion.type) {
-      case CompanionType.dexter:
-        return 'assets/images/companions/backgrounds/dexter_bg.png';
-      case CompanionType.elly:
-        return 'assets/images/companions/backgrounds/elly_bg.png';
-      case CompanionType.paxolotl:
-        return 'assets/images/companions/backgrounds/paxolotl_bg.png';
-      case CompanionType.yami:
-        return 'assets/images/companions/backgrounds/yami_bg.png';
-    }
-  }
 
-  // 🔧 TAMAÑO ESPECÍFICO MEJORADO PARA CADA COMPAÑERO
+  // 🔧 TAMAÑO ESPECÍFICO PARA CADA COMPAÑERO
   double get _getCompanionSpecificSize {
-    // 🔧 TAMAÑOS BASE MÁS GRANDES PARA TODAS LAS MASCOTAS
     double baseMultiplier = 1.0;
     
-    // 🔧 MULTIPLICADOR POR ETAPA
+    // Multiplicador por etapa
     switch (widget.companion.stage) {
       case CompanionStage.baby:
-        baseMultiplier = 1.0; // 🔧 BEBÉS MANTIENEN TAMAÑO BASE
+        baseMultiplier = 1.0;
         break;
       case CompanionStage.young:
-        baseMultiplier = 1.15; // 🔧 JÓVENES 15% MÁS GRANDES
+        baseMultiplier = 1.15;
         break;
       case CompanionStage.adult:
-        baseMultiplier = 1.3; // 🔧 ADULTOS 30% MÁS GRANDES
+        baseMultiplier = 1.3;
         break;
     }
     
-    // 🔧 AJUSTES ESPECÍFICOS POR TIPO
+    // Ajustes específicos por tipo
     switch (widget.companion.type) {
       case CompanionType.yami:
-        // 🐆 YAMI ES NATURALMENTE MÁS GRANDE
         if (widget.companion.stage == CompanionStage.adult) {
-          baseMultiplier = 1.5; // 🔧 50% MÁS GRANDE
+          baseMultiplier = 1.5;
         } else if (widget.companion.stage == CompanionStage.young) {
-          baseMultiplier = 1.3; // 🔧 30% MÁS GRANDE
+          baseMultiplier = 1.3;
         }
         break;
         
       case CompanionType.elly:
-        // 🐼 ELLY TAMBIÉN ES GRANDE
         if (widget.companion.stage == CompanionStage.adult) {
-          baseMultiplier = 1.4; // 🔧 40% MÁS GRANDE
+          baseMultiplier = 1.4;
         } else if (widget.companion.stage == CompanionStage.young) {
-          baseMultiplier = 1.25; // 🔧 25% MÁS GRANDE
+          baseMultiplier = 1.25;
         }
         break;
         
       case CompanionType.dexter:
-        // 🐶 DEXTER ES PEQUEÑO PERO NO TANTO
         if (widget.companion.stage == CompanionStage.baby) {
-          baseMultiplier = 0.95; // 🔧 SOLO 5% MÁS PEQUEÑO
+          baseMultiplier = 0.95;
         }
         break;
         
       case CompanionType.paxolotl:
-        // 🦎 PAXOLOTL MANTIENE PROPORCIONES NORMALES
         break;
     }
     
     return widget.size * baseMultiplier;
   }
 
-  // 🔧 POSICIÓN ESPECÍFICA MEJORADA
+  // 🔧 POSICIÓN ESPECÍFICA
   Offset get _getCompanionOffset {
     switch (widget.companion.type) {
       case CompanionType.yami:
         if (widget.companion.stage == CompanionStage.adult) {
-          return const Offset(-60, -10); // 🔧 YAMI ADULTA HACIA IZQUIERDA Y ARRIBA
+          return const Offset(-60, -10);
         } else if (widget.companion.stage == CompanionStage.young) {
-          return const Offset(-30, -5); // 🔧 YAMI JOVEN LIGERAMENTE HACIA IZQUIERDA
+          return const Offset(-30, -5);
         }
         break;
         
       case CompanionType.elly:
         if (widget.companion.stage == CompanionStage.adult) {
-          return const Offset(-20, -5); // 🔧 ELLY ADULTA LIGERAMENTE HACIA IZQUIERDA
+          return const Offset(-20, -5);
         }
         break;
         
       case CompanionType.dexter:
       case CompanionType.paxolotl:
-        // 🔧 POSICIÓN CENTRAL NORMAL
         break;
     }
     
@@ -348,7 +320,6 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   
   @override
   Widget build(BuildContext context) {
-    // 🎯 USAR EL TAMAÑO ESPECÍFICO Y POSICIÓN
     final companionSize = _getCompanionSpecificSize;
     final companionOffset = _getCompanionOffset;
     
@@ -358,35 +329,25 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 🏞️ FONDO CON IMAGEN
+          // 🔧 SIN FONDO - SOLO TRANSPARENTE O COLOR SUAVE
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Image.asset(
-                  _backgroundImagePath,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: _getDefaultGradient(),
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    );
-                  },
+                // 🔧 FONDO TRANSPARENTE O GRADIENTE MUY SUAVE
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withOpacity(0.1),
+                    Colors.white.withOpacity(0.05),
+                  ],
                 ),
+                borderRadius: BorderRadius.circular(20),
               ),
             ),
           ),
           
-          // 🐾 MASCOTA CON ANIMACIONES MEJORADAS
+          // 🐾 MASCOTA SOLA CON ANIMACIONES
           AnimatedBuilder(
             animation: Listenable.merge([
               _bounceAnimation, 
@@ -400,24 +361,25 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
                   companionOffset.dy + 
                   // 🌸 Flotación sutil
                   (sin(_floatingAnimation.value * pi * 2) * 4) + 
-                  // 🦘 Rebote MÁS VISIBLE
-                  (_bounceAnimation.value * -15) + // 🔧 REBOTE MÁS GRANDE
+                  // 🦘 Rebote
+                  (_bounceAnimation.value * -15) +
                   // 😊 Movimiento de felicidad
                   (sin(_happyAnimation.value * pi * 4) * 2)
                 ),
                 child: Transform.scale(
                   scale: 1.0 + 
-                         (_bounceAnimation.value * 0.12) + // 🔧 ESCALA MÁS GRANDE
-                         (_happyAnimation.value * 0.08) + // 🔧 FELICIDAD MÁS VISIBLE
-                         (sin(_floatingAnimation.value * pi * 2) * 0.02), // 🔧 RESPIRACIÓN SUTIL
+                         (_bounceAnimation.value * 0.12) +
+                         (_happyAnimation.value * 0.08) +
+                         (sin(_floatingAnimation.value * pi * 2) * 0.02),
                   child: Container(
                     width: companionSize,
                     height: companionSize,
+                    // 🔧 SOLO LA MASCOTA, SIN FONDO
                     child: Image.asset(
                       _petImagePath,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
-                        // 🔧 FALLBACK mejorado
+                        debugPrint('🔧 Error loading pet image: ${_petImagePath}');
                         if (_isBlinking || _isHappy || _isFeeding) {
                           final normalPath = 'assets/images/companions/${widget.companion.type.name}_${widget.companion.stage.name}.png';
                           return Image.asset(
@@ -437,29 +399,29 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
             },
           ),
           
-          // 💕 CORAZONES FLOTANTES MÁS VISIBLES
+          // 💕 CORAZONES FLOTANTES
           if (_showHearts)
             AnimatedBuilder(
               animation: _heartAnimation,
               builder: (context, child) {
                 return Stack(
-                  children: List.generate(6, (index) { // 🔧 MÁS CORAZONES
+                  children: List.generate(6, (index) {
                     final angle = (index * pi * 2) / 6;
-                    final radius = 50 + (_heartAnimation.value * 80); // 🔧 RADIO MÁS GRANDE
+                    final radius = 50 + (_heartAnimation.value * 80);
                     final opacity = (1.0 - _heartAnimation.value).clamp(0.0, 1.0);
                     
                     return Positioned(
                       left: (widget.size / 2) + cos(angle + _heartAnimation.value * pi) * radius,
                       top: (widget.size / 2) + sin(angle + _heartAnimation.value * pi) * radius - 
-                          (_heartAnimation.value * 100), // 🔧 MOVIMIENTO MÁS GRANDE
+                          (_heartAnimation.value * 100),
                       child: Transform.scale(
-                        scale: 0.8 + (_heartAnimation.value * 1.2), // 🔧 ESCALA MÁS GRANDE
+                        scale: 0.8 + (_heartAnimation.value * 1.2),
                         child: Opacity(
                           opacity: opacity,
                           child: Icon(
                             Icons.favorite,
                             color: Colors.red.withOpacity(0.9),
-                            size: 20 + (_heartAnimation.value * 16), // 🔧 TAMAÑO MÁS GRANDE
+                            size: 20 + (_heartAnimation.value * 16),
                           ),
                         ),
                       ),
@@ -469,23 +431,23 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
               },
             ),
           
-          // 🍎 EFECTOS DE ALIMENTACIÓN MÁS VISIBLES
+          // 🍎 EFECTOS DE ALIMENTACIÓN
           if (_isFeeding)
             AnimatedBuilder(
               animation: _feedAnimation,
               builder: (context, child) {
                 return Positioned(
-                  top: 30 - (_feedAnimation.value * 60), // 🔧 MOVIMIENTO MÁS GRANDE
+                  top: 30 - (_feedAnimation.value * 60),
                   child: Opacity(
                     opacity: (1.0 - _feedAnimation.value).clamp(0.0, 1.0),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Transform.scale(
-                          scale: 1.0 + (_feedAnimation.value * 0.6), // 🔧 ESCALA MÁS GRANDE
+                          scale: 1.0 + (_feedAnimation.value * 0.6),
                           child: const Text(
                             '🍎',
-                            style: TextStyle(fontSize: 28), // 🔧 TAMAÑO MÁS GRANDE
+                            style: TextStyle(fontSize: 28),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -493,7 +455,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
                           scale: 1.0 + (_feedAnimation.value * 0.6),
                           child: const Text(
                             '🥕',
-                            style: TextStyle(fontSize: 24), // 🔧 TAMAÑO MÁS GRANDE
+                            style: TextStyle(fontSize: 24),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -501,7 +463,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
                           scale: 1.0 + (_feedAnimation.value * 0.6),
                           child: const Text(
                             '🥬',
-                            style: TextStyle(fontSize: 22), // 🔧 TAMAÑO MÁS GRANDE
+                            style: TextStyle(fontSize: 22),
                           ),
                         ),
                       ],
@@ -511,14 +473,13 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
               },
             ),
           
-          // ✨ EFECTOS DE FELICIDAD MÁS VISIBLES
+          // ✨ EFECTOS DE FELICIDAD
           if (_isHappy && widget.isInteracting)
             AnimatedBuilder(
               animation: _happyAnimation,
               builder: (context, child) {
                 return Stack(
                   children: [
-                    // ✨ ESTRELLAS PRINCIPALES
                     Positioned(
                       top: 20 - (_happyAnimation.value * 40),
                       left: widget.size / 2 - 15,
@@ -527,12 +488,11 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
                         child: Text(
                           '✨',
                           style: TextStyle(
-                            fontSize: 24 + (_happyAnimation.value * 12), // 🔧 MÁS GRANDE
+                            fontSize: 24 + (_happyAnimation.value * 12),
                           ),
                         ),
                       ),
                     ),
-                    // ⭐ ESTRELLAS SECUNDARIAS
                     Positioned(
                       top: 25 - (_happyAnimation.value * 35),
                       left: widget.size / 2 + 20,
@@ -568,7 +528,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     );
   }
   
-  // 🔧 PLACEHOLDER MEJORADO
+  // 🔧 PLACEHOLDER MEJORADO SOLO PARA LA MASCOTA
   Widget _buildEnhancedPlaceholder() {
     return Container(
       decoration: BoxDecoration(
@@ -632,7 +592,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '🎨 Imagen personalizada no encontrada',
+              '🎨 Solo PNG de mascota',
               style: TextStyle(
                 fontSize: 10,
                 color: Colors.orange[700],
@@ -644,20 +604,6 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
         ],
       ),
     );
-  }
-  
-  // Métodos auxiliares (sin cambios)
-  List<Color> _getDefaultGradient() {
-    switch (widget.companion.type) {
-      case CompanionType.dexter:
-        return [Colors.brown[200]!, Colors.brown[400]!];
-      case CompanionType.elly:
-        return [Colors.green[200]!, Colors.green[400]!];
-      case CompanionType.paxolotl:
-        return [Colors.cyan[200]!, Colors.cyan[400]!];
-      case CompanionType.yami:
-        return [Colors.purple[200]!, Colors.purple[400]!];
-    }
   }
   
   Color _getCompanionColor() {
