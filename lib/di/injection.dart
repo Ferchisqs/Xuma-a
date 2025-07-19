@@ -502,6 +502,64 @@ void _verifyDependencies() {
     throw Exception('Cannot resolve ContentRemoteDataSource: $e');
   }
   
+  // 🆕 TEST ESPECÍFICO PARA ENDPOINT DE MEDIA FILES
+  try {
+    final mediaDataSource = getIt<MediaRemoteDataSource>();
+    print('🧪 [INJECTION] Testing media files endpoint resolution...');
+    
+    // Test con un ID de ejemplo (este fallará pero debe mostrar los logs correctos)
+    mediaDataSource.getFileMediaResponse('test-file-id-123').then((response) {
+      print('🧪 [INJECTION] Media test completed - Response: ${response?.toString() ?? "null"}');
+    }).catchError((error) {
+      print('🧪 [INJECTION] Media test completed with expected error: $error');
+    });
+    
+    print('✅ [INJECTION] Media files endpoint test initiated');
+  } catch (e) {
+    print('❌ [INJECTION] ERROR in media files endpoint test: $e');
+  }
+  
+  print('🔍 [INJECTION] === VERIFICATION COMPLETED ===');
+
+  
+  // Test de resolución para TopicContentsCubit
+  try {
+    final testCubit = getIt<TopicContentsCubit>();
+    print('✅ [INJECTION] TopicContentsCubit can be resolved successfully');
+    testCubit.close(); // Cerrar el cubit de prueba
+  } catch (e) {
+    print('❌ [INJECTION] ERROR resolving TopicContentsCubit: $e');
+    throw Exception('Cannot resolve TopicContentsCubit: $e');
+  }
+  
+  // Test de resolución para NewsCubit
+  try {
+    final testNewsCubit = getIt<NewsCubit>();
+    print('✅ [INJECTION] NewsCubit can be resolved successfully');
+    testNewsCubit.close(); // Cerrar el cubit de prueba
+  } catch (e) {
+    print('❌ [INJECTION] ERROR resolving NewsCubit: $e');
+    throw Exception('Cannot resolve NewsCubit: $e');
+  }
+  
+  // 🆕 Test de resolución para MediaRemoteDataSource
+  try {
+    final testMediaDataSource = getIt<MediaRemoteDataSource>();
+    print('✅ [INJECTION] MediaRemoteDataSource can be resolved successfully');
+  } catch (e) {
+    print('❌ [INJECTION] ERROR resolving MediaRemoteDataSource: $e');
+    throw Exception('Cannot resolve MediaRemoteDataSource: $e');
+  }
+  
+  // 🆕 Test de resolución para ContentRemoteDataSource CON MEDIA
+  try {
+    final testContentDataSource = getIt<ContentRemoteDataSource>();
+    print('✅ [INJECTION] ContentRemoteDataSource can be resolved successfully WITH MEDIA');
+  } catch (e) {
+    print('❌ [INJECTION] ERROR resolving ContentRemoteDataSource: $e');
+    throw Exception('Cannot resolve ContentRemoteDataSource: $e');
+  }
+  
   print('🔍 [INJECTION] === VERIFICATION COMPLETED ===');
 }
 
