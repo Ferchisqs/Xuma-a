@@ -1,3 +1,4 @@
+// lib/features/companion/data/repositories/companion_repository_impl.dart - COMPLETO
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/utils/either.dart';
