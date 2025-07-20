@@ -1,6 +1,4 @@
-// 🔧 ARREGLO DEL ERROR DEL PROVIDER
-// lib/features/companion/presentation/pages/companion_shop_page.dart
-
+// lib/features/companion/presentation/pages/companion_shop_page.dart - API CONECTADA
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../di/injection.dart';
@@ -14,12 +12,17 @@ class CompanionShopPage extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    debugPrint('🏪 [SHOP_PAGE] Creando CompanionShopPage');
+    debugPrint('🏪 [SHOP_PAGE] === INICIALIZANDO TIENDA CON API ===');
     
     return BlocProvider(
       create: (context) {
-        debugPrint('🏪 [SHOP_PAGE] Creando CompanionShopCubit');
-        return getIt<CompanionShopCubit>()..loadShop();
+        debugPrint('🚀 [SHOP_PAGE] Creando cubit conectado a API');
+        final cubit = getIt<CompanionShopCubit>();
+        
+        // 🔥 CARGAR TIENDA DESDE TU API
+        cubit.loadShop();
+        
+        return cubit;
       },
       child: const _CompanionShopView(),
     );
@@ -40,8 +43,8 @@ class _CompanionShopViewState extends State<_CompanionShopView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this); // Todos + 4 tipos
-    debugPrint('🏪 [SHOP_VIEW] TabController inicializado');
+    _tabController = TabController(length: 5, vsync: this);
+    debugPrint('🏪 [SHOP_VIEW] Vista inicializada');
   }
   
   @override
@@ -56,80 +59,110 @@ class _CompanionShopViewState extends State<_CompanionShopView>
       backgroundColor: Colors.grey[100],
       body: BlocConsumer<CompanionShopCubit, CompanionShopState>(
         listener: (context, state) {
-          debugPrint('🏪 [SHOP_VIEW] Estado cambió a: ${state.runtimeType}');
+          debugPrint('🏪 [SHOP_VIEW] Estado cambió: ${state.runtimeType}');
           
           if (state is CompanionShopError) {
             debugPrint('❌ [SHOP_VIEW] Error: ${state.message}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message),
+                content: Row(
+                  children: [
+                    const Icon(Icons.error, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(state.message)),
+                  ],
+                ),
                 backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
+                action: SnackBarAction(
+                  label: 'REINTENTAR',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    debugPrint('🔄 [SHOP_VIEW] Reintentando carga...');
+                    context.read<CompanionShopCubit>().loadShop();
+                  },
+                ),
               ),
             );
           } else if (state is CompanionShopPurchaseSuccess) {
-            debugPrint('✅ [SHOP_VIEW] Compra exitosa: ${state.message}');
+            debugPrint('🎉 [SHOP_VIEW] Adopción exitosa: ${state.message}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message),
+                content: Row(
+                  children: [
+                    const Icon(Icons.pets, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(state.message)),
+                  ],
+                ),
                 backgroundColor: Colors.green,
+                duration: const Duration(seconds: 4),
               ),
             );
           }
         },
         builder: (context, state) {
-          debugPrint('🏪 [SHOP_VIEW] Construyendo UI para estado: ${state.runtimeType}');
+          debugPrint('🏪 [SHOP_VIEW] Construyendo UI: ${state.runtimeType}');
           
           if (state is CompanionShopLoading) {
-            return const _LoadingView();
+            return _buildLoadingView();
           } else if (state is CompanionShopError) {
-            return _ErrorView(
-              message: state.message,
-              onRetry: () {
-                debugPrint('🔄 [SHOP_VIEW] Retry presionado');
-                context.read<CompanionShopCubit>().loadShop();
-              },
-            );
+            return _buildErrorView(state.message, context);
           } else if (state is CompanionShopLoaded) {
-            debugPrint('✅ [SHOP_VIEW] Mostrando tienda cargada');
-            return _LoadedView(
-              state: state,
-              tabController: _tabController,
-            );
+            debugPrint('✅ [SHOP_VIEW] === MOSTRANDO TIENDA CARGADA ===');
+            debugPrint('💰 [SHOP_VIEW] Puntos usuario: ${state.userStats.availablePoints}');
+            debugPrint('🛍️ [SHOP_VIEW] Mascotas en tienda: ${state.purchasableCompanions.length}');
+            return _buildLoadedView(state, context);
           } else if (state is CompanionShopPurchasing) {
-            debugPrint('⏳ [SHOP_VIEW] Mostrando estado de compra');
-            return _PurchasingView(companion: state.companion);
+            return _buildPurchasingView(state.companion);
           }
           
-          return const _LoadingView();
+          return _buildLoadingView();
         },
+      ),
+      // 🔧 BOTÓN FLOTANTE PARA TESTING API
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _testApiConnection(context),
+        backgroundColor: Colors.blue,
+        icon: const Icon(Icons.api, color: Colors.white),
+        label: const Text(
+          'Test API',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
-}
-
-class _LoadingView extends StatelessWidget {
-  const _LoadingView({Key? key}) : super(key: key);
   
-  @override
-  Widget build(BuildContext context) {
-    debugPrint('🔄 [SHOP] Mostrando loading view');
-    
+  Widget _buildLoadingView() {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tienda de Compañeros'),
+        title: const Text('🏪 Tienda de Mascotas'),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
+        centerTitle: true,
       ),
       body: const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
+            CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+            ),
+            SizedBox(height: 20),
             Text(
-              'Cargando tienda...',
+              '🚀 Conectando con API...',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Cargando mascotas desde el servidor',
+              style: TextStyle(
+                fontSize: 14,
                 color: Colors.grey,
               ),
             ),
@@ -138,27 +171,14 @@ class _LoadingView extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
   
-  const _ErrorView({
-    Key? key,
-    required this.message,
-    required this.onRetry,
-  }) : super(key: key);
-  
-  @override
-  Widget build(BuildContext context) {
-    debugPrint('❌ [SHOP] Mostrando error view: $message');
-    
+  Widget _buildErrorView(String message, BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tienda de Compañeros'),
+        title: const Text('🏪 Tienda de Mascotas'),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
+        centerTitle: true,
       ),
       body: Center(
         child: Padding(
@@ -166,33 +186,82 @@ class _ErrorView extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red[300],
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red[200]!),
+                ),
+                child: Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red[400],
+                ),
               ),
-              const SizedBox(height: 16),
+              
+              const SizedBox(height: 20),
+              
               Text(
-                'Error al cargar la tienda',
+                '❌ Error de Conexión',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey[700],
+                  color: Colors.red[700],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
+              
+              const SizedBox(height: 12),
+              
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
+              
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: onRetry,
-                child: const Text('Reintentar'),
+              
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        debugPrint('🔄 Reintentando conexión API...');
+                        context.read<CompanionShopCubit>().loadShop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reintentar'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _testApiConnection(context),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.blue),
+                        foregroundColor: Colors.blue,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.api),
+                      label: const Text('Test API'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -200,31 +269,26 @@ class _ErrorView extends StatelessWidget {
       ),
     );
   }
-}
-
-class _PurchasingView extends StatelessWidget {
-  final CompanionEntity companion;
   
-  const _PurchasingView({Key? key, required this.companion}) : super(key: key);
-  
-  @override
-  Widget build(BuildContext context) {
-    debugPrint('⏳ [SHOP] Mostrando purchasing view para: ${companion.displayName}');
-    
+  Widget _buildPurchasingView(CompanionEntity companion) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tienda de Compañeros'),
+        title: const Text('🏪 Tienda de Mascotas'),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
+        centerTitle: true,
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(),
+            const CircularProgressIndicator(
+              strokeWidth: 4,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+            ),
             const SizedBox(height: 24),
             Text(
-              'Comprando a ${companion.displayName}...',
+              '🐾 Adoptando a ${companion.displayName}...',
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -232,7 +296,7 @@ class _PurchasingView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Por favor espera un momento',
+              'Conectando con la API, por favor espera',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
@@ -243,38 +307,22 @@ class _PurchasingView extends StatelessWidget {
       ),
     );
   }
-}
-
-class _LoadedView extends StatelessWidget {
-  final CompanionShopLoaded state;
-  final TabController tabController;
   
-  const _LoadedView({
-    Key? key,
-    required this.state,
-    required this.tabController,
-  }) : super(key: key);
-  
-  @override
-  Widget build(BuildContext context) {
-    debugPrint('✅ [SHOP] Mostrando loaded view');
-    debugPrint('🛍️ [SHOP] Compañeros disponibles: ${state.purchasableCompanions.length}');
-    debugPrint('💰 [SHOP] Puntos usuario: ${state.userStats.availablePoints}');
-    
+  Widget _buildLoadedView(CompanionShopLoaded state, BuildContext context) {
     return Scaffold(
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
-            // App Bar con puntos disponibles
+            // App Bar con información de la API
             SliverAppBar(
-              expandedHeight: 120,
+              expandedHeight: 140,
               floating: false,
               pinned: true,
               backgroundColor: Colors.deepPurple,
               foregroundColor: Colors.white,
               flexibleSpace: FlexibleSpaceBar(
                 title: const Text(
-                  'Tienda de Compañeros',
+                  '🏪 Tienda API',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -294,9 +342,10 @@ class _LoadedView extends StatelessWidget {
                   child: SafeArea(
                     child: Padding(
                       padding: const EdgeInsets.only(top: 60, right: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
+                          // Puntos del usuario desde la API
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
@@ -319,6 +368,32 @@ class _LoadedView extends StatelessWidget {
                               ],
                             ),
                           ),
+                          
+                          const SizedBox(height: 4),
+                          
+                          // Indicador de conexión API
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.cloud_done, color: Colors.green[300], size: 12),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'API Conectada',
+                                  style: TextStyle(
+                                    color: Colors.green[300],
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -327,11 +402,11 @@ class _LoadedView extends StatelessWidget {
               ),
             ),
             
-            // Tab Bar
+            // Tab Bar para categorías
             SliverPersistentHeader(
               delegate: _SliverTabBarDelegate(
                 TabBar(
-                  controller: tabController,
+                  controller: _tabController,
                   isScrollable: true,
                   indicatorColor: Colors.deepPurple,
                   labelColor: Colors.deepPurple,
@@ -350,12 +425,12 @@ class _LoadedView extends StatelessWidget {
           ];
         },
         body: TabBarView(
-          controller: tabController,
+          controller: _tabController,
           children: [
             // Todos los compañeros
             _buildCompanionGrid(context, state.purchasableCompanions, state),
             
-            // Por tipo
+            // Por tipo específico
             _buildCompanionGrid(
               context,
               state.purchasableCompanions.where((c) => c.type == CompanionType.dexter).toList(),
@@ -390,18 +465,46 @@ class _LoadedView extends StatelessWidget {
     debugPrint('🏗️ [SHOP] Construyendo grid con ${companions.length} compañeros');
     
     if (companions.isEmpty) {
-      debugPrint('📦 [SHOP] No hay compañeros en esta categoría');
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.pets, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(Icons.pets, size: 64, color: Colors.grey[400]),
+            ),
+            const SizedBox(height: 16),
             Text(
-              'No hay compañeros disponibles en esta categoría',
+              'No hay mascotas en esta categoría',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Intenta en otra pestaña o recarga la tienda',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                debugPrint('🔄 Recargando tienda...');
+                context.read<CompanionShopCubit>().refreshShop();
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Recargar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
               ),
             ),
           ],
@@ -411,32 +514,78 @@ class _LoadedView extends StatelessWidget {
     
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.75,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-        ),
-        itemCount: companions.length,
-        itemBuilder: (context, index) {
-          final companion = companions[index];
-          debugPrint('🏪 [SHOP] Creando item $index: ${companion.displayName}');
+      child: Column(
+        children: [
+          // Header con información de la API
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '🚀 Datos desde tu API: ${companions.length} mascotas disponibles',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${state.userStats.availablePoints}★',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.blue[700],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
           
-          return BlocBuilder<CompanionShopCubit, CompanionShopState>(
-            builder: (builderContext, builderState) {
-              // 🔧 USAR EL CONTEXT DEL BUILDER QUE TIENE ACCESO AL CUBIT
-              return CompanionShopItemWidget(
-                companion: companion,
-                userPoints: state.userStats.availablePoints,
-                onPurchase: () {
-                  debugPrint('🎯 [SHOP] onPurchase llamado para: ${companion.displayName}');
-                  _showPurchaseDialog(builderContext, companion, state);
-                },
-              );
-            },
-          );
-        },
+          // Grid de mascotas
+          Expanded(
+            child: GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.75,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: companions.length,
+              itemBuilder: (context, index) {
+                final companion = companions[index];
+                debugPrint('🏪 [SHOP] Renderizando: ${companion.displayName} (${companion.purchasePrice}★)');
+                
+                return BlocBuilder<CompanionShopCubit, CompanionShopState>(
+                  builder: (builderContext, builderState) {
+                    return CompanionShopItemWidget(
+                      companion: companion,
+                      userPoints: state.userStats.availablePoints,
+                      onPurchase: () {
+                        debugPrint('🎯 [SHOP] === INICIANDO ADOPCIÓN ===');
+                        debugPrint('🐾 [SHOP] Mascota: ${companion.displayName}');
+                        debugPrint('💰 [SHOP] Precio: ${companion.purchasePrice}★');
+                        debugPrint('👤 [SHOP] Puntos usuario: ${state.userStats.availablePoints}');
+                        
+                        _showPurchaseDialog(builderContext, companion, state);
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -446,9 +595,10 @@ class _LoadedView extends StatelessWidget {
     CompanionEntity companion,
     CompanionShopLoaded state,
   ) {
-    debugPrint('🛒 [SHOP] Mostrando diálogo de compra para: ${companion.displayName}');
-    debugPrint('💰 [SHOP] Puntos disponibles: ${state.userStats.availablePoints}');
-    debugPrint('🏷️ [SHOP] Precio del compañero: ${companion.purchasePrice}');
+    debugPrint('🛒 [SHOP] === MOSTRANDO DIÁLOGO DE ADOPCIÓN ===');
+    debugPrint('🐾 [SHOP] Mascota: ${companion.displayName}');
+    debugPrint('💰 [SHOP] Precio: ${companion.purchasePrice}★');
+    debugPrint('👤 [SHOP] Puntos disponibles: ${state.userStats.availablePoints}');
     
     showDialog(
       context: context,
@@ -456,13 +606,57 @@ class _LoadedView extends StatelessWidget {
         companion: companion,
         userPoints: state.userStats.availablePoints,
         onConfirm: () {
-          debugPrint('✅ [SHOP] Usuario confirmó compra desde diálogo: ${companion.displayName}');
-          Navigator.of(dialogContext).pop();
-          debugPrint('🚀 [SHOP] Enviando compra al cubit...');
+          debugPrint('✅ [SHOP] === ADOPCIÓN CONFIRMADA ===');
+          debugPrint('🚀 [SHOP] Enviando adopción a API...');
           
-          // 🔧 USAR EL CONTEXT CORRECTO PARA ACCEDER AL CUBIT
+          Navigator.of(dialogContext).pop();
+          
+          // 🚀 LLAMADA A LA API DE ADOPCIÓN
           context.read<CompanionShopCubit>().purchaseCompanion(companion);
         },
+      ),
+    );
+  }
+  
+  void _testApiConnection(BuildContext context) {
+    debugPrint('🧪 [SHOP] === INICIANDO TEST DE API ===');
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.api, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('🧪 Test de API'),
+          ],
+        ),
+        content: const Text(
+          '¿Quieres probar la conexión con tu API?\n\n'
+          'Esto verificará:\n'
+          '• Conexión con el servidor\n'
+          '• Endpoint de tienda\n'
+          '• Datos de usuario\n'
+          '• Mascotas disponibles',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              debugPrint('🧪 [SHOP] Ejecutando test de API...');
+              context.read<CompanionShopCubit>().testApiConnection();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+            child: const Text(
+              'Probar API',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }

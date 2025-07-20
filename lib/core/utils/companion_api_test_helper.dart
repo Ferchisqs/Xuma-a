@@ -105,7 +105,7 @@ class CompanionApiTestHelper {
       // 2. Probar tienda de mascotas
       debugPrint('🧪 [API_TEST] Probando getStoreCompanions...');
       try {
-        final storeCompanions = await remoteDataSource.getStoreCompanions();
+        final storeCompanions = await remoteDataSource.getStoreCompanions(userId: '');
         debugPrint('✅ [API_TEST] Store Companions: ${storeCompanions.length} encontradas');
         
         if (storeCompanions.isNotEmpty) {

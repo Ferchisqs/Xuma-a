@@ -1,4 +1,4 @@
-// lib/features/companion/presentation/cubit/companion_shop_cubit.dart - CORREGIDO
+// lib/features/companion/presentation/cubit/companion_shop_cubit.dart - API CONECTADA
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -72,7 +72,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
   final GetCompanionShopUseCase getCompanionShopUseCase;
   final PurchaseCompanionUseCase purchaseCompanionUseCase;
   
-  static const String _defaultUserId = 'user_123';
+  static const String _defaultUserId = 'user_123'; // 🔥 CAMBIAR POR USUARIO REAL
   
   CompanionShopCubit({
     required this.getCompanionShopUseCase,
@@ -81,27 +81,33 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
   
   Future<void> loadShop() async {
     try {
-      debugPrint('🏪 [SHOP_CUBIT] === CARGANDO TIENDA ===');
+      debugPrint('🏪 [SHOP_CUBIT] === CARGANDO TIENDA DESDE API ===');
       emit(CompanionShopLoading());
       
+      // 🚀 LLAMADA A TU API DE TIENDA
       final result = await getCompanionShopUseCase(
         const GetCompanionShopParams(userId: _defaultUserId),
       );
       
       result.fold(
         (failure) {
-          debugPrint('❌ [SHOP_CUBIT] Error cargando tienda: ${failure.message}');
+          debugPrint('❌ [SHOP_CUBIT] Error API: ${failure.message}');
           emit(CompanionShopError(message: failure.message));
         },
         (shopData) {
-          debugPrint('✅ [SHOP_CUBIT] Tienda cargada exitosamente');
-          debugPrint('📊 [SHOP_CUBIT] Stats: ${shopData.userStats.availablePoints} puntos disponibles');
-          debugPrint('🐾 [SHOP_CUBIT] Total companions: ${shopData.availableCompanions.length}');
+          debugPrint('✅ [SHOP_CUBIT] === TIENDA API CARGADA EXITOSAMENTE ===');
+          debugPrint('💰 [SHOP_CUBIT] Puntos usuario desde API: ${shopData.userStats.availablePoints}');
+          debugPrint('🛍️ [SHOP_CUBIT] Mascotas desde API: ${shopData.availableCompanions.length}');
           
-          // 🔧 FILTRAR COMPANIONS PARA TIENDA
+          // Log de cada mascota para debugging
+          for (final companion in shopData.availableCompanions) {
+            debugPrint('🐾 [SHOP_CUBIT] - ${companion.displayName}: ${companion.purchasePrice}★ (owned: ${companion.isOwned})');
+          }
+          
+          // 🔧 FILTRAR MASCOTAS PARA LA TIENDA
           final purchasableCompanions = _filterCompanionsForShop(shopData.availableCompanions);
           
-          debugPrint('🛍️ [SHOP_CUBIT] Companions en tienda: ${purchasableCompanions.length}');
+          debugPrint('🛒 [SHOP_CUBIT] Mascotas en tienda después de filtrar: ${purchasableCompanions.length}');
           
           emit(CompanionShopLoaded(
             availableCompanions: shopData.availableCompanions,
@@ -111,60 +117,40 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
         },
       );
     } catch (e) {
-      debugPrint('❌ [SHOP_CUBIT] Error inesperado cargando tienda: $e');
+      debugPrint('❌ [SHOP_CUBIT] Error inesperado: $e');
       emit(CompanionShopError(message: 'Error inesperado: ${e.toString()}'));
     }
   }
   
   Future<void> purchaseCompanion(CompanionEntity companion) async {
-    debugPrint('🛒 [SHOP_CUBIT] === INICIANDO COMPRA ===');
-    debugPrint('🛒 [SHOP_CUBIT] Companion: ${companion.displayName}');
-    debugPrint('🛒 [SHOP_CUBIT] ID: ${companion.id}');
-    debugPrint('🛒 [SHOP_CUBIT] Precio: ${companion.purchasePrice}');
-    debugPrint('🛒 [SHOP_CUBIT] Estado actual: ${state.runtimeType}');
+    debugPrint('🛒 [SHOP_CUBIT] === INICIANDO ADOPCIÓN VIA API ===');
+    debugPrint('🐾 [SHOP_CUBIT] Mascota: ${companion.displayName}');
+    debugPrint('🆔 [SHOP_CUBIT] ID: ${companion.id}');
+    debugPrint('💰 [SHOP_CUBIT] Precio: ${companion.purchasePrice}★');
     
     if (state is! CompanionShopLoaded) {
-      debugPrint('❌ [SHOP_CUBIT] Estado incorrecto para compra: ${state.runtimeType}');
+      debugPrint('❌ [SHOP_CUBIT] Estado incorrecto para adopción');
       emit(CompanionShopError(message: 'Error: Estado de tienda no válido'));
       return;
     }
     
     final currentState = state as CompanionShopLoaded;
     
-    // 🔧 VERIFICAR SI ES DEXTER JOVEN (YA DESBLOQUEADO)
-    if (_isDexterYoung(companion)) {
-      debugPrint('🔧 [SHOP_CUBIT] Dexter joven detectado - ya desbloqueado');
-      emit(CompanionShopPurchaseSuccess(
-        purchasedCompanion: companion,
-        message: '¡${companion.displayName} ya está desbloqueado! Es tu primer compañero.',
-      ));
-      
-      // Recargar inmediatamente
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (!isClosed) loadShop();
-      });
-      return;
-    }
-    
-    debugPrint('💰 [SHOP_CUBIT] Puntos disponibles: ${currentState.userStats.availablePoints}');
-    debugPrint('🏷️ [SHOP_CUBIT] Precio del companion: ${companion.purchasePrice}');
-    
-    // Verificar puntos suficientes
+    // 🔧 VERIFICAR PUNTOS SUFICIENTES
     if (currentState.userStats.availablePoints < companion.purchasePrice) {
       final faltantes = companion.purchasePrice - currentState.userStats.availablePoints;
-      debugPrint('❌ [SHOP_CUBIT] PUNTOS INSUFICIENTES');
-      debugPrint('💸 [SHOP_CUBIT] Faltan: $faltantes puntos');
+      debugPrint('❌ [SHOP_CUBIT] Puntos insuficientes: faltan $faltantes');
       emit(CompanionShopError(
         message: 'No tienes suficientes puntos. Necesitas $faltantes puntos más.',
       ));
       return;
     }
     
-    debugPrint('⏳ [SHOP_CUBIT] Cambiando estado a PURCHASING...');
+    debugPrint('⏳ [SHOP_CUBIT] Enviando adopción a API...');
     emit(CompanionShopPurchasing(companion: companion));
     
     try {
-      debugPrint('🚀 [SHOP_CUBIT] Llamando al USE CASE...');
+      // 🚀 LLAMADA A TU API DE ADOPCIÓN
       final result = await purchaseCompanionUseCase(
         PurchaseCompanionParams(
           userId: _defaultUserId,
@@ -174,38 +160,50 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
       
       result.fold(
         (failure) {
-          debugPrint('❌ [SHOP_CUBIT] ERROR EN USE CASE: ${failure.message}');
-          debugPrint('🔍 [SHOP_CUBIT] Tipo de falla: ${failure.runtimeType}');
-          emit(CompanionShopError(message: failure.message));
+          debugPrint('❌ [SHOP_CUBIT] Error en adopción API: ${failure.message}');
+          
+          // 🔧 MENSAJES DE ERROR ESPECÍFICOS
+          String userMessage;
+          if (failure.message.contains('ya adoptada') || failure.message.contains('already owned')) {
+            userMessage = 'Ya tienes esta mascota';
+          } else if (failure.message.contains('insufficient') || failure.message.contains('insuficientes')) {
+            userMessage = 'No tienes suficientes puntos';
+          } else if (failure.message.contains('not found') || failure.message.contains('no encontrada')) {
+            userMessage = 'Esta mascota no está disponible';
+          } else {
+            userMessage = 'Error adoptando mascota. Intenta de nuevo.';
+          }
+          
+          emit(CompanionShopError(message: userMessage));
         },
-        (purchasedCompanion) {
-          debugPrint('✅ [SHOP_CUBIT] === COMPRA EXITOSA ===');
-          debugPrint('🎉 [SHOP_CUBIT] Companion adquirido: ${purchasedCompanion.displayName}');
-          debugPrint('✨ [SHOP_CUBIT] isOwned: ${purchasedCompanion.isOwned}');
+        (adoptedCompanion) {
+          debugPrint('🎉 [SHOP_CUBIT] === ADOPCIÓN EXITOSA ===');
+          debugPrint('✅ [SHOP_CUBIT] Mascota adoptada: ${adoptedCompanion.displayName}');
+          debugPrint('🏠 [SHOP_CUBIT] Ahora es tuya: ${adoptedCompanion.isOwned}');
           
           emit(CompanionShopPurchaseSuccess(
-            purchasedCompanion: purchasedCompanion,
-            message: '¡Felicidades! Has adquirido a ${purchasedCompanion.displayName}',
+            purchasedCompanion: adoptedCompanion,
+            message: '¡Felicidades! Has adoptado a ${adoptedCompanion.displayName} 🎉',
           ));
           
-          // 🔧 RECARGAR TIENDA DESPUÉS DE COMPRA EXITOSA
-          debugPrint('🔄 [SHOP_CUBIT] RECARGANDO TIENDA...');
+          // 🔧 RECARGAR TIENDA DESPUÉS DE ADOPCIÓN
+          debugPrint('🔄 [SHOP_CUBIT] Recargando tienda después de adopción...');
           _reloadShopAfterPurchase();
         },
       );
     } catch (e) {
-      debugPrint('❌ [SHOP_CUBIT] Excepción durante compra: $e');
-      emit(CompanionShopError(message: 'Error inesperado durante la compra: ${e.toString()}'));
+      debugPrint('❌ [SHOP_CUBIT] Excepción durante adopción: $e');
+      emit(CompanionShopError(message: 'Error inesperado durante la adopción: ${e.toString()}'));
     }
   }
 
-  /// Recargar tienda después de una compra exitosa
+  /// Recargar tienda después de una adopción exitosa
   Future<void> _reloadShopAfterPurchase() async {
     try {
-      debugPrint('🔄 [SHOP_CUBIT] Iniciando recarga post-compra...');
+      debugPrint('🔄 [SHOP_CUBIT] Iniciando recarga post-adopción...');
       
-      // Pequeña pausa para asegurar que el cache se actualice
-      await Future.delayed(const Duration(milliseconds: 800));
+      // Pausa para asegurar que la API se actualice
+      await Future.delayed(const Duration(milliseconds: 1000));
       
       if (isClosed) {
         debugPrint('⚠️ [SHOP_CUBIT] Cubit cerrado, saltando recarga');
@@ -226,33 +224,17 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     debugPrint('🔧 [SHOP_CUBIT] Filtrando companions para tienda');
     
     final filtered = allCompanions.where((companion) {
-      // 🔧 MOSTRAR DEXTER JOVEN COMO "YA DESBLOQUEADO" (NO PARA COMPRAR)
-      if (_isDexterYoung(companion)) {
-        debugPrint('🔧 [SHOP_CUBIT] Dexter joven: mostrar como desbloqueado');
-        return true; // Mostrar pero con indicador especial
-      }
-      
-      // Mostrar solo los no poseídos
+      // 🔧 MOSTRAR SOLO LOS NO POSEÍDOS
       final shouldShow = !companion.isOwned;
       debugPrint('🔧 [SHOP_CUBIT] ${companion.displayName}: ${shouldShow ? "MOSTRAR" : "OCULTAR"} (owned: ${companion.isOwned})');
       return shouldShow;
     }).toList();
     
-    // Ordenar por tipo y luego por etapa
-    filtered.sort((a, b) {
-      final typeComparison = a.type.index.compareTo(b.type.index);
-      if (typeComparison != 0) return typeComparison;
-      return a.stage.index.compareTo(b.stage.index);
-    });
+    // Ordenar por precio (más baratos primero)
+    filtered.sort((a, b) => a.purchasePrice.compareTo(b.purchasePrice));
     
     debugPrint('🔧 [SHOP_CUBIT] Companions filtrados: ${filtered.length}');
     return filtered;
-  }
-  
-  /// Verificar si un companion es Dexter joven
-  bool _isDexterYoung(CompanionEntity companion) {
-    return companion.type == CompanionType.dexter && 
-           companion.stage == CompanionStage.young;
   }
   
   void refreshShop() {
@@ -271,27 +253,10 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     return [];
   }
   
-  // Método para obtener companions por rango de precio
-  List<CompanionEntity> getCompanionsByPriceRange(int minPrice, int maxPrice) {
-    if (state is CompanionShopLoaded) {
-      final currentState = state as CompanionShopLoaded;
-      return currentState.purchasableCompanions
-          .where((c) => c.purchasePrice >= minPrice && c.purchasePrice <= maxPrice)
-          .toList();
-    }
-    return [];
-  }
-  
   // Verificar si un companion puede ser comprado
   bool canAffordCompanion(CompanionEntity companion) {
     if (state is CompanionShopLoaded) {
       final currentState = state as CompanionShopLoaded;
-      
-      // Dexter joven siempre es "asequible" (ya desbloqueado)
-      if (_isDexterYoung(companion)) {
-        return true;
-      }
-      
       return currentState.userStats.availablePoints >= companion.purchasePrice;
     }
     return false;
@@ -299,10 +264,6 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
   
   // Obtener mensaje para companion específico
   String getCompanionMessage(CompanionEntity companion) {
-    if (_isDexterYoung(companion)) {
-      return '¡Ya desbloqueado!';
-    }
-    
     if (companion.isOwned) {
       return 'Ya lo tienes';
     }
@@ -318,5 +279,41 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     }
     
     return 'Cargando...';
+  }
+
+  // 🔥 MÉTODO PARA TESTING/DEBUG DE LA API
+  Future<void> testApiConnection() async {
+    try {
+      debugPrint('🧪 [SHOP_CUBIT] === TESTING API CONNECTION ===');
+      
+      emit(CompanionShopLoading());
+      
+      final result = await getCompanionShopUseCase(
+        const GetCompanionShopParams(userId: _defaultUserId),
+      );
+      
+      result.fold(
+        (failure) {
+          debugPrint('❌ [API_TEST] Error: ${failure.message}');
+          emit(CompanionShopError(message: 'API Test Failed: ${failure.message}'));
+        },
+        (shopData) {
+          debugPrint('✅ [API_TEST] === API CONNECTION SUCCESSFUL ===');
+          debugPrint('📊 [API_TEST] Data received:');
+          debugPrint('   - User points: ${shopData.userStats.availablePoints}');
+          debugPrint('   - Total companions: ${shopData.availableCompanions.length}');
+          debugPrint('   - Owned companions: ${shopData.userStats.ownedCompanions}');
+          
+          emit(CompanionShopLoaded(
+            availableCompanions: shopData.availableCompanions,
+            purchasableCompanions: _filterCompanionsForShop(shopData.availableCompanions),
+            userStats: shopData.userStats,
+          ));
+        },
+      );
+    } catch (e) {
+      debugPrint('❌ [API_TEST] Exception: $e');
+      emit(CompanionShopError(message: 'API Test Exception: ${e.toString()}'));
+    }
   }
 }

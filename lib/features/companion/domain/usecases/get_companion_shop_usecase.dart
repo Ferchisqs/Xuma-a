@@ -1,3 +1,4 @@
+// lib/features/companion/domain/usecases/get_companion_shop_usecase.dart - API CONECTADA
 import 'package:injectable/injectable.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../../../core/utils/either.dart';
@@ -30,6 +31,7 @@ class GetCompanionShopUseCase implements UseCase<CompanionShopData, GetCompanion
 
   @override
   Future<Either<Failure, CompanionShopData>> call(GetCompanionShopParams params) async {
+    // 🚀 OBTENER TIENDA DESDE TU API
     final companionsResult = await repository.getAvailableCompanions();
     final statsResult = await repository.getCompanionStats(params.userId);
 
