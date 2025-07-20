@@ -244,9 +244,10 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       debugPrint('👤 [API] User ID: $userId');
       debugPrint('🆔 [API] Pet ID: $petId');
       debugPrint('🏷️ [API] Nickname: ${nickname ?? "Sin nickname"}');
+
       
       // 🔥 ENDPOINT CORRECTO BASADO EN TU CURL
-      final endpoint = '/api/gamification/pets/$petId/adopt';
+      final endpoint = '/api/gamification/pets/$userId/adopt';
       debugPrint('🔗 [API] Endpoint: $endpoint');
       
       final requestBody = {

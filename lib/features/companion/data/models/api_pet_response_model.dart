@@ -1,4 +1,4 @@
-// lib/features/companion/data/models/api_pet_response_model.dart
+// lib/features/companion/data/models/api_pet_response_model.dart - CON PET ID
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 import '../../domain/entities/companion_entity.dart';
@@ -56,7 +56,7 @@ class ApiPetResponseModel {
 
   Map<String, dynamic> toJson() => _$ApiPetResponseModelToJson(this);
 
-  /// 🔧 MAPEO PRINCIPAL: Convierte cada etapa de evolución a CompanionModel
+  /// 🔧 MAPEO PRINCIPAL: Convierte cada etapa de evolución a CompanionModel CON PET ID
   List<CompanionModel> toCompanionModels() {
     final companions = <CompanionModel>[];
     
@@ -66,8 +66,9 @@ class ApiPetResponseModel {
       final companionType = _mapNameToCompanionType(name);
       
       debugPrint('🔄 [API_MAPPING] Mapeando: $name etapa ${stage.stage} -> ${companionType.name}_${companionStage.name}');
+      debugPrint('🆔 [API_MAPPING] Pet ID: $petId');
       
-      final companion = CompanionModel(
+      final companion = CompanionModelWithPetId(
         id: '${companionType.name}_${companionStage.name}',
         type: companionType,
         stage: companionStage,
@@ -86,6 +87,7 @@ class ApiPetResponseModel {
         evolutionPrice: _calculateEvolutionPrice(companionStage),
         unlockedAnimations: _getAnimationsForStage(companionStage),
         createdAt: DateTime.now(),
+        petId: petId, // 🔥 INCLUIR EL PET ID DE LA API
       );
       
       companions.add(companion);
@@ -167,6 +169,139 @@ class ApiPetResponseModel {
       case CompanionStage.adult:
         return ['idle', 'blink', 'happy', 'eating', 'loving', 'excited'];
     }
+  }
+}
+
+// 🆕 COMPANION MODEL EXTENDIDO CON PET ID
+class CompanionModelWithPetId extends CompanionModel {
+  final String petId; // 🔥 PET ID DE LA API
+  
+  const CompanionModelWithPetId({
+    required String id,
+    required CompanionType type,
+    required CompanionStage stage,
+    required String name,
+    required String description,
+    required int level,
+    required int experience,
+    required int happiness,
+    required int hunger,
+    required int energy,
+    required bool isOwned,
+    required bool isSelected,
+    DateTime? purchasedAt,
+    DateTime? lastFeedTime,
+    DateTime? lastLoveTime,
+    required CompanionMood currentMood,
+    required int purchasePrice,
+    required int evolutionPrice,
+    required List<String> unlockedAnimations,
+    required DateTime createdAt,
+    required this.petId, // 🔥 NUEVO CAMPO
+  }) : super(
+          id: id,
+          type: type,
+          stage: stage,
+          name: name,
+          description: description,
+          level: level,
+          experience: experience,
+          happiness: happiness,
+          hunger: hunger,
+          energy: energy,
+          isOwned: isOwned,
+          isSelected: isSelected,
+          purchasedAt: purchasedAt,
+          lastFeedTime: lastFeedTime,
+          lastLoveTime: lastLoveTime,
+          currentMood: currentMood,
+          purchasePrice: purchasePrice,
+          evolutionPrice: evolutionPrice,
+          unlockedAnimations: unlockedAnimations,
+          createdAt: createdAt,
+        );
+
+  @override
+  Map<String, dynamic> toJson() {
+    final json = super.toJson();
+    json['petId'] = petId; // 🔥 INCLUIR PET ID EN JSON
+    return json;
+  }
+
+  factory CompanionModelWithPetId.fromJson(Map<String, dynamic> json) {
+    final baseCompanion = CompanionModel.fromJson(json);
+    return CompanionModelWithPetId(
+      id: baseCompanion.id,
+      type: baseCompanion.type,
+      stage: baseCompanion.stage,
+      name: baseCompanion.name,
+      description: baseCompanion.description,
+      level: baseCompanion.level,
+      experience: baseCompanion.experience,
+      happiness: baseCompanion.happiness,
+      hunger: baseCompanion.hunger,
+      energy: baseCompanion.energy,
+      isOwned: baseCompanion.isOwned,
+      isSelected: baseCompanion.isSelected,
+      purchasedAt: baseCompanion.purchasedAt,
+      lastFeedTime: baseCompanion.lastFeedTime,
+      lastLoveTime: baseCompanion.lastLoveTime,
+      currentMood: baseCompanion.currentMood,
+      purchasePrice: baseCompanion.purchasePrice,
+      evolutionPrice: baseCompanion.evolutionPrice,
+      unlockedAnimations: baseCompanion.unlockedAnimations,
+      createdAt: baseCompanion.createdAt,
+      petId: json['petId'] as String? ?? '', // 🔥 EXTRAER PET ID
+    );
+  }
+
+  @override
+  CompanionModelWithPetId copyWith({
+    String? id,
+    CompanionType? type,
+    CompanionStage? stage,
+    String? name,
+    String? description,
+    int? level,
+    int? experience,
+    int? happiness,
+    int? hunger,
+    int? energy,
+    bool? isOwned,
+    bool? isSelected,
+    DateTime? purchasedAt,
+    DateTime? lastFeedTime,
+    DateTime? lastLoveTime,
+    CompanionMood? currentMood,
+    int? purchasePrice,
+    int? evolutionPrice,
+    List<String>? unlockedAnimations,
+    DateTime? createdAt,
+    String? petId, // 🔥 NUEVO PARÁMETRO
+  }) {
+    return CompanionModelWithPetId(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      stage: stage ?? this.stage,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      level: level ?? this.level,
+      experience: experience ?? this.experience,
+      happiness: happiness ?? this.happiness,
+      hunger: hunger ?? this.hunger,
+      energy: energy ?? this.energy,
+      isOwned: isOwned ?? this.isOwned,
+      isSelected: isSelected ?? this.isSelected,
+      purchasedAt: purchasedAt ?? this.purchasedAt,
+      lastFeedTime: lastFeedTime ?? this.lastFeedTime,
+      lastLoveTime: lastLoveTime ?? this.lastLoveTime,
+      currentMood: currentMood ?? this.currentMood,
+      purchasePrice: purchasePrice ?? this.purchasePrice,
+      evolutionPrice: evolutionPrice ?? this.evolutionPrice,
+      unlockedAnimations: unlockedAnimations ?? this.unlockedAnimations,
+      createdAt: createdAt ?? this.createdAt,
+      petId: petId ?? this.petId, // 🔥 INCLUIR PET ID
+    );
   }
 }
 
