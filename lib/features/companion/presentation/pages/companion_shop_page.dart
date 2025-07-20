@@ -1,6 +1,7 @@
 // lib/features/companion/presentation/pages/companion_shop_page.dart - API CONECTADA
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:xuma_a/features/companion/presentation/widgets/adoption_test_widget.dart';
 import '../../../../di/injection.dart';
 import '../../domain/entities/companion_entity.dart';
 import '../cubit/companion_shop_cubit.dart';
@@ -308,7 +309,7 @@ class _CompanionShopViewState extends State<_CompanionShopView>
     );
   }
   
-  Widget _buildLoadedView(CompanionShopLoaded state, BuildContext context) {
+ Widget _buildLoadedView(CompanionShopLoaded state, BuildContext context) {
     return Scaffold(
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -400,6 +401,11 @@ class _CompanionShopViewState extends State<_CompanionShopView>
                   ),
                 ),
               ),
+            ),
+            
+            // 🆕 WIDGET DE TESTING DE ADOPCIÓN
+            const SliverToBoxAdapter(
+              child: AdoptionTestWidget(),
             ),
             
             // Tab Bar para categorías

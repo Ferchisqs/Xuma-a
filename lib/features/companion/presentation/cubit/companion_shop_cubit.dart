@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
+import 'package:xuma_a/core/services/token_manager.dart';
+import 'package:xuma_a/di/injection.dart';
 import '../../domain/entities/companion_entity.dart';
 import '../../domain/entities/companion_stats_entity.dart';
 import '../../domain/usecases/get_companion_shop_usecase.dart';
@@ -123,8 +125,9 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     }
   }
   
+  
   Future<void> purchaseCompanion(CompanionEntity companion) async {
-    debugPrint('🛒 [SHOP_CUBIT] === INICIANDO ADOPCIÓN VIA API ===');
+    debugPrint('🛒 [SHOP_CUBIT] === INICIANDO ADOPCIÓN VIA API REAL ===');
     debugPrint('🐾 [SHOP_CUBIT] Mascota: ${companion.displayName}');
     debugPrint('🆔 [SHOP_CUBIT] ID: ${companion.id}');
     debugPrint('💰 [SHOP_CUBIT] Precio: ${companion.purchasePrice}★');
@@ -151,11 +154,28 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     emit(CompanionShopPurchasing(companion: companion));
     
     try {
-      // 🔥 CAMBIO PRINCIPAL: YA NO PASAR USER ID HARDCODEADO
+      // 🚀 OBTENER USER ID REAL DEL TOKEN
+      final tokenManager = getIt<TokenManager>();
+      final userId = await tokenManager.getUserId();
+      
+      if (userId == null || userId.isEmpty) {
+        debugPrint('❌ [SHOP_CUBIT] Sin usuario autenticado');
+        emit(CompanionShopError(message: 'Debes estar autenticado para adoptar mascotas'));
+        return;
+      }
+      
+      debugPrint('👤 [SHOP_CUBIT] Usuario autenticado: $userId');
+      
+      // 🔥 MAPEAR COMPANION ID A PET ID DE LA API
+      final petId = _mapCompanionIdToPetId(companion.id);
+      debugPrint('🔄 [SHOP_CUBIT] Mapeando ${companion.id} -> $petId');
+      
+      // 🚀 LLAMADA A LA API REAL DE ADOPCIÓN
       final result = await purchaseCompanionUseCase(
         PurchaseCompanionParams(
-          userId: '', // ← String vacío, se obtiene internamente del token
-          companionId: companion.id, // Se mapeará al pet ID real internamente
+          userId: userId,
+          companionId: petId, // Pet ID de tu API
+          nickname: companion.displayName,
         ),
       );
       
@@ -163,14 +183,20 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
         (failure) {
           debugPrint('❌ [SHOP_CUBIT] Error en adopción API: ${failure.message}');
           
-          // 🔧 MENSAJES DE ERROR ESPECÍFICOS
+          // 🔧 MENSAJES DE ERROR ESPECÍFICOS PARA TU API
           String userMessage;
-          if (failure.message.contains('ya adoptada') || failure.message.contains('already owned')) {
+          if (failure.message.contains('ya adoptada') || 
+              failure.message.contains('already adopted')) {
             userMessage = 'Ya tienes esta mascota';
-          } else if (failure.message.contains('insufficient') || failure.message.contains('insuficientes')) {
+          } else if (failure.message.contains('insufficient') || 
+                     failure.message.contains('insuficientes')) {
             userMessage = 'No tienes suficientes puntos';
-          } else if (failure.message.contains('not found') || failure.message.contains('no encontrada')) {
+          } else if (failure.message.contains('not found') || 
+                     failure.message.contains('no encontrada')) {
             userMessage = 'Esta mascota no está disponible';
+          } else if (failure.message.contains('authentication') || 
+                     failure.message.contains('token')) {
+            userMessage = 'Error de autenticación. Reinicia sesión.';
           } else {
             userMessage = 'Error adoptando mascota. Intenta de nuevo.';
           }
@@ -181,6 +207,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
           debugPrint('🎉 [SHOP_CUBIT] === ADOPCIÓN EXITOSA ===');
           debugPrint('✅ [SHOP_CUBIT] Mascota adoptada: ${adoptedCompanion.displayName}');
           debugPrint('🏠 [SHOP_CUBIT] Ahora es tuya: ${adoptedCompanion.isOwned}');
+          debugPrint('📅 [SHOP_CUBIT] Adoptada el: ${adoptedCompanion.purchasedAt}');
           
           emit(CompanionShopPurchaseSuccess(
             purchasedCompanion: adoptedCompanion,
@@ -198,13 +225,53 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     }
   }
 
+  // 🔧 MAPEAR COMPANION ID INTERNO A PET ID DE TU API
+  String _mapCompanionIdToPetId(String companionId) {
+    debugPrint('🔄 [SHOP_CUBIT] Mapeando companion ID: $companionId');
+    
+    // 🔧 AQUÍ NECESITAS DEFINIR EL MAPEO SEGÚN TU API
+    // Ejemplo de mapeo basado en tu estructura:
+    
+    final Map<String, String> companionToPetIdMap = {
+      // Dexter
+      'dexter_baby': '51a56248-17b5-4861-af11-335f9724f9eb',  // 🔧 USAR TU PET ID REAL
+      'dexter_young': 'dexter-young-pet-id',
+      'dexter_adult': 'dexter-adult-pet-id',
+      
+      // Elly (Panda)
+      'elly_baby': 'elly-baby-pet-id',
+      'elly_young': 'elly-young-pet-id', 
+      'elly_adult': 'elly-adult-pet-id',
+      
+      // Paxolotl (Ajolote)
+      'paxolotl_baby': 'paxolotl-baby-pet-id',
+      'paxolotl_young': 'paxolotl-young-pet-id',
+      'paxolotl_adult': 'paxolotl-adult-pet-id',
+      
+      // Yami (Jaguar)
+      'yami_baby': 'yami-baby-pet-id',
+      'yami_young': 'yami-young-pet-id',
+      'yami_adult': 'yami-adult-pet-id',
+    };
+    
+    final petId = companionToPetIdMap[companionId];
+    
+    if (petId != null) {
+      debugPrint('✅ [SHOP_CUBIT] Mapeo encontrado: $companionId -> $petId');
+      return petId;
+    } else {
+      debugPrint('⚠️ [SHOP_CUBIT] No hay mapeo para: $companionId, usando ID original');
+      return companionId;
+    }
+  }
+
   /// Recargar tienda después de una adopción exitosa
   Future<void> _reloadShopAfterPurchase() async {
     try {
       debugPrint('🔄 [SHOP_CUBIT] Iniciando recarga post-adopción...');
       
       // Pausa para asegurar que la API se actualice
-      await Future.delayed(const Duration(milliseconds: 1000));
+      await Future.delayed(const Duration(milliseconds: 1500));
       
       if (isClosed) {
         debugPrint('⚠️ [SHOP_CUBIT] Cubit cerrado, saltando recarga');
@@ -217,6 +284,49 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
       debugPrint('✅ [SHOP_CUBIT] Recarga completada');
     } catch (e) {
       debugPrint('❌ [SHOP_CUBIT] Error durante recarga: $e');
+    }
+  }
+Future<void> testAdoptionWithRealApi(String petId) async {
+    try {
+      debugPrint('🧪 [SHOP_CUBIT] === TESTING ADOPCIÓN CON API REAL ===');
+      debugPrint('🆔 [SHOP_CUBIT] Pet ID: $petId');
+      
+      emit(CompanionShopLoading());
+      
+      final tokenManager = getIt<TokenManager>();
+      final userId = await tokenManager.getUserId();
+      
+      if (userId == null) {
+        emit(CompanionShopError(message: 'No hay usuario autenticado para test'));
+        return;
+      }
+      
+      debugPrint('👤 [SHOP_CUBIT] Testing con usuario: $userId');
+      
+      final result = await purchaseCompanionUseCase(
+        PurchaseCompanionParams(
+          userId: userId,
+          companionId: petId,
+          nickname: 'Mascota de Prueba',
+        ),
+      );
+      
+      result.fold(
+        (failure) {
+          debugPrint('❌ [TEST] Error en adopción: ${failure.message}');
+          emit(CompanionShopError(message: 'Test falló: ${failure.message}'));
+        },
+        (adoptedCompanion) {
+          debugPrint('✅ [TEST] Adopción exitosa: ${adoptedCompanion.displayName}');
+          emit(CompanionShopPurchaseSuccess(
+            purchasedCompanion: adoptedCompanion,
+            message: 'Test exitoso: ${adoptedCompanion.displayName} adoptado',
+          ));
+        },
+      );
+    } catch (e) {
+      debugPrint('❌ [TEST] Excepción: $e');
+      emit(CompanionShopError(message: 'Test exception: ${e.toString()}'));
     }
   }
 

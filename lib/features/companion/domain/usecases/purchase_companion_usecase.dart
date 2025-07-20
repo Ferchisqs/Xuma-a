@@ -9,14 +9,16 @@ import '../repositories/companion_repository.dart';
 class PurchaseCompanionParams extends Equatable {
   final String userId;
   final String companionId;
+  final String? nickname;   
 
   const PurchaseCompanionParams({
     required this.userId,
     required this.companionId,
+    this.nickname,
   });
 
   @override
-  List<Object> get props => [userId, companionId];
+  List<Object?> get props => [userId, companionId, nickname];
 }
 
 @injectable
@@ -26,7 +28,12 @@ class PurchaseCompanionUseCase implements UseCase<CompanionEntity, PurchaseCompa
   PurchaseCompanionUseCase(this.repository);
 
   @override
-  Future<Either<Failure, CompanionEntity>> call(PurchaseCompanionParams params) {
-    return repository.purchaseCompanion(params.userId, params.companionId);
+  Future<Either<Failure, CompanionEntity>> call(PurchaseCompanionParams params) async {
+    // 🔥 USAR EL MÉTODO DE ADOPCIÓN ACTUALIZADO
+    return repository.adoptCompanion(
+      userId: params.userId,
+      petId: params.companionId,
+      nickname: params.nickname,
+    );
   }
 }
