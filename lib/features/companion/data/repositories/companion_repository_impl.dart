@@ -282,7 +282,6 @@ class CompanionRepositoryImpl implements CompanionRepository {
         }
 
         try {
-          // 🚀 LLAMADA A LA API REAL DE ADOPCIÓN
           final adoptedCompanion = await remoteDataSource.adoptCompanion(
             userId: realUserId,
             petId: petId,

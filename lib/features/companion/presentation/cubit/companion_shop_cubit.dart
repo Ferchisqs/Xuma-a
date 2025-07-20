@@ -138,7 +138,8 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
         
         // Mapear local ID -> API Pet ID
         _localIdToApiPetId[localId] = apiPetId;
-        
+
+
         // Mapear API Pet ID -> Info del companion
         _apiPetIdToInfo[apiPetId] = {
           'name': companion.name,
@@ -156,11 +157,9 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     debugPrint('✅ [MAPPING] Mapeo dinámico completado: ${_localIdToApiPetId.length} entries');
   }
   
-  // 🔧 EXTRAER API PET ID DESDE EL COMPANION
   String? _extractApiPetIdFromCompanion(CompanionEntity companion) {
     debugPrint('🔍 [MAPPING] Extrayendo Pet ID de: ${companion.id} (${companion.name})');
     
-    // 🔧 OPCIÓN 1: Si es CompanionModelWithPetId (desde API)
     if (companion is CompanionModelWithPetId) {
       debugPrint('✅ [MAPPING] Pet ID encontrado en CompanionModelWithPetId: ${companion.petId}');
       return companion.petId;
@@ -185,41 +184,13 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
       debugPrint('🔍 [MAPPING] ID parece UUID, usando como Pet ID: ${companion.id}');
       return companion.id;
     }
-    
-    // 🔧 OPCIÓN 4: Mapeo manual basado en nombre y tipo (último recurso)
-    final manualPetId = _getManualPetIdMapping(companion);
-    if (manualPetId != null) {
-      debugPrint('🔧 [MAPPING] Pet ID desde mapeo manual: $manualPetId');
-      return manualPetId;
-    }
+  
     
     debugPrint('❌ [MAPPING] No se pudo determinar Pet ID para: ${companion.id}');
     return null;
   }
   
-  // 🔧 MAPEO MANUAL COMO ÚLTIMO RECURSO (si la API no devuelve Pet IDs)
-  String? _getManualPetIdMapping(CompanionEntity companion) {
-    // Este mapeo solo se usa si no se puede extraer el Pet ID dinámicamente
-    final manualMapping = <String, String>{
-      'dexter_baby': 'e0512239-dc32-444f-a354-ef94446e5f1c',
-      'dexter_young': 'e0512239-dc32-444f-a354-ef94446e5f1c',
-      'dexter_adult': 'e0512239-dc32-444f-a354-ef94446e5f1c',
-      
-      'elly_baby': 'ab23c9ee-a63a-4114-aff7-8ef9899b33f6',
-      'elly_young': 'ab23c9ee-a63a-4114-aff7-8ef9899b33f6',
-      'elly_adult': 'ab23c9ee-a63a-4114-aff7-8ef9899b33f6',
-      
-      'paxolotl_baby': 'afdfcdfa-aed6-4320-a8e5-51debbd1bccf',
-      'paxolotl_young': 'afdfcdfa-aed6-4320-a8e5-51debbd1bccf',
-      'paxolotl_adult': 'afdfcdfa-aed6-4320-a8e5-51debbd1bccf',
-      
-      'yami_baby': '19119059-bb47-40e2-8eb5-8cf7a66f21b8',
-      'yami_young': '19119059-bb47-40e2-8eb5-8cf7a66f21b8',
-      'yami_adult': '19119059-bb47-40e2-8eb5-8cf7a66f21b8',
-    };
-    
-    return manualMapping[companion.id];
-  }
+  
   
   Future<void> purchaseCompanion(CompanionEntity companion) async {
     debugPrint('🛒 [SHOP_CUBIT] === INICIANDO ADOPCIÓN REAL ===');
