@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import  '../../../../di/injection.dart';
+import '../../../../di/injection.dart';
 import '../../domain/entities/companion_entity.dart';
 import '../cubit/companion_detail_cubit.dart';
 import '../widgets/companion_animation_widget.dart';
 import '../widgets/companion_evolution_dialog.dart';
 import '../widgets/companion_info_dialog.dart';
+
 class CompanionDetailPage extends StatelessWidget {
   final CompanionEntity companion;
-  
+
   const CompanionDetailPage({
     Key? key,
     required this.companion,
   }) : super(key: key);
-  
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => getIt<CompanionDetailCubit>()..loadCompanion(companion),
+      create: (context) =>
+          getIt<CompanionDetailCubit>()..loadCompanion(companion),
       child: _CompanionDetailView(companion: companion),
     );
   }
@@ -25,12 +27,12 @@ class CompanionDetailPage extends StatelessWidget {
 
 class _CompanionDetailView extends StatelessWidget {
   final CompanionEntity companion;
-  
+
   const _CompanionDetailView({
     Key? key,
     required this.companion,
   }) : super(key: key);
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,7 +53,7 @@ class _CompanionDetailView extends StatelessWidget {
                 backgroundColor: Colors.green,
               ),
             );
-            
+
             if (state.message.contains('evolucionado')) {
               _showEvolutionDialog(context, state.companion);
             }
@@ -60,28 +62,31 @@ class _CompanionDetailView extends StatelessWidget {
         builder: (context, state) {
           final currentCompanion = _getCurrentCompanion(state);
           final isLoading = state is CompanionDetailUpdating;
-          final currentAction = state is CompanionDetailUpdating ? state.action : null;
-          
+          final currentAction =
+              state is CompanionDetailUpdating ? state.action : null;
+
           return Stack(
             children: [
               Column(
                 children: [
                   // 🔧 APP BAR CON BOTÓN DE INFORMACIÓN
                   _buildCustomAppBar(context, currentCompanion),
-                  
+
                   // ÁREA PRINCIPAL DE LA MASCOTA
                   Expanded(
-                    child: _buildPetMainArea(currentCompanion, isLoading, currentAction),
+                    child: _buildPetMainArea(
+                        currentCompanion, isLoading, currentAction),
                   ),
                 ],
               ),
-              
+
               // ACCIONES FLOTANTES EN LA PARTE INFERIOR
               Positioned(
                 bottom: 0,
                 left: 0,
                 right: 0,
-                child: _buildFloatingActions(context, currentCompanion, isLoading, currentAction),
+                child: _buildFloatingActions(
+                    context, currentCompanion, isLoading, currentAction),
               ),
             ],
           );
@@ -89,8 +94,9 @@ class _CompanionDetailView extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildCustomAppBar(BuildContext context, CompanionEntity currentCompanion) {
+
+  Widget _buildCustomAppBar(
+      BuildContext context, CompanionEntity currentCompanion) {
     return Container(
       height: 100,
       decoration: const BoxDecoration(
@@ -110,13 +116,14 @@ class _CompanionDetailView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 18),
+                  icon: const Icon(Icons.arrow_back_ios,
+                      color: Colors.white, size: 18),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
-              
+
               const Spacer(),
-              
+
               // Título
               Text(
                 'COMPAÑERO',
@@ -126,9 +133,9 @@ class _CompanionDetailView extends StatelessWidget {
                   color: Colors.black,
                 ),
               ),
-              
+
               const Spacer(),
-              
+
               // 🆕 BOTÓN DE INFORMACIÓN CON DATOS CURIOSOS Y DEDICATORIA
               Container(
                 width: 40,
@@ -138,8 +145,10 @@ class _CompanionDetailView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.info_outline, color: Colors.blue, size: 20),
-                  onPressed: () => _showCompanionInfo(context, currentCompanion),
+                  icon: const Icon(Icons.info_outline,
+                      color: Colors.blue, size: 20),
+                  onPressed: () =>
+                      _showCompanionInfo(context, currentCompanion),
                 ),
               ),
             ],
@@ -148,8 +157,9 @@ class _CompanionDetailView extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildPetMainArea(CompanionEntity currentCompanion, bool isLoading, String? currentAction) {
+
+  Widget _buildPetMainArea(
+      CompanionEntity currentCompanion, bool isLoading, String? currentAction) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -179,7 +189,7 @@ class _CompanionDetailView extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Puntos en la esquina superior derecha
           Positioned(
             top: 20,
@@ -214,7 +224,7 @@ class _CompanionDetailView extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // 🔧 MASCOTA CON TU FONDO DE IMAGEN
           Positioned.fill(
             child: Padding(
@@ -222,13 +232,16 @@ class _CompanionDetailView extends StatelessWidget {
               child: BlocBuilder<CompanionDetailCubit, CompanionDetailState>(
                 builder: (context, state) {
                   final isInteracting = state is CompanionDetailUpdating;
-                  final currentAction = state is CompanionDetailUpdating ? state.action : null;
-                  
+                  final currentAction =
+                      state is CompanionDetailUpdating ? state.action : null;
+
                   return CompanionAnimationWidget(
                     companion: currentCompanion,
                     size: MediaQuery.of(context).size.width * 0.8,
                     isInteracting: isInteracting,
                     currentAction: currentAction,
+                    showBackground:
+                        true, // 🆕 CON FONDO EN LA PÁGINA DE DETALLE
                   );
                 },
               ),
@@ -238,8 +251,9 @@ class _CompanionDetailView extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildFloatingActions(BuildContext context, CompanionEntity currentCompanion, bool isLoading, String? currentAction) {
+
+  Widget _buildFloatingActions(BuildContext context,
+      CompanionEntity currentCompanion, bool isLoading, String? currentAction) {
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(20),
@@ -261,29 +275,35 @@ class _CompanionDetailView extends StatelessWidget {
           _buildActionButton(
             icon: Icons.restaurant,
             color: Colors.green,
-            onPressed: currentCompanion.needsFood || !isLoading 
-              ? () => context.read<CompanionDetailCubit>().feedCompanion(currentCompanion)
-              : null,
+            onPressed: currentCompanion.needsFood || !isLoading
+                ? () => context
+                    .read<CompanionDetailCubit>()
+                    .feedCompanion(currentCompanion)
+                : null,
             isActive: currentAction == 'feeding',
           ),
-          
+
           // Botón Dar Amor
           _buildActionButton(
             icon: Icons.favorite,
             color: Colors.green,
-            onPressed: currentCompanion.needsLove || !isLoading 
-              ? () => context.read<CompanionDetailCubit>().loveCompanion(currentCompanion)
-              : null,
+            onPressed: currentCompanion.needsLove || !isLoading
+                ? () => context
+                    .read<CompanionDetailCubit>()
+                    .loveCompanion(currentCompanion)
+                : null,
             isActive: currentAction == 'loving',
           ),
-          
+
           // Botón Evolucionar
           _buildActionButton(
             icon: Icons.recycling,
             color: Colors.green,
-            onPressed: currentCompanion.canEvolve && !isLoading 
-              ? () => context.read<CompanionDetailCubit>().evolveCompanion(currentCompanion)
-              : null,
+            onPressed: currentCompanion.canEvolve && !isLoading
+                ? () => context
+                    .read<CompanionDetailCubit>()
+                    .evolveCompanion(currentCompanion)
+                : null,
             isActive: currentAction == 'evolving',
             disabled: !currentCompanion.canEvolve,
           ),
@@ -291,7 +311,7 @@ class _CompanionDetailView extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildActionButton({
     required IconData icon,
     required Color color,
@@ -303,11 +323,11 @@ class _CompanionDetailView extends StatelessWidget {
       width: 60,
       height: 60,
       decoration: BoxDecoration(
-        color: disabled 
-          ? Colors.grey[300]
-          : isActive 
-            ? color.withOpacity(0.8)
-            : color,
+        color: disabled
+            ? Colors.grey[300]
+            : isActive
+                ? color.withOpacity(0.8)
+                : color,
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
@@ -320,23 +340,23 @@ class _CompanionDetailView extends StatelessWidget {
       child: IconButton(
         onPressed: onPressed,
         icon: isActive
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Icon(
+                icon,
+                color: Colors.white,
+                size: 28,
               ),
-            )
-          : Icon(
-              icon,
-              color: Colors.white,
-              size: 28,
-            ),
       ),
     );
   }
-  
+
   // 🆕 MOSTRAR INFORMACIÓN DE LA MASCOTA
   void _showCompanionInfo(BuildContext context, CompanionEntity companion) {
     showDialog(
@@ -344,16 +364,18 @@ class _CompanionDetailView extends StatelessWidget {
       builder: (context) => CompanionInfoDialog(companion: companion),
     );
   }
-  
+
   CompanionEntity _getCurrentCompanion(CompanionDetailState state) {
     if (state is CompanionDetailLoaded) return state.companion;
     if (state is CompanionDetailUpdating) return state.companion;
     if (state is CompanionDetailSuccess) return state.companion;
-    if (state is CompanionDetailError && state.companion != null) return state.companion!;
+    if (state is CompanionDetailError && state.companion != null)
+      return state.companion!;
     return companion;
   }
-  
-  void _showEvolutionDialog(BuildContext context, CompanionEntity evolvedCompanion) {
+
+  void _showEvolutionDialog(
+      BuildContext context, CompanionEntity evolvedCompanion) {
     showDialog(
       context: context,
       barrierDismissible: false,

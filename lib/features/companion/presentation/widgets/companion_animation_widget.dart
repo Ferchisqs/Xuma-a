@@ -8,6 +8,7 @@ class CompanionAnimationWidget extends StatefulWidget {
   final double size;
   final bool isInteracting;
   final String? currentAction;
+  final bool showBackground; // 🆕 NUEVO PARÁMETRO PARA CONTROLAR EL FONDO
   
   const CompanionAnimationWidget({
     Key? key,
@@ -15,6 +16,7 @@ class CompanionAnimationWidget extends StatefulWidget {
     this.size = 350,
     this.isInteracting = false,
     this.currentAction,
+    this.showBackground = false, // 🔧 FALSE POR DEFECTO (PARA TIENDA)
   }) : super(key: key);
   
   @override
@@ -222,7 +224,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     });
   }
   
-  // 🔧 MÉTODO PARA OBTENER SOLO LA IMAGEN DE LA MASCOTA (SIN FONDO)
+  // 🔧 MÉTODO PARA OBTENER IMAGEN DE LA MASCOTA (SIN FONDO)
   String get _petImagePath {
     final baseName = '${widget.companion.type.name}_${widget.companion.stage.name}';
     
@@ -243,6 +245,20 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     
     // 🔧 Imagen normal DE LA MASCOTA SOLAMENTE
     return 'assets/images/companions/${baseName}.png';
+  }
+
+  // 🆕 MÉTODO PARA OBTENER FONDO
+  String get _backgroundImagePath {
+    switch (widget.companion.type) {
+      case CompanionType.dexter:
+        return 'assets/images/companions/backgrounds/dexter_bg.png';
+      case CompanionType.elly:
+        return 'assets/images/companions/backgrounds/panda_bg.png';
+      case CompanionType.paxolotl:
+        return 'assets/images/companions/backgrounds/axolotl_bg.png';
+      case CompanionType.yami:
+        return 'assets/images/companions/backgrounds/jaguar_bg.png';
+    }
   }
 
   // 🔧 TAMAÑO ESPECÍFICO PARA CADA COMPAÑERO
@@ -329,25 +345,60 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 🔧 SIN FONDO - SOLO TRANSPARENTE O COLOR SUAVE
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                // 🔧 FONDO TRANSPARENTE O GRADIENTE MUY SUAVE
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.white.withOpacity(0.1),
-                    Colors.white.withOpacity(0.05),
-                  ],
+          // 🆕 FONDO CONDICIONAL - SOLO SI showBackground ES TRUE
+          if (widget.showBackground)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                borderRadius: BorderRadius.circular(20),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    _backgroundImagePath,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      debugPrint('🔧 Error loading background: $_backgroundImagePath');
+                      // Fondo de gradiente como fallback
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              _getCompanionColor().withOpacity(0.3),
+                              _getCompanionColor().withOpacity(0.1),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
-          ),
           
-          // 🐾 MASCOTA SOLA CON ANIMACIONES
+          // 🔧 SI NO HAY FONDO, USAR TRANSPARENTE/SUAVE
+          if (!widget.showBackground)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  // 🔧 FONDO TRANSPARENTE O GRADIENTE MUY SUAVE
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withOpacity(0.1),
+                      Colors.white.withOpacity(0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
+          
+          // 🐾 MASCOTA CON ANIMACIONES
           AnimatedBuilder(
             animation: Listenable.merge([
               _bounceAnimation, 
@@ -374,12 +425,12 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
                   child: Container(
                     width: companionSize,
                     height: companionSize,
-                    // 🔧 SOLO LA MASCOTA, SIN FONDO
+                    // 🔧 SOLO LA MASCOTA, SIN FONDO ADICIONAL
                     child: Image.asset(
                       _petImagePath,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
-                        debugPrint('🔧 Error loading pet image: ${_petImagePath}');
+                        debugPrint('🔧 Error loading pet image: $_petImagePath');
                         if (_isBlinking || _isHappy || _isFeeding) {
                           final normalPath = 'assets/images/companions/${widget.companion.type.name}_${widget.companion.stage.name}.png';
                           return Image.asset(
@@ -592,7 +643,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '🎨 Solo PNG de mascota',
+              widget.showBackground ? '🖼️ Con fondo' : '🎨 Solo PNG',
               style: TextStyle(
                 fontSize: 10,
                 color: Colors.orange[700],
