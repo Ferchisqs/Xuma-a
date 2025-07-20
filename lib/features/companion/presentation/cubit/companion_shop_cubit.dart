@@ -1,4 +1,4 @@
-// lib/features/companion/presentation/cubit/companion_shop_cubit.dart - API CONECTADA
+// lib/features/companion/presentation/cubit/companion_shop_cubit.dart - VERSIÓN CORREGIDA
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -8,7 +8,7 @@ import '../../domain/entities/companion_stats_entity.dart';
 import '../../domain/usecases/get_companion_shop_usecase.dart';
 import '../../domain/usecases/purchase_companion_usecase.dart';
 
-// States
+// ==================== STATES ====================
 abstract class CompanionShopState extends Equatable {
   const CompanionShopState();
   
@@ -66,13 +66,14 @@ class CompanionShopError extends CompanionShopState {
   List<Object> get props => [message];
 }
 
-// Cubit
+// ==================== CUBIT - VERSIÓN CORREGIDA ====================
 @injectable
 class CompanionShopCubit extends Cubit<CompanionShopState> {
   final GetCompanionShopUseCase getCompanionShopUseCase;
   final PurchaseCompanionUseCase purchaseCompanionUseCase;
   
-  static const String _defaultUserId = 'user_123'; // 🔥 CAMBIAR POR USUARIO REAL
+  // ✅ ELIMINADO: static const String _defaultUserId = 'user_123';
+  // 🔥 AHORA EL USER ID SE OBTIENE INTERNAMENTE DEL TOKEN
   
   CompanionShopCubit({
     required this.getCompanionShopUseCase,
@@ -84,9 +85,9 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
       debugPrint('🏪 [SHOP_CUBIT] === CARGANDO TIENDA DESDE API ===');
       emit(CompanionShopLoading());
       
-      // 🚀 LLAMADA A TU API DE TIENDA
+      // 🔥 CAMBIO PRINCIPAL: YA NO PASAR USER ID - SE OBTIENE INTERNAMENTE
       final result = await getCompanionShopUseCase(
-        const GetCompanionShopParams(userId: _defaultUserId),
+        const GetCompanionShopParams(userId: ''), // ← String vacío, se obtiene internamente del token
       );
       
       result.fold(
@@ -150,11 +151,11 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     emit(CompanionShopPurchasing(companion: companion));
     
     try {
-      // 🚀 LLAMADA A TU API DE ADOPCIÓN
+      // 🔥 CAMBIO PRINCIPAL: YA NO PASAR USER ID HARDCODEADO
       final result = await purchaseCompanionUseCase(
         PurchaseCompanionParams(
-          userId: _defaultUserId,
-          companionId: companion.id,
+          userId: '', // ← String vacío, se obtiene internamente del token
+          companionId: companion.id, // Se mapeará al pet ID real internamente
         ),
       );
       
@@ -281,15 +282,16 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     return 'Cargando...';
   }
 
-  // 🔥 MÉTODO PARA TESTING/DEBUG DE LA API
+  // 🔥 MÉTODO PARA TESTING/DEBUG DE LA API - TAMBIÉN CORREGIDO
   Future<void> testApiConnection() async {
     try {
       debugPrint('🧪 [SHOP_CUBIT] === TESTING API CONNECTION ===');
       
       emit(CompanionShopLoading());
       
+      // 🔥 YA NO USAR USER ID HARDCODEADO EN EL TEST
       final result = await getCompanionShopUseCase(
-        const GetCompanionShopParams(userId: _defaultUserId),
+        const GetCompanionShopParams(userId: ''), // ← Se obtiene internamente del token
       );
       
       result.fold(

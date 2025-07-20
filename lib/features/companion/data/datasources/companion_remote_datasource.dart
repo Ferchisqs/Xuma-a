@@ -24,7 +24,7 @@ class PetStoreResponse {
 
   factory PetStoreResponse.fromJson(Map<String, dynamic> json) {
     return PetStoreResponse(
-      availablePets: (json['available_pets'] as List)
+      availablePets: (json['available_pets'] as List? ?? [])
           .map((pet) => AvailablePet.fromJson(pet))
           .toList(),
       userQuizPoints: json['user_quiz_points'] ?? 0,
@@ -57,7 +57,7 @@ class AvailablePet {
 
   factory AvailablePet.fromJson(Map<String, dynamic> json) {
     return AvailablePet(
-      petId: json['pet_id'] ?? '',
+      petId: json['pet_id'] ?? json['id'] ?? '',
       name: json['name'] ?? '',
       quizPointsCost: json['quiz_points_cost'] ?? 0,
       rarity: json['rarity'] ?? 'common',
@@ -66,6 +66,11 @@ class AvailablePet {
       isOnSale: json['is_on_sale'] ?? false,
       userCanAfford: json['user_can_afford'] ?? false,
     );
+  }
+
+  @override
+  String toString() {
+    return 'AvailablePet{petId: $petId, name: $name, cost: $quizPointsCost, rarity: $rarity}';
   }
 }
 
@@ -89,15 +94,20 @@ class AdoptedPet {
 
   factory AdoptedPet.fromJson(Map<String, dynamic> json) {
     return AdoptedPet(
-      id: json['id'] ?? '',
+      id: json['id'] ?? json['pet_id'] ?? '',
       name: json['name'] ?? '',
-      speciesType: json['species_type'] ?? '',
+      speciesType: json['species_type'] ?? json['type'] ?? '',
       adoptedAt: json['adopted_at'] != null 
-          ? DateTime.parse(json['adopted_at'])
+          ? DateTime.tryParse(json['adopted_at']) 
           : null,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
     );
+  }
+
+  @override
+  String toString() {
+    return 'AdoptedPet{id: $id, name: $name, species: $speciesType, adopted: $adoptedAt}';
   }
 }
 
@@ -135,6 +145,11 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       debugPrint('✅ [API] Respuesta tienda: ${response.statusCode}');
       debugPrint('📊 [API] Data: ${response.data}');
       
+      if (response.data == null || response.data is! Map<String, dynamic>) {
+        debugPrint('❌ [API] Respuesta de tienda inválida');
+        return [];
+      }
+      
       // Parsear respuesta de tu API
       final storeResponse = PetStoreResponse.fromJson(response.data);
       
@@ -145,6 +160,8 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       final companions = <CompanionModel>[];
       
       for (final pet in storeResponse.availablePets) {
+        debugPrint('🔄 [MAPPING] Procesando pet: ${pet.toString()}');
+        
         final companion = _mapApiPetToCompanion(
           pet, 
           userPoints: storeResponse.userQuizPoints,
@@ -154,14 +171,17 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         if (companion != null) {
           companions.add(companion);
           debugPrint('✅ [API] Mapeado: ${companion.displayName} (${pet.quizPointsCost}★)');
+        } else {
+          debugPrint('❌ [API] No se pudo mapear: ${pet.petId}');
         }
       }
       
       debugPrint('🎯 [API] Total companions mapeados: ${companions.length}');
       return companions;
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ [API] Error obteniendo tienda: $e');
+      debugPrint('📍 [API] StackTrace: $stackTrace');
       throw ServerException('Error obteniendo tienda: ${e.toString()}');
     }
   }
@@ -180,6 +200,11 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       
       debugPrint('✅ [API] Respuesta disponibles: ${response.statusCode}');
       
+      if (response.data == null || response.data is! List) {
+        debugPrint('❌ [API] Respuesta de disponibles inválida');
+        return _getDefaultAvailableCompanions();
+      }
+      
       final List<dynamic> petsData = response.data;
       final companions = <CompanionModel>[];
       
@@ -191,11 +216,12 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       }
       
       debugPrint('🌐 [API] Total disponibles: ${companions.length}');
-      return companions;
+      return companions.isEmpty ? _getDefaultAvailableCompanions() : companions;
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ [API] Error obteniendo disponibles: $e');
-      throw ServerException('Error obteniendo mascotas disponibles: ${e.toString()}');
+      debugPrint('📍 [API] StackTrace: $stackTrace');
+      return _getDefaultAvailableCompanions();
     }
   }
 
@@ -214,16 +240,31 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       
       debugPrint('✅ [API] Respuesta usuario: ${response.statusCode}');
       
+      if (response.data == null || response.data is! List) {
+        debugPrint('⚠️ [API] Respuesta de usuario inválida o vacía');
+        final dexterInitial = _createInitialDexterYoung(userId);
+        return [dexterInitial];
+      }
+      
       final List<dynamic> petsData = response.data;
       final companions = <CompanionModel>[];
       
       for (final petJson in petsData) {
-        final adoptedPet = AdoptedPet.fromJson(petJson);
-        final companion = _mapAdoptedPetToCompanion(adoptedPet);
-        
-        if (companion != null) {
-          companions.add(companion);
-          debugPrint('🏠 [API] Mascota adoptada: ${companion.displayName}');
+        try {
+          final adoptedPet = AdoptedPet.fromJson(petJson);
+          debugPrint('🔄 [MAPPING] Procesando adopted pet: ${adoptedPet.toString()}');
+          
+          final companion = _mapAdoptedPetToCompanion(adoptedPet);
+          
+          if (companion != null) {
+            companions.add(companion);
+            debugPrint('🏠 [API] Mascota adoptada: ${companion.displayName}');
+          } else {
+            debugPrint('❌ [MAPPING] No se pudo mapear pet adoptada: ${adoptedPet.id}');
+          }
+        } catch (e) {
+          debugPrint('❌ [MAPPING] Error procesando pet individual: $e');
+          debugPrint('📊 [DATA] Pet data: $petJson');
         }
       }
       
@@ -232,13 +273,23 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         debugPrint('🔧 [API] Usuario sin mascotas - agregando Dexter inicial');
         final dexterInitial = _createInitialDexterYoung(userId);
         companions.add(dexterInitial);
+      } else {
+        // Verificar que al menos una mascota esté seleccionada
+        final hasSelected = companions.any((c) => c.isSelected);
+        if (!hasSelected && companions.isNotEmpty) {
+          // Seleccionar la primera mascota
+          final firstCompanion = companions.first;
+          companions[0] = firstCompanion.copyWith(isSelected: true);
+          debugPrint('🔧 [API] Seleccionando primera mascota: ${firstCompanion.displayName}');
+        }
       }
       
       debugPrint('🎯 [API] Total mascotas usuario: ${companions.length}');
       return companions;
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ [API] Error obteniendo mascotas usuario: $e');
+      debugPrint('📍 [API] StackTrace: $stackTrace');
       
       // Fallback: crear Dexter inicial
       final dexterInitial = _createInitialDexterYoung(userId);
@@ -263,19 +314,24 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       debugPrint('✅ [API] Adopción exitosa: ${response.statusCode}');
       debugPrint('📊 [API] Respuesta: ${response.data}');
       
+      if (response.data == null) {
+        throw ServerException('Respuesta de adopción vacía');
+      }
+      
       // Convertir respuesta a companion
       final adoptedPet = AdoptedPet.fromJson(response.data);
       final companion = _mapAdoptedPetToCompanion(adoptedPet);
       
       if (companion == null) {
-        throw ServerException('No se pudo mapear la mascota adoptada');
+        throw ServerException('No se pudo mapear la mascota adoptada: ${adoptedPet.id}');
       }
       
       debugPrint('🎉 [API] Mascota adoptada exitosamente: ${companion.displayName}');
       return companion;
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ [API] Error adoptando mascota: $e');
+      debugPrint('📍 [API] StackTrace: $stackTrace');
       throw ServerException('Error adoptando mascota: ${e.toString()}');
     }
   }
@@ -291,17 +347,19 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       final userCompanions = await getUserCompanions(userId);
       
       // Obtener puntos desde la tienda
-      final storeData = await getStoreCompanions(userId: userId);
       int userPoints = 1000; // Default
       
       try {
         final storeResponse = await apiClient.getGamification(
           '/api/gamification/pets/store',
           queryParameters: {'userId': userId},
+          requireAuth: true,
         );
         
-        final storeInfo = PetStoreResponse.fromJson(storeResponse.data);
-        userPoints = storeInfo.userQuizPoints;
+        if (storeResponse.data != null) {
+          final storeInfo = PetStoreResponse.fromJson(storeResponse.data);
+          userPoints = storeInfo.userQuizPoints;
+        }
       } catch (e) {
         debugPrint('⚠️ [API] No se pudieron obtener puntos del usuario: $e');
       }
@@ -329,8 +387,9 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       debugPrint('📊 [API] Stats calculados: ${stats.ownedCompanions}/${stats.totalCompanions}');
       return stats;
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ [API] Error obteniendo stats: $e');
+      debugPrint('📍 [API] StackTrace: $stackTrace');
       throw ServerException('Error obteniendo estadísticas: ${e.toString()}');
     }
   }
@@ -355,11 +414,13 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       
       final localId = '${localType.name}_${localStage.name}';
       
+      debugPrint('🔄 [MAPPING] Mapeando: ${pet.petId} -> $localId (${localType.name}, ${localStage.name})');
+      
       return CompanionModel(
         id: localId,
         type: localType,
         stage: localStage,
-        name: _getDisplayName(localType),
+        name: pet.name.isNotEmpty ? pet.name : _getDisplayName(localType),
         description: pet.description,
         level: 1,
         experience: 0,
@@ -375,8 +436,10 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         unlockedAnimations: ['idle', 'blink', 'happy'],
         createdAt: DateTime.now(),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ [MAPPING] Error mapeando pet de tienda: $e');
+      debugPrint('📍 [MAPPING] StackTrace: $stackTrace');
+      debugPrint('📊 [MAPPING] Pet data: ${pet.toString()}');
       return null;
     }
   }
@@ -384,12 +447,15 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
   /// Mapear mascota disponible a CompanionModel
   CompanionModel? _mapAvailablePetToCompanion(Map<String, dynamic> petJson) {
     try {
-      final petId = petJson['id'] ?? '';
+      final petId = petJson['id'] ?? petJson['pet_id'] ?? '';
       final localType = _mapSpeciesToType(petId);
       final rarity = petJson['rarity'] ?? 'common';
       final localStage = _mapRarityToStage(rarity);
       
-      if (localType == null) return null;
+      if (localType == null) {
+        debugPrint('❌ [MAPPING] No se pudo mapear pet disponible: $petId');
+        return null;
+      }
       
       final localId = '${localType.name}_${localStage.name}';
       
@@ -398,7 +464,7 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         type: localType,
         stage: localStage,
         name: petJson['name'] ?? _getDisplayName(localType),
-        description: petJson['description'] ?? '',
+        description: petJson['description'] ?? _generateDescription(localType, localStage),
         level: 1,
         experience: 0,
         happiness: 100,
@@ -408,13 +474,15 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         isSelected: false,
         purchasedAt: null,
         currentMood: CompanionMood.happy,
-        purchasePrice: petJson['quiz_points_cost'] ?? 0,
+        purchasePrice: petJson['quiz_points_cost'] ?? _getDefaultPrice(localStage),
         evolutionPrice: _getEvolutionPrice(localStage),
         unlockedAnimations: ['idle', 'blink', 'happy'],
         createdAt: DateTime.now(),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ [MAPPING] Error mapeando pet disponible: $e');
+      debugPrint('📍 [MAPPING] StackTrace: $stackTrace');
+      debugPrint('📊 [MAPPING] Pet data: $petJson');
       return null;
     }
   }
@@ -424,7 +492,14 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     try {
       final localType = _mapSpeciesToType(adoptedPet.id);
       
-      if (localType == null) return null;
+      if (localType == null) {
+        debugPrint('❌ [MAPPING] No se pudo mapear pet adoptada: ${adoptedPet.id}');
+        // Intentar con speciesType
+        final typeFromSpecies = _mapSpeciesTypeToCompanionType(adoptedPet.speciesType);
+        if (typeFromSpecies == null) return null;
+      }
+      
+      final companionType = localType ?? _mapSpeciesTypeToCompanionType(adoptedPet.speciesType)!;
       
       // Determinar etapa basado en cuánto tiempo tiene adoptada
       final adoptionDays = adoptedPet.adoptedAt != null 
@@ -440,14 +515,14 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         stage = CompanionStage.adult;
       }
       
-      final localId = '${localType.name}_${stage.name}';
+      final localId = '${companionType.name}_${stage.name}';
       
       return CompanionModel(
         id: localId,
-        type: localType,
+        type: companionType,
         stage: stage,
         name: adoptedPet.name,
-        description: _generateDescription(localType, stage),
+        description: _generateDescription(companionType, stage),
         level: _calculateLevel(adoptionDays),
         experience: adoptionDays * 5,
         happiness: 100,
@@ -462,8 +537,10 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         unlockedAnimations: _getAnimationsForStage(stage),
         createdAt: adoptedPet.createdAt,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ [MAPPING] Error mapeando pet adoptada: $e');
+      debugPrint('📍 [MAPPING] StackTrace: $stackTrace');
+      debugPrint('📊 [MAPPING] Pet data: ${adoptedPet.toString()}');
       return null;
     }
   }
@@ -473,13 +550,13 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
   CompanionType? _mapSpeciesToType(String petId) {
     final lowerPetId = petId.toLowerCase();
     
-    if (lowerPetId.contains('ajolote') || lowerPetId.contains('axolotl')) {
+    if (lowerPetId.contains('ajolote') || lowerPetId.contains('axolotl') || lowerPetId.contains('paxolotl')) {
       return CompanionType.paxolotl;
-    } else if (lowerPetId.contains('dog') || lowerPetId.contains('perro')) {
+    } else if (lowerPetId.contains('dog') || lowerPetId.contains('perro') || lowerPetId.contains('dexter')) {
       return CompanionType.dexter;
-    } else if (lowerPetId.contains('panda')) {
+    } else if (lowerPetId.contains('panda') || lowerPetId.contains('elly')) {
       return CompanionType.elly;
-    } else if (lowerPetId.contains('jaguar') || lowerPetId.contains('cat')) {
+    } else if (lowerPetId.contains('jaguar') || lowerPetId.contains('cat') || lowerPetId.contains('yami')) {
       return CompanionType.yami;
     }
     
@@ -490,17 +567,25 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       return CompanionType.elly;
     }
     
-    return CompanionType.dexter; // Default
+    return null; // No hacer default, que sea explícito
+  }
+
+  CompanionType? _mapSpeciesTypeToCompanionType(String speciesType) {
+    return _mapSpeciesToType(speciesType);
   }
 
   CompanionStage _mapRarityToStage(String rarity) {
     switch (rarity.toLowerCase()) {
       case 'common':
+      case 'común':
         return CompanionStage.baby;
       case 'rare':
+      case 'raro':
         return CompanionStage.young;
       case 'epic':
       case 'legendary':
+      case 'épico':
+      case 'legendario':
         return CompanionStage.adult;
       default:
         return CompanionStage.baby;
@@ -520,11 +605,11 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     final name = _getDisplayName(type);
     switch (stage) {
       case CompanionStage.baby:
-        return 'Un adorable $name bebé lleno de energía';
+        return 'Un adorable $name bebé lleno de energía y curiosidad';
       case CompanionStage.young:
-        return '$name ha crecido y es más juguetón';
+        return '$name ha crecido y es más juguetón que nunca';
       case CompanionStage.adult:
-        return '$name adulto, el compañero perfecto';
+        return '$name adulto, el compañero perfecto y sabio';
     }
   }
 
@@ -533,6 +618,14 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       case CompanionStage.baby: return 50;
       case CompanionStage.young: return 100;
       case CompanionStage.adult: return 0;
+    }
+  }
+
+  int _getDefaultPrice(CompanionStage stage) {
+    switch (stage) {
+      case CompanionStage.baby: return 100;
+      case CompanionStage.young: return 200;
+      case CompanionStage.adult: return 300;
     }
   }
 
@@ -572,5 +665,42 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       unlockedAnimations: ['idle', 'blink', 'happy', 'eating'],
       createdAt: DateTime.now(),
     );
+  }
+
+  /// Obtener mascotas disponibles por defecto si la API falla
+  List<CompanionModel> _getDefaultAvailableCompanions() {
+    debugPrint('🔧 [FALLBACK] Creando mascotas disponibles por defecto');
+    
+    final companions = <CompanionModel>[];
+    
+    // Crear mascotas por defecto para cada tipo y etapa
+    for (final type in CompanionType.values) {
+      for (final stage in CompanionStage.values) {
+        final companion = CompanionModel(
+          id: '${type.name}_${stage.name}',
+          type: type,
+          stage: stage,
+          name: _getDisplayName(type),
+          description: _generateDescription(type, stage),
+          level: 1,
+          experience: 0,
+          happiness: 100,
+          hunger: 100,
+          energy: 100,
+          isOwned: false,
+          isSelected: false,
+          purchasedAt: null,
+          currentMood: CompanionMood.happy,
+          purchasePrice: _getDefaultPrice(stage),
+          evolutionPrice: _getEvolutionPrice(stage),
+          unlockedAnimations: _getAnimationsForStage(stage),
+          createdAt: DateTime.now(),
+        );
+        companions.add(companion);
+      }
+    }
+    
+    debugPrint('🔧 [FALLBACK] Creadas ${companions.length} mascotas por defecto');
+    return companions;
   }
 }

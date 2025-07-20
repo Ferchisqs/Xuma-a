@@ -78,4 +78,50 @@ class CompanionModel extends CompanionEntity {
       createdAt: entity.createdAt,
     );
   }
+
+  CompanionModel copyWith({
+    String? id,
+    CompanionType? type,
+    CompanionStage? stage,
+    String? name,
+    String? description,
+    int? level,
+    int? experience,
+    int? happiness,
+    int? hunger,
+    int? energy,
+    bool? isOwned,
+    bool? isSelected,
+    DateTime? purchasedAt,
+    DateTime? lastFeedTime,
+    DateTime? lastLoveTime,
+    CompanionMood? currentMood,
+    int? purchasePrice,
+    int? evolutionPrice,
+    List<String>? unlockedAnimations,
+    DateTime? createdAt,
+  }) {
+    return CompanionModel(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      stage: stage ?? this.stage,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      level: level ?? this.level,
+      experience: experience ?? this.experience,
+      happiness: happiness ?? this.happiness,
+      hunger: hunger ?? this.hunger,
+      energy: energy ?? this.energy,
+      isOwned: isOwned ?? this.isOwned,
+      isSelected: isSelected ?? this.isSelected,
+      purchasedAt: purchasedAt ?? this.purchasedAt,
+      lastFeedTime: lastFeedTime ?? this.lastFeedTime,
+      lastLoveTime: lastLoveTime ?? this.lastLoveTime,
+      currentMood: currentMood ?? this.currentMood,
+      purchasePrice: purchasePrice ?? this.purchasePrice,
+      evolutionPrice: evolutionPrice ?? this.evolutionPrice,
+      unlockedAnimations: unlockedAnimations ?? this.unlockedAnimations,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
