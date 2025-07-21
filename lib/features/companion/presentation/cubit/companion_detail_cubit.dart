@@ -2,6 +2,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
 import 'package:xuma_a/core/services/token_manager.dart';
+import 'package:xuma_a/features/companion/domain/usecases/evolve_companion_via_api_usecase.dart';
+import 'package:xuma_a/features/companion/domain/usecases/feature_companion_usecase.dart';
 import '../../domain/entities/companion_entity.dart';
 import '../../domain/usecases/feed_companion_usecase.dart';
 import '../../domain/usecases/love_companion_usecase.dart';
@@ -79,7 +81,7 @@ class CompanionDetailCubit extends Cubit<CompanionDetailState> {
     required this.feedCompanionUseCase,
     required this.loveCompanionUseCase,
     required this.evolveCompanionUseCase,
-    required this.tokenManager,
+    required this.tokenManager, required EvolveCompanionViaApiUseCase evolveCompanionViaApiUseCase, required FeatureCompanionUseCase featureCompanionUseCase,
   }) : super(CompanionDetailInitial());
   
   void loadCompanion(CompanionEntity companion) {

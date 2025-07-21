@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../di/injection.dart';
 import '../../domain/entities/companion_entity.dart';
 import '../cubit/companion_detail_cubit.dart';
+import '../cubit/companion_actions_cubit.dart'; // 🆕 IMPORTAR ACTIONS CUBIT
 import '../widgets/companion_animation_widget.dart';
 import '../widgets/companion_evolution_dialog.dart';
 import '../widgets/companion_info_dialog.dart';
@@ -17,14 +18,23 @@ class CompanionDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) =>
-          getIt<CompanionDetailCubit>()..loadCompanion(companion),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) =>
+              getIt<CompanionDetailCubit>()..loadCompanion(companion),
+        ),
+        // 🆕 AGREGAR ACTIONS CUBIT PARA ACCIONES REALES
+        BlocProvider(
+          create: (context) => getIt<CompanionActionsCubit>(),
+        ),
+      ],
       child: _CompanionDetailView(companion: companion),
     );
   }
 }
 
+// 🔧 REEMPLAZAR _CompanionDetailView con listeners para ambos cubits
 class _CompanionDetailView extends StatelessWidget {
   final CompanionEntity companion;
 
@@ -35,62 +45,136 @@ class _CompanionDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: BlocConsumer<CompanionDetailCubit, CompanionDetailState>(
-        listener: (context, state) {
-          if (state is CompanionDetailError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          } else if (state is CompanionDetailSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.green,
-              ),
-            );
+    return MultiBlocListener(
+      listeners: [
+        // Listener para CompanionDetailCubit (acciones locales)
+        BlocListener<CompanionDetailCubit, CompanionDetailState>(
+          listener: (context, state) {
+            if (state is CompanionDetailError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            } else if (state is CompanionDetailSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.green,
+                ),
+              );
 
-            if (state.message.contains('evolucionado')) {
-              _showEvolutionDialog(context, state.companion);
+              if (state.message.contains('evolucionado')) {
+                _showEvolutionDialog(context, state.companion);
+              }
             }
-          }
-        },
-        builder: (context, state) {
-          final currentCompanion = _getCurrentCompanion(state);
-          final isLoading = state is CompanionDetailUpdating;
-          final currentAction =
-              state is CompanionDetailUpdating ? state.action : null;
-
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  // 🔧 APP BAR CON BOTÓN DE INFORMACIÓN
-                  _buildCustomAppBar(context, currentCompanion),
-
-                  // ÁREA PRINCIPAL DE LA MASCOTA
-                  Expanded(
-                    child: _buildPetMainArea(
-                        currentCompanion, isLoading, currentAction),
+          },
+        ),
+        // 🆕 Listener para CompanionActionsCubit (acciones API)
+        BlocListener<CompanionActionsCubit, CompanionActionsState>(
+          listener: (context, state) {
+            if (state is CompanionActionsSuccess) {
+              debugPrint('✅ [DETAIL] Acción API exitosa: ${state.action}');
+              
+              // Mostrar mensaje de éxito
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(_getActionIcon(state.action), color: Colors.white),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(state.message)),
+                    ],
                   ),
-                ],
-              ),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+              
+              // Actualizar el companion en DetailCubit
+              context.read<CompanionDetailCubit>().loadCompanion(state.companion);
+              
+              // Mostrar diálogo de evolución si aplica
+              if (state.action == 'evolving') {
+                _showEvolutionDialog(context, state.companion);
+              }
+              
+            } else if (state is CompanionActionsError) {
+              debugPrint('❌ [DETAIL] Error API: ${state.message}');
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.error, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(state.message)),
+                    ],
+                  ),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
+          },
+        ),
+      ],
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: BlocBuilder<CompanionDetailCubit, CompanionDetailState>(
+          builder: (context, state) {
+            final currentCompanion = _getCurrentCompanion(state);
+            final isLoading = state is CompanionDetailUpdating;
+            final currentAction = state is CompanionDetailUpdating ? state.action : null;
 
-              // ACCIONES FLOTANTES EN LA PARTE INFERIOR
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: _buildFloatingActions(
-                    context, currentCompanion, isLoading, currentAction),
-              ),
-            ],
-          );
-        },
+            // 🔧 TAMBIÉN VERIFICAR SI ACTIONS CUBIT ESTÁ CARGANDO
+            return BlocBuilder<CompanionActionsCubit, CompanionActionsState>(
+              builder: (context, actionsState) {
+                final isApiActionLoading = actionsState is CompanionActionsLoading;
+                final apiCurrentAction = actionsState is CompanionActionsLoading 
+                  ? actionsState.action 
+                  : null;
+
+                final finalIsLoading = isLoading || isApiActionLoading;
+                final finalCurrentAction = currentAction ?? apiCurrentAction;
+
+                return Stack(
+                  children: [
+                    Column(
+                      children: [
+                        // 🔧 APP BAR CON BOTÓN DE INFORMACIÓN
+                        _buildCustomAppBar(context, currentCompanion),
+
+                        // ÁREA PRINCIPAL DE LA MASCOTA
+                        Expanded(
+                          child: _buildPetMainArea(
+                            currentCompanion, 
+                            finalIsLoading, 
+                            finalCurrentAction
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // ACCIONES FLOTANTES EN LA PARTE INFERIOR
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: _buildFloatingActions(
+                        context, 
+                        currentCompanion, 
+                        finalIsLoading, 
+                        finalCurrentAction
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -252,6 +336,7 @@ class _CompanionDetailView extends StatelessWidget {
     );
   }
 
+  // 🔧 ACCIONES FLOTANTES USANDO ACTIONS CUBIT REAL
   Widget _buildFloatingActions(BuildContext context,
       CompanionEntity currentCompanion, bool isLoading, String? currentAction) {
     return Container(
@@ -271,41 +356,55 @@ class _CompanionDetailView extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // Botón Alimentar
+          // Botón Alimentar (LOCAL)
           _buildActionButton(
             icon: Icons.restaurant,
             color: Colors.green,
-            onPressed: currentCompanion.needsFood || !isLoading
+            onPressed: currentCompanion.needsFood && !isLoading
                 ? () => context
                     .read<CompanionDetailCubit>()
                     .feedCompanion(currentCompanion)
                 : null,
             isActive: currentAction == 'feeding',
+            disabled: !currentCompanion.needsFood, // Added disabled property based on needsFood
           ),
 
-          // Botón Dar Amor
+          // Botón Dar Amor (LOCAL)
           _buildActionButton(
             icon: Icons.favorite,
             color: Colors.green,
-            onPressed: currentCompanion.needsLove || !isLoading
+            onPressed: currentCompanion.needsLove && !isLoading
                 ? () => context
                     .read<CompanionDetailCubit>()
                     .loveCompanion(currentCompanion)
                 : null,
             isActive: currentAction == 'loving',
+            disabled: !currentCompanion.needsLove, // Added disabled property based on needsLove
           ),
 
-          // Botón Evolucionar
+          // 🔥 Botón Evolucionar (API REAL)
           _buildActionButton(
-            icon: Icons.recycling,
-            color: Colors.green,
+            icon: Icons.auto_awesome,
+            color: Colors.purple,
             onPressed: currentCompanion.canEvolve && !isLoading
                 ? () => context
-                    .read<CompanionDetailCubit>()
+                    .read<CompanionActionsCubit>()
                     .evolveCompanion(currentCompanion)
                 : null,
             isActive: currentAction == 'evolving',
             disabled: !currentCompanion.canEvolve,
+          ),
+
+          // 🆕 Botón Activar/Destacar (API REAL)
+          _buildActionButton(
+            icon: currentCompanion.isSelected ? Icons.star : Icons.star_outline,
+            color: Colors.orange,
+            onPressed: !isLoading
+                ? () => context
+                    .read<CompanionActionsCubit>()
+                    .featureCompanion(currentCompanion)
+                : null,
+            isActive: currentAction == 'featuring',
           ),
         ],
       ),
@@ -317,14 +416,14 @@ class _CompanionDetailView extends StatelessWidget {
     required Color color,
     required VoidCallback? onPressed,
     bool isActive = false,
-    bool disabled = false,
+    bool disabled = false, // Added disabled parameter
   }) {
     return Container(
       width: 60,
       height: 60,
       decoration: BoxDecoration(
         color: disabled
-            ? Colors.grey[300]
+            ? Colors.grey[300] // Grey out if disabled
             : isActive
                 ? color.withOpacity(0.8)
                 : color,
@@ -355,6 +454,22 @@ class _CompanionDetailView extends StatelessWidget {
               ),
       ),
     );
+  }
+
+  // Helper methods
+  IconData _getActionIcon(String action) {
+    switch (action) {
+      case 'feeding':
+        return Icons.restaurant;
+      case 'loving':
+        return Icons.favorite;
+      case 'evolving':
+        return Icons.auto_awesome;
+      case 'featuring':
+        return Icons.star;
+      default:
+        return Icons.check;
+    }
   }
 
   // 🆕 MOSTRAR INFORMACIÓN DE LA MASCOTA

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
+import 'package:xuma_a/features/companion/data/models/api_pet_response_model.dart';
+import 'package:xuma_a/features/companion/data/models/companion_model.dart';
 import '../../../../core/services/token_manager.dart';
 import '../../domain/entities/companion_entity.dart';
 import '../../domain/repositories/companion_repository.dart';
@@ -100,6 +102,8 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         return;
       }
       
+
+
       // Obtener Pet ID real de la mascota
       final petId = _extractPetId(companion);
       debugPrint('🆔 [ACTIONS_CUBIT] Pet ID: $petId');
@@ -293,25 +297,59 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
     }
   }
   
-  // 🔧 HELPER: EXTRAER PET ID DE LA MASCOTA
   String _extractPetId(CompanionEntity companion) {
-    // Si la mascota fue adoptada desde la API, debería tener el Pet ID
-    // Por ahora, usamos el ID local como fallback
-    // TODO: Mejorar esto cuando tengas el mapeo real Pet ID -> Local ID
+    debugPrint('🔍 [ACTIONS_CUBIT] === EXTRAYENDO PET ID ===');
+    debugPrint('🐾 [ACTIONS_CUBIT] Companion ID: ${companion.id}');
+    debugPrint('🐾 [ACTIONS_CUBIT] Companion Type: ${companion.displayName}');
     
-    if (companion.id.contains('_')) {
-      // Es un ID local, necesitamos mapearlo al Pet ID real
-      // Por ahora, usar el ID local
-      debugPrint('🔧 [ACTIONS_CUBIT] Usando ID local como Pet ID: ${companion.id}');
-      return companion.id;
+    // 1. Si es CompanionModelWithPetId, usar el petId directo
+    if (companion is CompanionModelWithPetId) {
+      debugPrint('✅ [ACTIONS_CUBIT] Found real petId: ${companion.petId}');
+      return companion.petId;
     }
     
-    // Si parece un UUID, asumir que es Pet ID real
-    return companion.id;
+    // 2. Si es CompanionModel, verificar si tiene petId en JSON
+    if (companion is CompanionModel) {
+      try {
+        final json = companion.toJson();
+        if (json.containsKey('petId') && json['petId'] != null) {
+          final petId = json['petId'] as String;
+          debugPrint('✅ [ACTIONS_CUBIT] Found petId in JSON: $petId');
+          return petId;
+        }
+      } catch (e) {
+        debugPrint('⚠️ [ACTIONS_CUBIT] Error accessing JSON: $e');
+      }
+    }
+    
+    // 3. Mapeo de fallback basado en tipo y etapa
+    final fallbackPetId = _mapCompanionToDefaultPetId(companion);
+    debugPrint('🔧 [ACTIONS_CUBIT] Using fallback petId: $fallbackPetId');
+    return fallbackPetId;
   }
   
-  // 🔧 RESETEAR ESTADO
-  void resetState() {
-    emit(CompanionActionsInitial());
+  // 🔧 MAPEO DE FALLBACK PARA PET ID
+  String _mapCompanionToDefaultPetId(CompanionEntity companion) {
+    // Mapeo basado en el patrón de tu API
+    final typeMap = {
+      CompanionType.dexter: 'chihuahua',
+      CompanionType.elly: 'panda', 
+      CompanionType.paxolotl: 'axolotl',
+      CompanionType.yami: 'jaguar',
+    };
+    
+    final stageMap = {
+      CompanionStage.baby: '1',
+      CompanionStage.young: '2', 
+      CompanionStage.adult: '3',
+    };
+    
+    final typeName = typeMap[companion.type] ?? 'chihuahua';
+    final stageNumber = stageMap[companion.stage] ?? '2';
+    
+    // Formato esperado por tu API: tipo_etapa
+    final petId = '${typeName}_$stageNumber';
+    debugPrint('🗺️ [ACTIONS_CUBIT] Generated fallback petId: $petId');
+    return petId;
   }
 }

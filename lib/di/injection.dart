@@ -32,7 +32,7 @@ import '../features/learning/presentation/cubit/lesson_content_cubit.dart';
 // Media imports
 import '../features/learning/data/datasources/media_remote_datasource.dart';
 
-// 🆕 COMPANION IMPORTS - INTEGRACIÓN CON API REAL
+// 🆕 COMPANION IMPORTS - INTEGRACIÓN CON API REAL Y NUEVOS USE CASES
 import '../features/companion/data/datasources/companion_remote_datasource.dart';
 import '../features/companion/data/datasources/companion_local_datasource.dart';
 import '../features/companion/data/repositories/companion_repository_impl.dart';
@@ -44,11 +44,13 @@ import '../features/companion/domain/usecases/purchase_companion_usecase.dart';
 import '../features/companion/domain/usecases/evolve_companion_usecase.dart';
 import '../features/companion/domain/usecases/feed_companion_usecase.dart';
 import '../features/companion/domain/usecases/love_companion_usecase.dart';
+// 🔧 NUEVOS IMPORTS - USE CASES AGREGADOS
+import '../features/companion/domain/usecases/evolve_companion_via_api_usecase.dart';
+import '../features/companion/domain/usecases/feature_companion_usecase.dart';
 import '../features/companion/presentation/cubit/companion_cubit.dart';
 import '../features/companion/presentation/cubit/companion_shop_cubit.dart';
 import '../features/companion/presentation/cubit/companion_detail_cubit.dart';
 import '../features/companion/presentation/cubit/welcome_companion_cubit.dart';
-
 
 // News feature imports
 import '../features/news/data/datasources/news_remote_datasource.dart';
@@ -68,7 +70,7 @@ final getIt = GetIt.instance;
   asExtension: true,
 )
 Future<void> configureDependencies() async {
-  print('🔧 [INJECTION] === STARTING DEPENDENCY CONFIGURATION WITH API INTEGRATION ===');
+  print('🔧 [INJECTION] === STARTING DEPENDENCY CONFIGURATION WITH ENHANCED API INTEGRATION ===');
   
   try {
     // 1. PRIMERO: Configurar dependencias básicas con @injectable
@@ -86,10 +88,10 @@ Future<void> configureDependencies() async {
     _registerContentDependencies();
     print('✅ [INJECTION] Step 3: Content dependencies registered');
     
-    // 4. CUARTO: 🆕 REGISTRAR DEPENDENCIAS DE COMPANION CON API REAL
-    print('🔧 [INJECTION] Step 4: Registering companion dependencies with API integration...');
+    // 4. CUARTO: 🆕 REGISTRAR DEPENDENCIAS DE COMPANION CON API REAL Y NUEVOS USE CASES
+    print('🔧 [INJECTION] Step 4: Registering companion dependencies with enhanced API integration...');
     _registerCompanionDependencies();
-    print('✅ [INJECTION] Step 4: Companion dependencies registered');
+    print('✅ [INJECTION] Step 4: Companion dependencies registered with new use cases');
     
     // 5. QUINTO: Registrar dependencias de learning modificadas
     print('🔧 [INJECTION] Step 5: Registering learning dependencies...');
@@ -102,11 +104,11 @@ Future<void> configureDependencies() async {
     print('✅ [INJECTION] Step 6: News dependencies registered');
     
     // 7. VERIFICACIÓN FINAL
-    print('🔍 [INJECTION] Step 7: Final verification...');
+    print('🔍 [INJECTION] Step 7: Final verification with enhanced features...');
     _verifyDependencies();
-    print('✅ [INJECTION] Step 7: All dependencies verified');
+    print('✅ [INJECTION] Step 7: All dependencies verified including new use cases');
     
-    print('🎉 [INJECTION] === DEPENDENCY CONFIGURATION COMPLETED WITH API INTEGRATION ===');
+    print('🎉 [INJECTION] === DEPENDENCY CONFIGURATION COMPLETED WITH ENHANCED API INTEGRATION ===');
     
   } catch (e, stackTrace) {
     print('❌ [INJECTION] CRITICAL ERROR in configureDependencies: $e');
@@ -214,12 +216,11 @@ void _registerContentDependencies() {
   }
 }
 
-// ==================== 🆕 COMPANION DEPENDENCIES - CON API REAL ====================
-// ==================== 🆕 COMPANION DEPENDENCIES - CON API REAL Y TOKEN MANAGER ====================
+// ==================== 🆕 COMPANION DEPENDENCIES - CON API REAL Y NUEVOS USE CASES ====================
 
 void _registerCompanionDependencies() {
   try {
-    print('🐾 [INJECTION] === REGISTERING COMPANION DEPENDENCIES WITH API ===');
+    print('🐾 [INJECTION] === REGISTERING COMPANION DEPENDENCIES WITH ENHANCED API ===');
 
     // 🆕 Data Sources - REMOTE CON API REAL Y TOKEN MANAGER
     if (!getIt.isRegistered<CompanionRemoteDataSource>()) {
@@ -229,8 +230,7 @@ void _registerCompanionDependencies() {
           getIt<TokenManager>(), // 🔧 INYECTAR TOKEN MANAGER
         ),
       );
-      print(
-          '✅ [INJECTION] CompanionRemoteDataSource registered WITH API CLIENT AND TOKEN MANAGER');
+      print('✅ [INJECTION] CompanionRemoteDataSource registered WITH API CLIENT AND TOKEN MANAGER');
     }
 
     // 🆕 Data Sources - LOCAL (ya registrado en injection.config.dart si usa @injectable)
@@ -254,7 +254,7 @@ void _registerCompanionDependencies() {
       print('✅ [INJECTION] CompanionRepository registered WITH TOKEN MANAGER');
     }
 
-    // 🆕 Use Cases
+    // 🆕 Use Cases - EXISTENTES
     if (!getIt.isRegistered<GetUserCompanionsUseCase>()) {
       getIt.registerLazySingleton<GetUserCompanionsUseCase>(
         () => GetUserCompanionsUseCase(getIt<CompanionRepository>()),
@@ -304,7 +304,22 @@ void _registerCompanionDependencies() {
       print('✅ [INJECTION] LoveCompanionUseCase registered');
     }
 
-    // 🆕 Cubits - ACTUALIZADOS CON TOKEN MANAGER
+    // 🔧 NUEVOS USE CASES - REGISTROS AGREGADOS
+    if (!getIt.isRegistered<EvolveCompanionViaApiUseCase>()) {
+      getIt.registerLazySingleton<EvolveCompanionViaApiUseCase>(
+        () => EvolveCompanionViaApiUseCase(getIt<CompanionRepository>()),
+      );
+      print('✅ [INJECTION] EvolveCompanionViaApiUseCase registered');
+    }
+
+    if (!getIt.isRegistered<FeatureCompanionUseCase>()) {
+      getIt.registerLazySingleton<FeatureCompanionUseCase>(
+        () => FeatureCompanionUseCase(getIt<CompanionRepository>()),
+      );
+      print('✅ [INJECTION] FeatureCompanionUseCase registered');
+    }
+
+    // 🆕 Cubits - ACTUALIZADOS CON TOKEN MANAGER Y NUEVOS USE CASES
     if (!getIt.isRegistered<CompanionCubit>()) {
       getIt.registerFactory<CompanionCubit>(
         () => CompanionCubit(
@@ -321,7 +336,7 @@ void _registerCompanionDependencies() {
         () => CompanionShopCubit(
           getCompanionShopUseCase: getIt<GetCompanionShopUseCase>(),
           purchaseCompanionUseCase: getIt<PurchaseCompanionUseCase>(),
-          tokenManager: getIt<TokenManager>(), // 🔥 AGREGAR TOKEN MANAGER SI ES NECESARIO
+          tokenManager: getIt<TokenManager>(), // 🔥 AGREGAR TOKEN MANAGER
         ),
       );
       print('✅ [INJECTION] CompanionShopCubit registered WITH TOKEN MANAGER');
@@ -333,10 +348,13 @@ void _registerCompanionDependencies() {
           feedCompanionUseCase: getIt<FeedCompanionUseCase>(),
           loveCompanionUseCase: getIt<LoveCompanionUseCase>(),
           evolveCompanionUseCase: getIt<EvolveCompanionUseCase>(),
-          tokenManager: getIt<TokenManager>(), // 🔥 AGREGAR TOKEN MANAGER SI ES NECESARIO
+          // 🔧 NUEVOS USE CASES AGREGADOS AL CUBIT
+          evolveCompanionViaApiUseCase: getIt<EvolveCompanionViaApiUseCase>(),
+          featureCompanionUseCase: getIt<FeatureCompanionUseCase>(),
+          tokenManager: getIt<TokenManager>(), // 🔥 AGREGAR TOKEN MANAGER
         ),
       );
-      print('✅ [INJECTION] CompanionDetailCubit registered WITH TOKEN MANAGER');
+      print('✅ [INJECTION] CompanionDetailCubit registered WITH TOKEN MANAGER AND NEW USE CASES');
     }
 
     // 🆕 WelcomeCompanionCubit - YA TIENE TOKEN MANAGER
@@ -350,8 +368,7 @@ void _registerCompanionDependencies() {
       print('✅ [INJECTION] WelcomeCompanionCubit registered');
     }
 
-    print(
-        '🎉 [INJECTION] === COMPANION DEPENDENCIES REGISTERED SUCCESSFULLY WITH TOKEN MANAGER ===');
+    print('🎉 [INJECTION] === COMPANION DEPENDENCIES REGISTERED SUCCESSFULLY WITH ENHANCED FEATURES ===');
   } catch (e, stackTrace) {
     print('❌ [INJECTION] Error in _registerCompanionDependencies: $e');
     print('❌ [INJECTION] Stack trace: $stackTrace');
@@ -543,12 +560,12 @@ void _registerNewsDependencies() {
 // ==================== VERIFICATION ====================
 
 void _verifyDependencies() {
-  print('🔍 [INJECTION] === DEPENDENCY VERIFICATION WITH API INTEGRATION ===');
+  print('🔍 [INJECTION] === DEPENDENCY VERIFICATION WITH ENHANCED API INTEGRATION ===');
   
-  // Verificar dependencias críticas INCLUYENDO COMPANION API
+  // Verificar dependencias críticas INCLUYENDO COMPANION API Y NUEVOS USE CASES
   final criticalDeps = [
     'ApiClient',
-    'TokenManager', // 🆕 VERIFICAR TOKEN MANAGER
+    'TokenManager',
     'MediaRemoteDataSource',
     'ContentRemoteDataSource',
     'ContentRepository', 
@@ -568,6 +585,9 @@ void _verifyDependencies() {
     'EvolveCompanionUseCase',
     'FeedCompanionUseCase',
     'LoveCompanionUseCase',
+    // 🔧 NUEVOS USE CASES
+    'EvolveCompanionViaApiUseCase',
+    'FeatureCompanionUseCase',
     'CompanionCubit',
     'CompanionShopCubit',
     'CompanionDetailCubit',
@@ -589,7 +609,7 @@ void _verifyDependencies() {
       case 'ApiClient':
         isRegistered = getIt.isRegistered<ApiClient>();
         break;
-      case 'TokenManager': // 🆕 NUEVO
+      case 'TokenManager':
         isRegistered = getIt.isRegistered<TokenManager>();
         break;
       case 'MediaRemoteDataSource':
@@ -646,6 +666,13 @@ void _verifyDependencies() {
         break;
       case 'LoveCompanionUseCase':
         isRegistered = getIt.isRegistered<LoveCompanionUseCase>();
+        break;
+      // 🔧 NUEVOS USE CASES
+      case 'EvolveCompanionViaApiUseCase':
+        isRegistered = getIt.isRegistered<EvolveCompanionViaApiUseCase>();
+        break;
+      case 'FeatureCompanionUseCase':
+        isRegistered = getIt.isRegistered<FeatureCompanionUseCase>();
         break;
       case 'CompanionCubit':
         isRegistered = getIt.isRegistered<CompanionCubit>();
@@ -711,6 +738,16 @@ void _verifyDependencies() {
     throw Exception('Cannot resolve CompanionShopCubit: $e');
   }
   
+  // 🔧 Test de resolución para CompanionDetailCubit CON NUEVOS USE CASES
+  try {
+    final testDetailCubit = getIt<CompanionDetailCubit>();
+    print('✅ [INJECTION] CompanionDetailCubit can be resolved successfully WITH NEW USE CASES');
+    testDetailCubit.close();
+  } catch (e) {
+    print('❌ [INJECTION] ERROR resolving CompanionDetailCubit: $e');
+    throw Exception('Cannot resolve CompanionDetailCubit: $e');
+  }
+  
   // Test de resolución para TopicContentsCubit
   try {
     final testCubit = getIt<TopicContentsCubit>();
@@ -749,15 +786,32 @@ void _verifyDependencies() {
     throw Exception('Cannot resolve MediaRemoteDataSource: $e');
   }
   
-  print('🔍 [INJECTION] === VERIFICATION COMPLETED WITH API INTEGRATION ===');
+  // 🔧 Test de resolución para NUEVOS USE CASES
+  try {
+    final testEvolveViaApi = getIt<EvolveCompanionViaApiUseCase>();
+    print('✅ [INJECTION] EvolveCompanionViaApiUseCase can be resolved successfully');
+  } catch (e) {
+    print('❌ [INJECTION] ERROR resolving EvolveCompanionViaApiUseCase: $e');
+    throw Exception('Cannot resolve EvolveCompanionViaApiUseCase: $e');
+  }
+  
+  try {
+    final testFeatureCompanion = getIt<FeatureCompanionUseCase>();
+    print('✅ [INJECTION] FeatureCompanionUseCase can be resolved successfully');
+  } catch (e) {
+    print('❌ [INJECTION] ERROR resolving FeatureCompanionUseCase: $e');
+    throw Exception('Cannot resolve FeatureCompanionUseCase: $e');
+  }
+  
+  print('🔍 [INJECTION] === VERIFICATION COMPLETED WITH ENHANCED API INTEGRATION ===');
 }
 
 // ==================== DEBUG HELPERS ====================
 
 void debugDependencies() {
-  print('🔍 [INJECTION] === DEPENDENCY DEBUG WITH API INTEGRATION ===');
+  print('🔍 [INJECTION] === DEPENDENCY DEBUG WITH ENHANCED API INTEGRATION ===');
   print('🔍 ApiClient: ${getIt.isRegistered<ApiClient>()}');
-  print('🔍 TokenManager: ${getIt.isRegistered<TokenManager>()}'); // 🆕 NUEVO
+  print('🔍 TokenManager: ${getIt.isRegistered<TokenManager>()}');
   print('🔍 MediaRemoteDataSource: ${getIt.isRegistered<MediaRemoteDataSource>()}');
   print('🔍 ContentRemoteDataSource: ${getIt.isRegistered<ContentRemoteDataSource>()}');
   print('🔍 ContentRepository: ${getIt.isRegistered<ContentRepository>()}');
@@ -766,6 +820,7 @@ void debugDependencies() {
   print('🔍 GetContentsByTopicUseCase: ${getIt.isRegistered<GetContentsByTopicUseCase>()}');
   print('🔍 ContentCubit: ${getIt.isRegistered<ContentCubit>()}');
   print('🔍 TopicContentsCubit: ${getIt.isRegistered<TopicContentsCubit>()}');
+  
   // 🆕 COMPANION DEBUG
   print('🔍 CompanionRemoteDataSource: ${getIt.isRegistered<CompanionRemoteDataSource>()}');
   print('🔍 CompanionLocalDataSource: ${getIt.isRegistered<CompanionLocalDataSource>()}');
@@ -777,9 +832,15 @@ void debugDependencies() {
   print('🔍 EvolveCompanionUseCase: ${getIt.isRegistered<EvolveCompanionUseCase>()}');
   print('🔍 FeedCompanionUseCase: ${getIt.isRegistered<FeedCompanionUseCase>()}');
   print('🔍 LoveCompanionUseCase: ${getIt.isRegistered<LoveCompanionUseCase>()}');
+  
+  // 🔧 NUEVOS USE CASES DEBUG
+  print('🔍 EvolveCompanionViaApiUseCase: ${getIt.isRegistered<EvolveCompanionViaApiUseCase>()}');
+  print('🔍 FeatureCompanionUseCase: ${getIt.isRegistered<FeatureCompanionUseCase>()}');
+  
   print('🔍 CompanionCubit: ${getIt.isRegistered<CompanionCubit>()}');
   print('🔍 CompanionShopCubit: ${getIt.isRegistered<CompanionShopCubit>()}');
   print('🔍 CompanionDetailCubit: ${getIt.isRegistered<CompanionDetailCubit>()}');
+  
   // LEARNING & NEWS DEBUG
   print('🔍 LearningCubit: ${getIt.isRegistered<LearningCubit>()}');
   print('🔍 NewsRemoteDataSource: ${getIt.isRegistered<NewsRemoteDataSource>()}');
@@ -789,6 +850,7 @@ void debugDependencies() {
   print('🔍 GetCachedNewsUseCase: ${getIt.isRegistered<GetCachedNewsUseCase>()}');
   print('🔍 RefreshNewsUseCase: ${getIt.isRegistered<RefreshNewsUseCase>()}');
   print('🔍 NewsCubit: ${getIt.isRegistered<NewsCubit>()}');
+  
   print('🔍 [INJECTION] === END DEBUG ===');
 }
 
@@ -796,3 +858,64 @@ void clearAllDependencies() {
   getIt.reset();
   print('🧹 [INJECTION] All dependencies cleared');
 }
+
+// ==================== 🔧 COMPANION MODULE (OPCIONAL PARA @module) ====================
+// Si decides usar @module en el futuro, aquí tienes la estructura:
+
+/*
+@module
+abstract class CompanionModule {
+  // Data Sources
+  @injectable
+  CompanionRemoteDataSource get companionRemoteDataSource;
+  
+  @injectable
+  CompanionLocalDataSource get companionLocalDataSource;
+  
+  // Repository
+  @injectable
+  CompanionRepository get companionRepository;
+  
+  // Use Cases Existentes
+  @injectable
+  GetUserCompanionsUseCase get getUserCompanionsUseCase;
+  
+  @injectable
+  GetAvailableCompanionsUseCase get getAvailableCompanionsUseCase;
+  
+  @injectable
+  GetCompanionShopUseCase get getCompanionShopUseCase;
+  
+  @injectable
+  PurchaseCompanionUseCase get purchaseCompanionUseCase;
+  
+  @injectable
+  EvolveCompanionUseCase get evolveCompanionUseCase;
+  
+  @injectable
+  FeedCompanionUseCase get feedCompanionUseCase;
+  
+  @injectable
+  LoveCompanionUseCase get loveCompanionUseCase;
+  
+  // 🔧 NUEVOS USE CASES PARA API
+  @injectable
+  EvolveCompanionViaApiUseCase get evolveCompanionViaApiUseCase;
+  
+  @injectable
+  FeatureCompanionUseCase get featureCompanionUseCase;
+  
+  // Cubits
+  @injectable
+  CompanionCubit get companionCubit;
+  
+  @injectable
+  CompanionShopCubit get companionShopCubit;
+  
+  @injectable
+  CompanionDetailCubit get companionDetailCubit;
+  
+  @injectable
+  WelcomeCompanionCubit get welcomeCompanionCubit;
+}
+*/

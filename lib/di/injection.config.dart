@@ -63,6 +63,10 @@ import '../features/companion/domain/repositories/companion_repository.dart'
     as _i770;
 import '../features/companion/domain/usecases/evolve_companion_usecase.dart'
     as _i108;
+import '../features/companion/domain/usecases/evolve_companion_via_api_usecase.dart'
+    as _i711;
+import '../features/companion/domain/usecases/feature_companion_usecase.dart'
+    as _i913;
 import '../features/companion/domain/usecases/feed_companion_usecase.dart'
     as _i960;
 import '../features/companion/domain/usecases/get_available_companions_usecase.dart'
@@ -75,6 +79,8 @@ import '../features/companion/domain/usecases/love_companion_usecase.dart'
     as _i820;
 import '../features/companion/domain/usecases/purchase_companion_usecase.dart'
     as _i395;
+import '../features/companion/presentation/cubit/companion_actions_cubit.dart'
+    as _i238;
 import '../features/companion/presentation/cubit/companion_cubit.dart' as _i917;
 import '../features/companion/presentation/cubit/companion_detail_cubit.dart'
     as _i0;
@@ -354,6 +360,10 @@ extension GetItInjectableX on _i174.GetIt {
         _i22.GetRandomTipWithoutParamsUseCase(gh<_i406.TipsRepository>()));
     gh.factory<_i441.TipsCubit>(
         () => _i441.TipsCubit(gh<_i406.TipsRepository>()));
+    gh.factory<_i238.CompanionActionsCubit>(() => _i238.CompanionActionsCubit(
+          repository: gh<_i770.CompanionRepository>(),
+          tokenManager: gh<_i497.TokenManager>(),
+        ));
     gh.factory<_i605.ContentRemoteDataSource>(
         () => _i605.ContentRemoteDataSourceImpl(
               gh<_i510.ApiClient>(),
@@ -373,15 +383,13 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i820.LoveCompanionUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i395.PurchaseCompanionUseCase>(
         () => _i395.PurchaseCompanionUseCase(gh<_i770.CompanionRepository>()));
+    gh.factory<_i711.EvolveCompanionViaApiUseCase>(() =>
+        _i711.EvolveCompanionViaApiUseCase(gh<_i770.CompanionRepository>()));
+    gh.factory<_i913.FeatureCompanionUseCase>(
+        () => _i913.FeatureCompanionUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i1017.HomeCubit>(() => _i1017.HomeCubit(
           getDailyTipUseCase: gh<_i957.GetDailyTipUseCase>(),
           getUserStatsUseCase: gh<_i762.GetUserStatsUseCase>(),
-        ));
-    gh.factory<_i0.CompanionDetailCubit>(() => _i0.CompanionDetailCubit(
-          feedCompanionUseCase: gh<_i960.FeedCompanionUseCase>(),
-          loveCompanionUseCase: gh<_i820.LoveCompanionUseCase>(),
-          evolveCompanionUseCase: gh<_i108.EvolveCompanionUseCase>(),
-          tokenManager: gh<_i497.TokenManager>(),
         ));
     gh.factory<_i912.TriviaGameCubit>(() => _i912.TriviaGameCubit(
           getTriviaQuestionsUseCase: gh<_i9.GetTriviaQuestionsUseCase>(),
@@ -448,6 +456,15 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i503.WelcomeCompanionCubit>(() => _i503.WelcomeCompanionCubit(
           getUserCompanionsUseCase: gh<_i574.GetUserCompanionsUseCase>(),
           tokenManager: gh<_i497.TokenManager>(),
+        ));
+    gh.factory<_i0.CompanionDetailCubit>(() => _i0.CompanionDetailCubit(
+          feedCompanionUseCase: gh<_i960.FeedCompanionUseCase>(),
+          loveCompanionUseCase: gh<_i820.LoveCompanionUseCase>(),
+          evolveCompanionUseCase: gh<_i108.EvolveCompanionUseCase>(),
+          tokenManager: gh<_i497.TokenManager>(),
+          evolveCompanionViaApiUseCase:
+              gh<_i711.EvolveCompanionViaApiUseCase>(),
+          featureCompanionUseCase: gh<_i913.FeatureCompanionUseCase>(),
         ));
     gh.factory<_i314.ChallengesCubit>(() => _i314.ChallengesCubit(
           getChallengesUseCase: gh<_i1010.GetChallengesUseCase>(),

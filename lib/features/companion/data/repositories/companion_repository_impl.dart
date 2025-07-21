@@ -1133,116 +1133,119 @@ Future<Either<Failure, CompanionStatsEntity>> getCompanionStats(String userId) a
     }
   }
   
-   @override
-  Future<Either<Failure, CompanionEntity>> evolveCompanionViaApi({
-    required String userId,
-    required String petId,
-  }) async {
-    try {
-      debugPrint('🦋 [REPO] === EVOLUCIONANDO VIA API ===');
-      debugPrint('👤 [REPO] Usuario: $userId');
-      debugPrint('🆔 [REPO] Pet ID: $petId');
+   // ==================== 🆕 EVOLUCIONAR MASCOTA VIA API REAL ====================
+@override
+Future<Either<Failure, CompanionEntity>> evolveCompanionViaApi({
+  required String userId,
+  required String petId,
+}) async {
+  try {
+    debugPrint('🦋 [REPO] === EVOLUCIONANDO VIA API REAL ===');
+    debugPrint('👤 [REPO] Usuario: $userId');
+    debugPrint('🆔 [REPO] Pet ID: $petId');
 
-      // 🔥 USAR USER ID REAL
-      final realUserId = await _getRealUserId();
-      debugPrint('👤 [REPO] Usuario ID REAL: $realUserId');
+    // 🔥 USAR USER ID REAL
+    final realUserId = await _getRealUserId();
+    debugPrint('👤 [REPO] Usuario ID REAL: $realUserId');
 
-      if (enableApiMode && await networkInfo.isConnected) {
-        debugPrint('🌐 [REPO] Evolucionando via API real...');
+    if (enableApiMode && await networkInfo.isConnected) {
+      debugPrint('🌐 [REPO] Evolucionando via API real...');
 
-        final hasValidToken = await tokenManager.hasValidAccessToken();
-        if (!hasValidToken) {
-          debugPrint('❌ [REPO] Sin token válido para evolución');
-          return Left(AuthFailure('Token de autenticación requerido'));
-        }
-
-        try {
-          final evolvedCompanion = await remoteDataSource.evolvePet(
-            userId: realUserId,
-            petId: petId,
-          );
-
-          debugPrint('✅ [REPO] Evolución exitosa desde API: ${evolvedCompanion.displayName}');
-
-          // 💾 GUARDAR EN CACHE LOCAL
-          await localDataSource.cacheCompanion(evolvedCompanion);
-          await _updateLocalCacheAfterEvolution(realUserId, evolvedCompanion);
-
-          return Right(evolvedCompanion);
-        } catch (e) {
-          debugPrint('❌ [REPO] Error en API de evolución: $e');
-          
-          if (e.toString().contains('insufficient') ||
-              e.toString().contains('insuficientes')) {
-            return Left(ValidationFailure('No tienes suficientes puntos para evolucionar'));
-          } else if (e.toString().contains('not found')) {
-            return Left(ValidationFailure('Mascota no encontrada'));
-          } else if (e.toString().contains('max level') ||
-              e.toString().contains('maximum')) {
-            return Left(ValidationFailure('Ya está en su máxima evolución'));
-          } else {
-            return Left(ServerFailure('Error evolucionando mascota: ${e.toString()}'));
-          }
-        }
-      } else {
-        debugPrint('📱 [REPO] Sin conexión, usando evolución local');
-        return await _evolveCompanionLocal(realUserId, petId);
+      final hasValidToken = await tokenManager.hasValidAccessToken();
+      if (!hasValidToken) {
+        debugPrint('❌ [REPO] Sin token válido para evolución');
+        return Left(AuthFailure('Token de autenticación requerido'));
       }
-    } catch (e) {
-      debugPrint('💥 [REPO] Error general en evolución: $e');
-      return Left(UnknownFailure('Error en evolución: ${e.toString()}'));
-    }
-  }
 
-  // ==================== 🆕 DESTACAR MASCOTA VIA API ====================
-  @override
-  Future<Either<Failure, CompanionEntity>> featureCompanion({
-    required String userId,
-    required String petId,
-  }) async {
-    try {
-      debugPrint('⭐ [REPO] === DESTACANDO MASCOTA VIA API ===');
-      debugPrint('👤 [REPO] Usuario: $userId');
-      debugPrint('🆔 [REPO] Pet ID: $petId');
+      try {
+        // 🔥 LLAMAR AL ENDPOINT CORRECTO DE EVOLUCIÓN
+        final response = await remoteDataSource.evolvePet(
+          userId: realUserId,
+          petId: petId,
+        );
 
-      // 🔥 USAR USER ID REAL
-      final realUserId = await _getRealUserId();
-      debugPrint('👤 [REPO] Usuario ID REAL: $realUserId');
+        debugPrint('✅ [REPO] Evolución exitosa desde API: ${response.displayName}');
 
-      if (enableApiMode && await networkInfo.isConnected) {
-        debugPrint('🌐 [REPO] Destacando via API real...');
+        // 💾 GUARDAR EN CACHE LOCAL
+        await localDataSource.cacheCompanion(response);
+        await _updateLocalCacheAfterEvolution(realUserId, response);
 
-        final hasValidToken = await tokenManager.hasValidAccessToken();
-        if (!hasValidToken) {
-          debugPrint('❌ [REPO] Sin token válido para destacar');
-          return Left(AuthFailure('Token de autenticación requerido'));
+        return Right(response);
+      } catch (e) {
+        debugPrint('❌ [REPO] Error en API de evolución: $e');
+        
+        if (e.toString().contains('insufficient') ||
+            e.toString().contains('insuficientes')) {
+          return Left(ValidationFailure('No tienes suficientes puntos para evolucionar'));
+        } else if (e.toString().contains('not found')) {
+          return Left(ValidationFailure('Mascota no encontrada'));
+        } else if (e.toString().contains('max level') ||
+            e.toString().contains('maximum')) {
+          return Left(ValidationFailure('Ya está en su máxima evolución'));
+        } else {
+          return Left(ServerFailure('Error evolucionando mascota: ${e.toString()}'));
         }
-
-        try {
-          final featuredCompanion = await remoteDataSource.featurePet(
-            userId: realUserId,
-            petId: petId,
-          );
-
-          debugPrint('✅ [REPO] Destacado exitoso desde API: ${featuredCompanion.displayName}');
-
-          // 💾 GUARDAR EN CACHE LOCAL
-          await localDataSource.cacheCompanion(featuredCompanion);
-          await _updateLocalCacheAfterFeature(realUserId, featuredCompanion);
-
-          return Right(featuredCompanion);
-        } catch (e) {
-          debugPrint('❌ [REPO] Error en API de destacar: $e');
-          return Left(ServerFailure('Error destacando mascota: ${e.toString()}'));
-        }
-      } else {
-        debugPrint('📱 [REPO] Sin conexión, usando destacar local');
-        return await _setActiveCompanionLocal(realUserId, petId);
       }
-    } catch (e) {
-      debugPrint('💥 [REPO] Error general destacando: $e');
-      return Left(UnknownFailure('Error destacando: ${e.toString()}'));
+    } else {
+      debugPrint('📱 [REPO] Sin conexión, usando evolución local');
+      return await _evolveCompanionLocal(realUserId, petId);
     }
+  } catch (e) {
+    debugPrint('💥 [REPO] Error general en evolución: $e');
+    return Left(UnknownFailure('Error en evolución: ${e.toString()}'));
   }
+}
+
+  // ==================== 🆕 DESTACAR MASCOTA VIA API REAL ====================
+@override
+Future<Either<Failure, CompanionEntity>> featureCompanion({
+  required String userId,
+  required String petId,
+}) async {
+  try {
+    debugPrint('⭐ [REPO] === DESTACANDO MASCOTA VIA API ===');
+    debugPrint('👤 [REPO] Usuario: $userId');
+    debugPrint('🆔 [REPO] Pet ID: $petId');
+
+    // 🔥 USAR USER ID REAL
+    final realUserId = await _getRealUserId();
+    debugPrint('👤 [REPO] Usuario ID REAL: $realUserId');
+
+    if (enableApiMode && await networkInfo.isConnected) {
+      debugPrint('🌐 [REPO] Destacando via API real...');
+
+      final hasValidToken = await tokenManager.hasValidAccessToken();
+      if (!hasValidToken) {
+        debugPrint('❌ [REPO] Sin token válido para destacar');
+        return Left(AuthFailure('Token de autenticación requerido'));
+      }
+
+      try {
+        // 🔥 LLAMAR AL ENDPOINT CORRECTO DE FEATURE
+        final response = await remoteDataSource.featurePet(
+          userId: realUserId,
+          petId: petId,
+        );
+
+        debugPrint('✅ [REPO] Destacado exitoso desde API: ${response.displayName}');
+
+        // 💾 GUARDAR EN CACHE LOCAL
+        await localDataSource.cacheCompanion(response);
+        await _updateLocalCacheAfterFeature(realUserId, response);
+
+        return Right(response);
+      } catch (e) {
+        debugPrint('❌ [REPO] Error en API de destacar: $e');
+        return Left(ServerFailure('Error destacando mascota: ${e.toString()}'));
+      }
+    } else {
+      debugPrint('📱 [REPO] Sin conexión, usando destacar local');
+      return await _setActiveCompanionLocal(realUserId, petId);
+    }
+  } catch (e) {
+    debugPrint('💥 [REPO] Error general destacando: $e');
+    return Left(UnknownFailure('Error destacando: ${e.toString()}'));
+  }
+}
   
 }
