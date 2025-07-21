@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
+import 'package:xuma_a/core/services/token_manager.dart';
 import '../../domain/entities/companion_entity.dart';
 import '../../domain/usecases/feed_companion_usecase.dart';
 import '../../domain/usecases/love_companion_usecase.dart';
@@ -70,6 +71,7 @@ class CompanionDetailCubit extends Cubit<CompanionDetailState> {
   final FeedCompanionUseCase feedCompanionUseCase;
   final LoveCompanionUseCase loveCompanionUseCase;
   final EvolveCompanionUseCase evolveCompanionUseCase;
+  final TokenManager tokenManager;
   
   static const String _defaultUserId = 'user_123';
   
@@ -77,6 +79,7 @@ class CompanionDetailCubit extends Cubit<CompanionDetailState> {
     required this.feedCompanionUseCase,
     required this.loveCompanionUseCase,
     required this.evolveCompanionUseCase,
+    required this.tokenManager,
   }) : super(CompanionDetailInitial());
   
   void loadCompanion(CompanionEntity companion) {

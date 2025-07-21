@@ -1,18 +1,31 @@
-// lib/features/companion/domain/repositories/companion_repository.dart - ACTUALIZADO
+// 🔧 REEMPLAZAR lib/features/companion/domain/repositories/companion_repository.dart
+
 import '../../../../core/utils/either.dart';
 import '../../../../core/errors/failures.dart';
 import '../entities/companion_entity.dart';
 import '../entities/companion_stats_entity.dart';
 
 abstract class CompanionRepository {
-  // 🔥 MÉTODO DE ADOPCIÓN ACTUALIZADO
+  // 🔥 MÉTODO DE ADOPCIÓN PRINCIPAL
   Future<Either<Failure, CompanionEntity>> adoptCompanion({
     required String userId,
     required String petId,
     String? nickname,
   });
 
-  // OTROS MÉTODOS EXISTENTES
+  // 🆕 DESTACAR MASCOTA (MARCAR COMO ACTIVA)
+  Future<Either<Failure, CompanionEntity>> featureCompanion({
+    required String userId,
+    required String petId,
+  });
+
+  // 🆕 EVOLUCIONAR MASCOTA VIA API
+  Future<Either<Failure, CompanionEntity>> evolveCompanionViaApi({
+    required String userId,
+    required String petId,
+  });
+
+  // MÉTODOS EXISTENTES
   Future<Either<Failure, List<CompanionEntity>>> getUserCompanions(String userId);
   Future<Either<Failure, List<CompanionEntity>>> getAvailableCompanions();
   Future<Either<Failure, CompanionStatsEntity>> getCompanionStats(String userId);
@@ -26,4 +39,3 @@ abstract class CompanionRepository {
     return adoptCompanion(userId: userId, petId: companionId);
   }
 }
-

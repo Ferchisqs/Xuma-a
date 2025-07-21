@@ -1,5 +1,4 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// lib/features/companion/data/models/api_pet_response_model.g.dart
 
 part of 'api_pet_response_model.dart';
 
@@ -22,13 +21,15 @@ ApiPetResponseModel _$ApiPetResponseModelFromJson(Map<String, dynamic> json) =>
       evolutionChain: (json['evolution_chain'] as List<dynamic>)
           .map((e) => EvolutionStageModel.fromJson(e as Map<String, dynamic>))
           .toList(),
-      baseStats: BaseStatsModel.fromJson(json['base_stats'] as Map<String, dynamic>),
+      baseStats:
+          BaseStatsModel.fromJson(json['base_stats'] as Map<String, dynamic>),
       unlockRequirements: UnlockRequirementsModel.fromJson(
           json['unlock_requirements'] as Map<String, dynamic>),
       isMexicanNative: json['is_mexican_native'] as bool,
     );
 
-Map<String, dynamic> _$ApiPetResponseModelToJson(ApiPetResponseModel instance) =>
+Map<String, dynamic> _$ApiPetResponseModelToJson(
+        ApiPetResponseModel instance) =>
     <String, dynamic>{
       'pet_id': instance.petId,
       'name': instance.name,
@@ -53,7 +54,8 @@ EvolutionStageModel _$EvolutionStageModelFromJson(Map<String, dynamic> json) =>
       imageUrl: json['image_url'] as String?,
     );
 
-Map<String, dynamic> _$EvolutionStageModelToJson(EvolutionStageModel instance) =>
+Map<String, dynamic> _$EvolutionStageModelToJson(
+        EvolutionStageModel instance) =>
     <String, dynamic>{
       'name': instance.name,
       'stage': instance.stage,

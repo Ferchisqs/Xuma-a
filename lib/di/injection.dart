@@ -49,6 +49,7 @@ import '../features/companion/presentation/cubit/companion_shop_cubit.dart';
 import '../features/companion/presentation/cubit/companion_detail_cubit.dart';
 import '../features/companion/presentation/cubit/welcome_companion_cubit.dart';
 
+
 // News feature imports
 import '../features/news/data/datasources/news_remote_datasource.dart';
 import '../features/news/data/datasources/news_local_datasource.dart';
@@ -67,49 +68,46 @@ final getIt = GetIt.instance;
   asExtension: true,
 )
 Future<void> configureDependencies() async {
-  print(
-      '🔧 [INJECTION] === STARTING DEPENDENCY CONFIGURATION WITH API INTEGRATION ===');
-
+  print('🔧 [INJECTION] === STARTING DEPENDENCY CONFIGURATION WITH API INTEGRATION ===');
+  
   try {
     // 1. PRIMERO: Configurar dependencias básicas con @injectable
     print('🔧 [INJECTION] Step 1: Configuring auto-generated dependencies...');
     await getIt.init();
     print('✅ [INJECTION] Step 1: Auto-generated dependencies configured');
-
+    
     // 2. SEGUNDO: Registrar MediaRemoteDataSource ANTES de usarlo
     print('🔧 [INJECTION] Step 2: Registering media dependencies...');
     _registerMediaDependencies();
     print('✅ [INJECTION] Step 2: Media dependencies registered');
-
+    
     // 3. TERCERO: Registrar dependencias de contenido con media
-    print(
-        '🔧 [INJECTION] Step 3: Registering content dependencies with media...');
+    print('🔧 [INJECTION] Step 3: Registering content dependencies with media...');
     _registerContentDependencies();
     print('✅ [INJECTION] Step 3: Content dependencies registered');
-
+    
     // 4. CUARTO: 🆕 REGISTRAR DEPENDENCIAS DE COMPANION CON API REAL
-    print(
-        '🔧 [INJECTION] Step 4: Registering companion dependencies with API integration...');
+    print('🔧 [INJECTION] Step 4: Registering companion dependencies with API integration...');
     _registerCompanionDependencies();
     print('✅ [INJECTION] Step 4: Companion dependencies registered');
-
+    
     // 5. QUINTO: Registrar dependencias de learning modificadas
     print('🔧 [INJECTION] Step 5: Registering learning dependencies...');
     _registerLearningDependencies();
     print('✅ [INJECTION] Step 5: Learning dependencies registered');
-
+    
     // 6. SEXTO: Registrar dependencias de news
     print('🔧 [INJECTION] Step 6: Registering news dependencies...');
     _registerNewsDependencies();
     print('✅ [INJECTION] Step 6: News dependencies registered');
-
+    
     // 7. VERIFICACIÓN FINAL
     print('🔍 [INJECTION] Step 7: Final verification...');
     _verifyDependencies();
     print('✅ [INJECTION] Step 7: All dependencies verified');
-
-    print(
-        '🎉 [INJECTION] === DEPENDENCY CONFIGURATION COMPLETED WITH API INTEGRATION ===');
+    
+    print('🎉 [INJECTION] === DEPENDENCY CONFIGURATION COMPLETED WITH API INTEGRATION ===');
+    
   } catch (e, stackTrace) {
     print('❌ [INJECTION] CRITICAL ERROR in configureDependencies: $e');
     print('❌ [INJECTION] Stack trace: $stackTrace');
@@ -128,6 +126,7 @@ void _registerMediaDependencies() {
       );
       print('✅ [INJECTION] MediaRemoteDataSource registered');
     }
+    
   } catch (e, stackTrace) {
     print('❌ [INJECTION] Error in _registerMediaDependencies: $e');
     print('❌ [INJECTION] Stack trace: $stackTrace');
@@ -149,7 +148,7 @@ void _registerContentDependencies() {
       );
       print('✅ [INJECTION] ContentRemoteDataSource registered WITH MEDIA');
     }
-
+    
     // Repository
     if (!getIt.isRegistered<ContentRepository>()) {
       getIt.registerLazySingleton<ContentRepository>(
@@ -161,7 +160,7 @@ void _registerContentDependencies() {
       );
       print('✅ [INJECTION] ContentRepository registered');
     }
-
+    
     // Use Cases
     if (!getIt.isRegistered<GetTopicsUseCase>()) {
       getIt.registerLazySingleton<GetTopicsUseCase>(
@@ -169,21 +168,21 @@ void _registerContentDependencies() {
       );
       print('✅ [INJECTION] GetTopicsUseCase registered');
     }
-
+    
     if (!getIt.isRegistered<GetContentByIdUseCase>()) {
       getIt.registerLazySingleton<GetContentByIdUseCase>(
         () => GetContentByIdUseCase(getIt<ContentRepository>()),
       );
       print('✅ [INJECTION] GetContentByIdUseCase registered');
     }
-
+    
     if (!getIt.isRegistered<GetContentsByTopicUseCase>()) {
       getIt.registerLazySingleton<GetContentsByTopicUseCase>(
         () => GetContentsByTopicUseCase(getIt<ContentRepository>()),
       );
       print('✅ [INJECTION] GetContentsByTopicUseCase registered');
     }
-
+    
     // Cubits
     if (!getIt.isRegistered<ContentCubit>()) {
       getIt.registerFactory<ContentCubit>(
@@ -194,7 +193,7 @@ void _registerContentDependencies() {
       );
       print('✅ [INJECTION] ContentCubit registered');
     }
-
+    
     // 🎯 REGISTRO CRÍTICO: TopicContentsCubit
     if (!getIt.isRegistered<TopicContentsCubit>()) {
       getIt.registerFactory<TopicContentsCubit>(
@@ -207,6 +206,7 @@ void _registerContentDependencies() {
       );
       print('✅ [INJECTION] TopicContentsCubit registered as factory');
     }
+    
   } catch (e, stackTrace) {
     print('❌ [INJECTION] Error in _registerContentDependencies: $e');
     print('❌ [INJECTION] Stack trace: $stackTrace');
@@ -215,6 +215,7 @@ void _registerContentDependencies() {
 }
 
 // ==================== 🆕 COMPANION DEPENDENCIES - CON API REAL ====================
+// ==================== 🆕 COMPANION DEPENDENCIES - CON API REAL Y TOKEN MANAGER ====================
 
 void _registerCompanionDependencies() {
   try {
@@ -303,15 +304,16 @@ void _registerCompanionDependencies() {
       print('✅ [INJECTION] LoveCompanionUseCase registered');
     }
 
-    // 🆕 Cubits
+    // 🆕 Cubits - ACTUALIZADOS CON TOKEN MANAGER
     if (!getIt.isRegistered<CompanionCubit>()) {
       getIt.registerFactory<CompanionCubit>(
         () => CompanionCubit(
           getUserCompanionsUseCase: getIt<GetUserCompanionsUseCase>(),
           getCompanionShopUseCase: getIt<GetCompanionShopUseCase>(),
+          tokenManager: getIt<TokenManager>(), // 🔥 AGREGAR TOKEN MANAGER
         ),
       );
-      print('✅ [INJECTION] CompanionCubit registered');
+      print('✅ [INJECTION] CompanionCubit registered WITH TOKEN MANAGER');
     }
 
     if (!getIt.isRegistered<CompanionShopCubit>()) {
@@ -319,9 +321,10 @@ void _registerCompanionDependencies() {
         () => CompanionShopCubit(
           getCompanionShopUseCase: getIt<GetCompanionShopUseCase>(),
           purchaseCompanionUseCase: getIt<PurchaseCompanionUseCase>(),
+          tokenManager: getIt<TokenManager>(), // 🔥 AGREGAR TOKEN MANAGER SI ES NECESARIO
         ),
       );
-      print('✅ [INJECTION] CompanionShopCubit registered');
+      print('✅ [INJECTION] CompanionShopCubit registered WITH TOKEN MANAGER');
     }
 
     if (!getIt.isRegistered<CompanionDetailCubit>()) {
@@ -330,12 +333,13 @@ void _registerCompanionDependencies() {
           feedCompanionUseCase: getIt<FeedCompanionUseCase>(),
           loveCompanionUseCase: getIt<LoveCompanionUseCase>(),
           evolveCompanionUseCase: getIt<EvolveCompanionUseCase>(),
+          tokenManager: getIt<TokenManager>(), // 🔥 AGREGAR TOKEN MANAGER SI ES NECESARIO
         ),
       );
-      print('✅ [INJECTION] CompanionDetailCubit registered');
+      print('✅ [INJECTION] CompanionDetailCubit registered WITH TOKEN MANAGER');
     }
 
-    // 🆕 WelcomeCompanionCubit
+    // 🆕 WelcomeCompanionCubit - YA TIENE TOKEN MANAGER
     if (!getIt.isRegistered<WelcomeCompanionCubit>()) {
       getIt.registerFactory<WelcomeCompanionCubit>(
         () => WelcomeCompanionCubit(
@@ -347,7 +351,7 @@ void _registerCompanionDependencies() {
     }
 
     print(
-        '🎉 [INJECTION] === COMPANION DEPENDENCIES REGISTERED SUCCESSFULLY ===');
+        '🎉 [INJECTION] === COMPANION DEPENDENCIES REGISTERED SUCCESSFULLY WITH TOKEN MANAGER ===');
   } catch (e, stackTrace) {
     print('❌ [INJECTION] Error in _registerCompanionDependencies: $e');
     print('❌ [INJECTION] Stack trace: $stackTrace');
@@ -361,7 +365,7 @@ void _registerLearningDependencies() {
   try {
     // ⚠️ IMPORTANTE: NO registrar LearningLocalDataSource manualmente
     // Ya está registrado por @injectable en injection.config.dart
-
+    
     // Data Sources - Solo remote
     if (!getIt.isRegistered<LearningRemoteDataSource>()) {
       getIt.registerLazySingleton<LearningRemoteDataSource>(
@@ -369,7 +373,7 @@ void _registerLearningDependencies() {
       );
       print('✅ [INJECTION] LearningRemoteDataSource registered');
     }
-
+    
     // Repository
     if (!getIt.isRegistered<LearningRepository>()) {
       getIt.registerLazySingleton<LearningRepository>(
@@ -381,7 +385,7 @@ void _registerLearningDependencies() {
       );
       print('✅ [INJECTION] LearningRepository registered');
     }
-
+    
     // Use Cases (solo si no están registrados por @injectable)
     if (!getIt.isRegistered<GetCategoriesUseCase>()) {
       getIt.registerLazySingleton<GetCategoriesUseCase>(
@@ -389,53 +393,52 @@ void _registerLearningDependencies() {
       );
       print('✅ [INJECTION] GetCategoriesUseCase registered');
     }
-
+    
     if (!getIt.isRegistered<GetLessonsByCategoryUseCase>()) {
       getIt.registerLazySingleton<GetLessonsByCategoryUseCase>(
         () => GetLessonsByCategoryUseCase(getIt<LearningRepository>()),
       );
       print('✅ [INJECTION] GetLessonsByCategoryUseCase registered');
     }
-
+    
     if (!getIt.isRegistered<GetLessonContentUseCase>()) {
       getIt.registerLazySingleton<GetLessonContentUseCase>(
         () => GetLessonContentUseCase(getIt<LearningRepository>()),
       );
       print('✅ [INJECTION] GetLessonContentUseCase registered');
     }
-
+    
     if (!getIt.isRegistered<UpdateLessonProgressUseCase>()) {
       getIt.registerLazySingleton<UpdateLessonProgressUseCase>(
         () => UpdateLessonProgressUseCase(getIt<LearningRepository>()),
       );
       print('✅ [INJECTION] UpdateLessonProgressUseCase registered');
     }
-
+    
     if (!getIt.isRegistered<CompleteLessonUseCase>()) {
       getIt.registerLazySingleton<CompleteLessonUseCase>(
         () => CompleteLessonUseCase(getIt<LearningRepository>()),
       );
       print('✅ [INJECTION] CompleteLessonUseCase registered');
     }
-
+    
     if (!getIt.isRegistered<SearchLessonsUseCase>()) {
       getIt.registerLazySingleton<SearchLessonsUseCase>(
         () => SearchLessonsUseCase(getIt<LearningRepository>()),
       );
       print('✅ [INJECTION] SearchLessonsUseCase registered');
     }
-
+    
     // Learning Cubit MODIFICADO para usar topics
     if (!getIt.isRegistered<LearningCubit>()) {
       getIt.registerFactory<LearningCubit>(
         () => LearningCubit(
-          getTopicsUseCase:
-              getIt<GetTopicsUseCase>(), // USA TOPICS EN LUGAR DE CATEGORIES
+          getTopicsUseCase: getIt<GetTopicsUseCase>(), // USA TOPICS EN LUGAR DE CATEGORIES
         ),
       );
       print('✅ [INJECTION] LearningCubit registered (using topics)');
     }
-
+    
     // Otros cubits
     if (!getIt.isRegistered<LessonListCubit>()) {
       getIt.registerFactory<LessonListCubit>(
@@ -446,7 +449,7 @@ void _registerLearningDependencies() {
       );
       print('✅ [INJECTION] LessonListCubit registered');
     }
-
+    
     if (!getIt.isRegistered<LessonContentCubit>()) {
       getIt.registerFactory<LessonContentCubit>(
         () => LessonContentCubit(
@@ -457,6 +460,7 @@ void _registerLearningDependencies() {
       );
       print('✅ [INJECTION] LessonContentCubit registered');
     }
+    
   } catch (e, stackTrace) {
     print('❌ [INJECTION] Error in _registerLearningDependencies: $e');
     print('❌ [INJECTION] Stack trace: $stackTrace');
@@ -475,15 +479,14 @@ void _registerNewsDependencies() {
       );
       print('✅ [INJECTION] NewsRemoteDataSource registered');
     }
-
+    
     if (!getIt.isRegistered<NewsLocalDataSource>()) {
       getIt.registerLazySingleton<NewsLocalDataSource>(
-        () => NewsLocalDataSourceImpl(
-            getIt()), // CacheService desde injection.config.dart
+        () => NewsLocalDataSourceImpl(getIt()), // CacheService desde injection.config.dart
       );
       print('✅ [INJECTION] NewsLocalDataSource registered');
     }
-
+    
     // Repository
     if (!getIt.isRegistered<NewsRepository>()) {
       getIt.registerLazySingleton<NewsRepository>(
@@ -495,7 +498,7 @@ void _registerNewsDependencies() {
       );
       print('✅ [INJECTION] NewsRepository registered');
     }
-
+    
     // Use Cases
     if (!getIt.isRegistered<GetClimateNewsUseCase>()) {
       getIt.registerLazySingleton<GetClimateNewsUseCase>(
@@ -503,21 +506,21 @@ void _registerNewsDependencies() {
       );
       print('✅ [INJECTION] GetClimateNewsUseCase registered');
     }
-
+    
     if (!getIt.isRegistered<GetCachedNewsUseCase>()) {
       getIt.registerLazySingleton<GetCachedNewsUseCase>(
         () => GetCachedNewsUseCase(getIt<NewsRepository>()),
       );
       print('✅ [INJECTION] GetCachedNewsUseCase registered');
     }
-
+    
     if (!getIt.isRegistered<RefreshNewsUseCase>()) {
       getIt.registerLazySingleton<RefreshNewsUseCase>(
         () => RefreshNewsUseCase(getIt<NewsRepository>()),
       );
       print('✅ [INJECTION] RefreshNewsUseCase registered');
     }
-
+    
     // Cubit
     if (!getIt.isRegistered<NewsCubit>()) {
       getIt.registerFactory<NewsCubit>(
@@ -529,6 +532,7 @@ void _registerNewsDependencies() {
       );
       print('✅ [INJECTION] NewsCubit registered');
     }
+    
   } catch (e, stackTrace) {
     print('❌ [INJECTION] Error in _registerNewsDependencies: $e');
     print('❌ [INJECTION] Stack trace: $stackTrace');
@@ -540,14 +544,14 @@ void _registerNewsDependencies() {
 
 void _verifyDependencies() {
   print('🔍 [INJECTION] === DEPENDENCY VERIFICATION WITH API INTEGRATION ===');
-
+  
   // Verificar dependencias críticas INCLUYENDO COMPANION API
   final criticalDeps = [
     'ApiClient',
     'TokenManager', // 🆕 VERIFICAR TOKEN MANAGER
     'MediaRemoteDataSource',
     'ContentRemoteDataSource',
-    'ContentRepository',
+    'ContentRepository', 
     'GetTopicsUseCase',
     'GetContentByIdUseCase',
     'GetContentsByTopicUseCase',
@@ -577,10 +581,10 @@ void _verifyDependencies() {
     'RefreshNewsUseCase',
     'NewsCubit',
   ];
-
+  
   for (final dep in criticalDeps) {
     bool isRegistered = false;
-
+    
     switch (dep) {
       case 'ApiClient':
         isRegistered = getIt.isRegistered<ApiClient>();
@@ -678,7 +682,7 @@ void _verifyDependencies() {
         isRegistered = getIt.isRegistered<NewsCubit>();
         break;
     }
-
+    
     if (isRegistered) {
       print('✅ [INJECTION] $dep: REGISTERED');
     } else {
@@ -686,7 +690,7 @@ void _verifyDependencies() {
       throw Exception('Critical dependency $dep is not registered');
     }
   }
-
+  
   // 🆕 Test de resolución para CompanionCubit
   try {
     final testCompanionCubit = getIt<CompanionCubit>();
@@ -696,7 +700,7 @@ void _verifyDependencies() {
     print('❌ [INJECTION] ERROR resolving CompanionCubit: $e');
     throw Exception('Cannot resolve CompanionCubit: $e');
   }
-
+  
   // 🆕 Test de resolución para CompanionShopCubit
   try {
     final testShopCubit = getIt<CompanionShopCubit>();
@@ -706,7 +710,7 @@ void _verifyDependencies() {
     print('❌ [INJECTION] ERROR resolving CompanionShopCubit: $e');
     throw Exception('Cannot resolve CompanionShopCubit: $e');
   }
-
+  
   // Test de resolución para TopicContentsCubit
   try {
     final testCubit = getIt<TopicContentsCubit>();
@@ -716,7 +720,7 @@ void _verifyDependencies() {
     print('❌ [INJECTION] ERROR resolving TopicContentsCubit: $e');
     throw Exception('Cannot resolve TopicContentsCubit: $e');
   }
-
+  
   // Test de resolución para NewsCubit
   try {
     final testNewsCubit = getIt<NewsCubit>();
@@ -726,17 +730,16 @@ void _verifyDependencies() {
     print('❌ [INJECTION] ERROR resolving NewsCubit: $e');
     throw Exception('Cannot resolve NewsCubit: $e');
   }
-
+  
   // 🆕 Test de resolución para CompanionRemoteDataSource
   try {
     final testCompanionDataSource = getIt<CompanionRemoteDataSource>();
-    print(
-        '✅ [INJECTION] CompanionRemoteDataSource can be resolved successfully');
+    print('✅ [INJECTION] CompanionRemoteDataSource can be resolved successfully');
   } catch (e) {
     print('❌ [INJECTION] ERROR resolving CompanionRemoteDataSource: $e');
     throw Exception('Cannot resolve CompanionRemoteDataSource: $e');
   }
-
+  
   // Test de resolución para MediaRemoteDataSource
   try {
     final testMediaDataSource = getIt<MediaRemoteDataSource>();
@@ -745,7 +748,7 @@ void _verifyDependencies() {
     print('❌ [INJECTION] ERROR resolving MediaRemoteDataSource: $e');
     throw Exception('Cannot resolve MediaRemoteDataSource: $e');
   }
-
+  
   print('🔍 [INJECTION] === VERIFICATION COMPLETED WITH API INTEGRATION ===');
 }
 
@@ -755,52 +758,35 @@ void debugDependencies() {
   print('🔍 [INJECTION] === DEPENDENCY DEBUG WITH API INTEGRATION ===');
   print('🔍 ApiClient: ${getIt.isRegistered<ApiClient>()}');
   print('🔍 TokenManager: ${getIt.isRegistered<TokenManager>()}'); // 🆕 NUEVO
-  print(
-      '🔍 MediaRemoteDataSource: ${getIt.isRegistered<MediaRemoteDataSource>()}');
-  print(
-      '🔍 ContentRemoteDataSource: ${getIt.isRegistered<ContentRemoteDataSource>()}');
+  print('🔍 MediaRemoteDataSource: ${getIt.isRegistered<MediaRemoteDataSource>()}');
+  print('🔍 ContentRemoteDataSource: ${getIt.isRegistered<ContentRemoteDataSource>()}');
   print('🔍 ContentRepository: ${getIt.isRegistered<ContentRepository>()}');
   print('🔍 GetTopicsUseCase: ${getIt.isRegistered<GetTopicsUseCase>()}');
-  print(
-      '🔍 GetContentByIdUseCase: ${getIt.isRegistered<GetContentByIdUseCase>()}');
-  print(
-      '🔍 GetContentsByTopicUseCase: ${getIt.isRegistered<GetContentsByTopicUseCase>()}');
+  print('🔍 GetContentByIdUseCase: ${getIt.isRegistered<GetContentByIdUseCase>()}');
+  print('🔍 GetContentsByTopicUseCase: ${getIt.isRegistered<GetContentsByTopicUseCase>()}');
   print('🔍 ContentCubit: ${getIt.isRegistered<ContentCubit>()}');
   print('🔍 TopicContentsCubit: ${getIt.isRegistered<TopicContentsCubit>()}');
   // 🆕 COMPANION DEBUG
-  print(
-      '🔍 CompanionRemoteDataSource: ${getIt.isRegistered<CompanionRemoteDataSource>()}');
-  print(
-      '🔍 CompanionLocalDataSource: ${getIt.isRegistered<CompanionLocalDataSource>()}');
+  print('🔍 CompanionRemoteDataSource: ${getIt.isRegistered<CompanionRemoteDataSource>()}');
+  print('🔍 CompanionLocalDataSource: ${getIt.isRegistered<CompanionLocalDataSource>()}');
   print('🔍 CompanionRepository: ${getIt.isRegistered<CompanionRepository>()}');
-  print(
-      '🔍 GetUserCompanionsUseCase: ${getIt.isRegistered<GetUserCompanionsUseCase>()}');
-  print(
-      '🔍 GetAvailableCompanionsUseCase: ${getIt.isRegistered<GetAvailableCompanionsUseCase>()}');
-  print(
-      '🔍 GetCompanionShopUseCase: ${getIt.isRegistered<GetCompanionShopUseCase>()}');
-  print(
-      '🔍 PurchaseCompanionUseCase: ${getIt.isRegistered<PurchaseCompanionUseCase>()}');
-  print(
-      '🔍 EvolveCompanionUseCase: ${getIt.isRegistered<EvolveCompanionUseCase>()}');
-  print(
-      '🔍 FeedCompanionUseCase: ${getIt.isRegistered<FeedCompanionUseCase>()}');
-  print(
-      '🔍 LoveCompanionUseCase: ${getIt.isRegistered<LoveCompanionUseCase>()}');
+  print('🔍 GetUserCompanionsUseCase: ${getIt.isRegistered<GetUserCompanionsUseCase>()}');
+  print('🔍 GetAvailableCompanionsUseCase: ${getIt.isRegistered<GetAvailableCompanionsUseCase>()}');
+  print('🔍 GetCompanionShopUseCase: ${getIt.isRegistered<GetCompanionShopUseCase>()}');
+  print('🔍 PurchaseCompanionUseCase: ${getIt.isRegistered<PurchaseCompanionUseCase>()}');
+  print('🔍 EvolveCompanionUseCase: ${getIt.isRegistered<EvolveCompanionUseCase>()}');
+  print('🔍 FeedCompanionUseCase: ${getIt.isRegistered<FeedCompanionUseCase>()}');
+  print('🔍 LoveCompanionUseCase: ${getIt.isRegistered<LoveCompanionUseCase>()}');
   print('🔍 CompanionCubit: ${getIt.isRegistered<CompanionCubit>()}');
   print('🔍 CompanionShopCubit: ${getIt.isRegistered<CompanionShopCubit>()}');
-  print(
-      '🔍 CompanionDetailCubit: ${getIt.isRegistered<CompanionDetailCubit>()}');
+  print('🔍 CompanionDetailCubit: ${getIt.isRegistered<CompanionDetailCubit>()}');
   // LEARNING & NEWS DEBUG
   print('🔍 LearningCubit: ${getIt.isRegistered<LearningCubit>()}');
-  print(
-      '🔍 NewsRemoteDataSource: ${getIt.isRegistered<NewsRemoteDataSource>()}');
+  print('🔍 NewsRemoteDataSource: ${getIt.isRegistered<NewsRemoteDataSource>()}');
   print('🔍 NewsLocalDataSource: ${getIt.isRegistered<NewsLocalDataSource>()}');
   print('🔍 NewsRepository: ${getIt.isRegistered<NewsRepository>()}');
-  print(
-      '🔍 GetClimateNewsUseCase: ${getIt.isRegistered<GetClimateNewsUseCase>()}');
-  print(
-      '🔍 GetCachedNewsUseCase: ${getIt.isRegistered<GetCachedNewsUseCase>()}');
+  print('🔍 GetClimateNewsUseCase: ${getIt.isRegistered<GetClimateNewsUseCase>()}');
+  print('🔍 GetCachedNewsUseCase: ${getIt.isRegistered<GetCachedNewsUseCase>()}');
   print('🔍 RefreshNewsUseCase: ${getIt.isRegistered<RefreshNewsUseCase>()}');
   print('🔍 NewsCubit: ${getIt.isRegistered<NewsCubit>()}');
   print('🔍 [INJECTION] === END DEBUG ===');

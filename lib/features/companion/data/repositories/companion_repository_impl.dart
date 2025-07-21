@@ -41,163 +41,193 @@ class CompanionRepositoryImpl implements CompanionRepository {
 
   // ==================== OBTENER MASCOTAS DEL USUARIO ====================
 
-   @override
-  Future<Either<Failure, List<CompanionEntity>>> getUserCompanions(
-      String userId) async {
-    try {
-      debugPrint('🐾 [REPO] === OBTENIENDO COMPAÑEROS DEL USUARIO ===');
+  @override
+Future<Either<Failure, List<CompanionEntity>>> getUserCompanions(
+    String userId) async {
+  try {
+    debugPrint('🐾 [REPO] === OBTENIENDO COMPAÑEROS DEL USUARIO ===');
 
-      // 🔥 USAR USER ID REAL
-      final realUserId = await _getRealUserId();
-      debugPrint('👤 [REPO] Usuario ID REAL: $realUserId');
-      debugPrint('🌐 [REPO] API Mode: $enableApiMode');
+    // 🔥 USAR USER ID REAL DEL TOKEN
+    final realUserId = await _getRealUserId();
+    debugPrint('👤 [REPO] Usuario ID REAL: $realUserId');
 
-      if (enableApiMode && await networkInfo.isConnected) {
-        debugPrint('🚀 [REPO] Conectando con API real...');
+    if (enableApiMode && await networkInfo.isConnected) {
+      debugPrint('🚀 [REPO] Conectando con API real...');
 
-        try {
-          final hasValidToken = await tokenManager.hasValidAccessToken();
-          if (!hasValidToken) {
-            debugPrint('⚠️ [REPO] Sin token válido, usando fallback local');
-            return await _getLocalCompanions(realUserId);
-          }
-
-          // 🔥 LLAMADA A LA API REAL PARA MASCOTAS DEL USUARIO
-          final remoteCompanions =
-              await remoteDataSource.getUserCompanions(realUserId);
-          debugPrint(
-              '✅ [REPO] API devolvió ${remoteCompanions.length} mascotas');
-
-          // Si no tiene mascotas, añadir Dexter inicial automáticamente
-          if (remoteCompanions.isEmpty) {
-            debugPrint('🔧 Usuario sin mascotas, agregando Dexter inicial');
-            final dexterInitial = await _createInitialDexterBaby();
-            final updatedCompanions = [dexterInitial, ...remoteCompanions];
-            await localDataSource.cacheCompanions(realUserId, updatedCompanions);
-            return Right(updatedCompanions);
-          }
-
-          // Guardar en cache
-          await localDataSource.cacheCompanions(realUserId, remoteCompanions);
-          return Right(remoteCompanions);
-          
-        } catch (e) {
-          debugPrint('❌ [REPO] Error con API, fallback a local: $e');
+      try {
+        final hasValidToken = await tokenManager.hasValidAccessToken();
+        if (!hasValidToken) {
+          debugPrint('⚠️ [REPO] Sin token válido, usando fallback local');
           return await _getLocalCompanions(realUserId);
         }
-      } else {
-        debugPrint('📱 [REPO] Usando datos locales');
+
+        // 🔥 LLAMADA DIRECTA A LA API CON USER ID REAL
+        final remoteCompanions = await remoteDataSource.getUserCompanions(realUserId);
+        debugPrint('✅ [REPO] API devolvió ${remoteCompanions.length} mascotas del usuario');
+
+        // 🔧 SIEMPRE AGREGAR DEXTER JOVEN SI NO LO TIENE
+        final hasDexterYoung = remoteCompanions.any((c) => 
+          c.type == CompanionType.dexter && c.stage == CompanionStage.young
+        );
+
+        List<CompanionModel> finalCompanions = List.from(remoteCompanions);
+
+        if (!hasDexterYoung) {
+          debugPrint('🎁 [REPO] Usuario no tiene Dexter joven, agregándolo automáticamente');
+          final dexterYoung = await _createInitialDexterYoung();
+          finalCompanions.insert(0, dexterYoung);
+        }
+
+        // 🔧 ASEGURAR QUE AL MENOS UNA ESTÉ ACTIVA
+        if (finalCompanions.isNotEmpty && !finalCompanions.any((c) => c.isSelected)) {
+          finalCompanions[0] = finalCompanions[0].copyWith(isSelected: true);
+          debugPrint('⭐ [REPO] Activando primera mascota: ${finalCompanions[0].displayName}');
+        }
+
+        // Guardar en cache
+        await localDataSource.cacheCompanions(realUserId, finalCompanions);
+        debugPrint('💾 [REPO] Mascotas guardadas en cache');
+
+        return Right(finalCompanions);
+        
+      } catch (e) {
+        debugPrint('❌ [REPO] Error con API, fallback a local: $e');
         return await _getLocalCompanions(realUserId);
       }
-    } catch (e) {
-      debugPrint('❌ [REPO] Error general: $e');
-      return Left(
-          UnknownFailure('Error obteniendo compañeros: ${e.toString()}'));
+    } else {
+      debugPrint('📱 [REPO] Usando datos locales');
+      return await _getLocalCompanions(realUserId);
     }
+  } catch (e) {
+    debugPrint('❌ [REPO] Error general: $e');
+    return Left(UnknownFailure('Error obteniendo compañeros: ${e.toString()}'));
   }
+}
 
   // ==================== TIENDA DE MASCOTAS (TU API) ====================
 
   @override
-  Future<Either<Failure, List<CompanionEntity>>>
-      getAvailableCompanions() async {
-    try {
-      debugPrint('🛍️ [REPO] === OBTENIENDO TIENDA DE MASCOTAS ===');
-      debugPrint('🌐 [REPO] API Mode: $enableApiMode');
+Future<Either<Failure, List<CompanionEntity>>> getAvailableCompanions() async {
+  try {
+    debugPrint('🛍️ [REPO] === OBTENIENDO TIENDA DE MASCOTAS ===');
 
-      if (enableApiMode && await networkInfo.isConnected) {
-        debugPrint('🚀 [REPO] Obteniendo tienda desde API real...');
+    if (enableApiMode && await networkInfo.isConnected) {
+      debugPrint('🚀 [REPO] Obteniendo tienda desde API real...');
 
-        try {
-          final hasValidToken = await tokenManager.hasValidAccessToken();
-          if (!hasValidToken) {
-            debugPrint('⚠️ [REPO] Sin token para tienda, usando fallback');
-            return await _getLocalAvailableCompanions();
-          }
-
-          // 🔥 USAR USER ID REAL PARA LA TIENDA
-          final realUserId = await _getRealUserId();
-
-          final storeCompanions = await remoteDataSource.getStoreCompanions(
-            userId: realUserId, // 🔥 USER ID REAL
-          );
-
-          debugPrint(
-              '🛍️ [REPO] Tienda API: ${storeCompanions.length} mascotas');
-
-          for (final companion in storeCompanions) {
-            debugPrint(
-                '🏪 [REPO] - ${companion.displayName}: ${companion.purchasePrice}★');
-          }
-
-          return Right(storeCompanions);
-        } catch (e) {
-          debugPrint('❌ [REPO] Error con tienda API: $e');
+      try {
+        final hasValidToken = await tokenManager.hasValidAccessToken();
+        if (!hasValidToken) {
+          debugPrint('⚠️ [REPO] Sin token para tienda, usando fallback');
           return await _getLocalAvailableCompanions();
         }
-      } else {
-        debugPrint('📱 [REPO] Usando tienda local');
+
+        // 🔥 USAR USER ID REAL PARA LA TIENDA
+        final realUserId = await _getRealUserId();
+        final storeCompanions = await remoteDataSource.getStoreCompanions(userId: realUserId);
+
+        debugPrint('🛍️ [REPO] Tienda API: ${storeCompanions.length} mascotas');
+
+        return Right(storeCompanions);
+      } catch (e) {
+        debugPrint('❌ [REPO] Error con tienda API: $e');
         return await _getLocalAvailableCompanions();
       }
-    } catch (e) {
-      debugPrint('❌ [REPO] Error obteniendo tienda: $e');
-      return Left(CacheFailure('Error obteniendo tienda: ${e.toString()}'));
+    } else {
+      debugPrint('📱 [REPO] Usando tienda local');
+      return await _getLocalAvailableCompanions();
     }
+  } catch (e) {
+    debugPrint('❌ [REPO] Error obteniendo tienda: $e');
+    return Left(CacheFailure('Error obteniendo tienda: ${e.toString()}'));
   }
+}
+
 
   // ==================== ESTADÍSTICAS (TU API) ====================
 
   @override
-  Future<Either<Failure, CompanionStatsEntity>> getCompanionStats(
-      String userId) async {
-    try {
-      debugPrint('📊 [REPO] === OBTENIENDO ESTADÍSTICAS ===');
+Future<Either<Failure, CompanionStatsEntity>> getCompanionStats(String userId) async {
+  try {
+    debugPrint('📊 [REPO] === OBTENIENDO ESTADÍSTICAS ===');
 
-      // 🔥 USAR USER ID REAL
-      final realUserId = await _getRealUserId();
-      debugPrint('👤 [REPO] Usuario ID REAL: $realUserId');
-      debugPrint('🌐 [REPO] API Mode: $enableApiMode');
+    // 🔥 USAR USER ID REAL
+    final realUserId = await _getRealUserId();
+    debugPrint('👤 [REPO] Usuario ID REAL: $realUserId');
 
-      if (enableApiMode && await networkInfo.isConnected) {
-        debugPrint('🚀 [REPO] Calculando stats desde API...');
+    if (enableApiMode && await networkInfo.isConnected) {
+      debugPrint('🚀 [REPO] Calculando stats desde API...');
 
-        try {
-          final hasValidToken = await tokenManager.hasValidAccessToken();
-          if (hasValidToken) {
-            // 🔥 LLAMADA A TU API PARA STATS CON USER ID REAL
-            final stats = await remoteDataSource.getCompanionStats(realUserId);
-            await localDataSource.cacheStats(stats);
+      try {
+        final hasValidToken = await tokenManager.hasValidAccessToken();
+        if (hasValidToken) {
+          // 🔥 OBTENER PUNTOS REALES DE LA API
+          final realUserPoints = await remoteDataSource.getUserPoints(realUserId);
+          debugPrint('💰 [REPO] Puntos REALES del usuario: $realUserPoints');
 
-            debugPrint('📊 [REPO] Stats API calculados y guardados');
-            return Right(stats);
-          } else {
-            debugPrint(
-                '⚠️ [REPO] Sin token válido para stats, usando cache local');
+          // 🔥 OBTENER MASCOTAS REALES DEL USUARIO
+          final userCompanions = await remoteDataSource.getUserCompanions(realUserId);
+          debugPrint('🐾 [REPO] Mascotas REALES del usuario: ${userCompanions.length}');
+
+          // 🔥 OBTENER TODAS LAS MASCOTAS DISPONIBLES
+          final allCompanions = await remoteDataSource.getAvailableCompanions();
+          debugPrint('🛍️ [REPO] Total mascotas disponibles: ${allCompanions.length}');
+
+          final ownedCount = userCompanions.length;
+          final totalCount = allCompanions.length + 1; // +1 por Dexter joven
+          final activeCompanionId = userCompanions.isNotEmpty ? userCompanions.first.id : 'dexter_young';
+
+          // Calcular puntos gastados (estimado basado en precios)
+          int spentPoints = 0;
+          for (final companion in userCompanions) {
+            spentPoints += companion.purchasePrice;
           }
-        } catch (e) {
-          debugPrint('❌ [REPO] Error obteniendo stats desde API: $e');
+
+          final stats = CompanionStatsModel(
+            userId: realUserId,
+            totalCompanions: totalCount,
+            ownedCompanions: ownedCount,
+            totalPoints: realUserPoints + spentPoints, // Total real + gastados
+            spentPoints: spentPoints,
+            activeCompanionId: activeCompanionId,
+            totalFeedCount: 0, // No disponible en API actual
+            totalLoveCount: 0, // No disponible en API actual
+            totalEvolutions: 0, // No disponible en API actual
+            lastActivity: DateTime.now(),
+          );
+
+          await localDataSource.cacheStats(stats);
+
+          debugPrint('📊 [REPO] Stats API calculados y guardados');
+          debugPrint('💰 [REPO] Puntos disponibles: ${stats.availablePoints}');
+          debugPrint('🐾 [REPO] Mascotas: ${stats.ownedCompanions}/${stats.totalCompanions}');
+          
+          return Right(stats);
+        } else {
+          debugPrint('⚠️ [REPO] Sin token válido para stats, usando cache local');
         }
+      } catch (e) {
+        debugPrint('❌ [REPO] Error obteniendo stats desde API: $e');
       }
-
-      // 📱 MODO LOCAL: Usar cache local CON USER ID REAL
-      debugPrint('📱 [REPO] Usando stats desde cache local');
-      final localStats = await localDataSource.getCachedStats(realUserId);
-
-      if (localStats != null) {
-        debugPrint('✅ [REPO] Stats locales encontrados');
-        return Right(localStats);
-      } else {
-        debugPrint('🔧 [REPO] Generando stats por defecto');
-        final defaultStats = _generateDefaultStats(realUserId);
-        await localDataSource.cacheStats(defaultStats);
-        return Right(defaultStats);
-      }
-    } catch (e) {
-      debugPrint('❌ [REPO] Error obteniendo stats: $e');
-      return Left(
-          UnknownFailure('Error obteniendo estadísticas: ${e.toString()}'));
     }
+
+    // 📱 MODO LOCAL: Usar cache local CON USER ID REAL
+    debugPrint('📱 [REPO] Usando stats desde cache local');
+    final localStats = await localDataSource.getCachedStats(realUserId);
+
+    if (localStats != null) {
+      debugPrint('✅ [REPO] Stats locales encontrados');
+      return Right(localStats);
+    } else {
+      debugPrint('🔧 [REPO] Generando stats por defecto');
+      final defaultStats = _generateDefaultStats(realUserId);
+      await localDataSource.cacheStats(defaultStats);
+      return Right(defaultStats);
+    }
+  } catch (e) {
+    debugPrint('❌ [REPO] Error obteniendo stats: $e');
+    return Left(UnknownFailure('Error obteniendo estadísticas: ${e.toString()}'));
   }
+}
 
   // ==================== COMPRAR/ADOPTAR MASCOTA (TU API) ====================
 
@@ -553,6 +583,29 @@ class CompanionRepositoryImpl implements CompanionRepository {
       currentMood: CompanionMood.happy,
       purchasePrice: 0,
       evolutionPrice: 50,
+      unlockedAnimations: ['idle', 'blink', 'happy', 'eating'],
+      createdAt: DateTime.now(),
+    );
+  }
+
+  Future<CompanionModel> _createInitialDexterYoung() async {
+    return CompanionModel(
+      id: 'dexter_young',
+      type: CompanionType.dexter,
+      stage: CompanionStage.young,
+      name: 'Dexter',
+      description: 'Tu primer compañero, un chihuahua joven lleno de energía',
+      level: 1,
+      experience: 0,
+      happiness: 100,
+      hunger: 100,
+      energy: 100,
+      isOwned: true,
+      isSelected: true,
+      purchasedAt: DateTime.now(),
+      currentMood: CompanionMood.happy,
+      purchasePrice: 0,
+      evolutionPrice: 100,
       unlockedAnimations: ['idle', 'blink', 'happy', 'eating'],
       createdAt: DateTime.now(),
     );
@@ -1078,5 +1131,17 @@ class CompanionRepositoryImpl implements CompanionRepository {
     } catch (e) {
       return Left(UnknownFailure('Error dando amor: ${e.toString()}'));
     }
+  }
+  
+  @override
+  Future<Either<Failure, CompanionEntity>> evolveCompanionViaApi({required String userId, required String petId}) {
+    // TODO: implement evolveCompanionViaApi
+    throw UnimplementedError();
+  }
+  
+  @override
+  Future<Either<Failure, CompanionEntity>> featureCompanion({required String userId, required String petId}) {
+    // TODO: implement featureCompanion
+    throw UnimplementedError();
   }
 }

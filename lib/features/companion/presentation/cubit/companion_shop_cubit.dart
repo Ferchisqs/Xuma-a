@@ -73,6 +73,7 @@ class CompanionShopError extends CompanionShopState {
 class CompanionShopCubit extends Cubit<CompanionShopState> {
   final GetCompanionShopUseCase getCompanionShopUseCase;
   final PurchaseCompanionUseCase purchaseCompanionUseCase;
+  final TokenManager tokenManager;
 
   // 🆕 MAPEO DINÁMICO QUE SE LLENA DESDE LA API
   Map<String, String> _localIdToApiPetId = {};
@@ -81,6 +82,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
   CompanionShopCubit({
     required this.getCompanionShopUseCase,
     required this.purchaseCompanionUseCase,
+    required this.tokenManager,
   }) : super(CompanionShopInitial());
 
   Future<void> loadShop() async {
