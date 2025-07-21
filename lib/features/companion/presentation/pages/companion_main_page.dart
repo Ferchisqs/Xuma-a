@@ -23,11 +23,6 @@ class CompanionMainPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // Welcome cubit para verificar primera vez
-        BlocProvider(
-          create: (context) =>
-              getIt<WelcomeCompanionCubit>()..checkAndShowWelcomeIfNeeded(),
-        ),
         // Cubit principal de companions
         BlocProvider(
           create: (context) => getIt<CompanionCubit>()..loadCompanions(),

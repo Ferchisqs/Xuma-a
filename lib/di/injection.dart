@@ -325,7 +325,7 @@ void _registerCompanionDependencies() {
         () => CompanionCubit(
           getUserCompanionsUseCase: getIt<GetUserCompanionsUseCase>(),
           getCompanionShopUseCase: getIt<GetCompanionShopUseCase>(),
-          tokenManager: getIt<TokenManager>(), // 🔥 AGREGAR TOKEN MANAGER
+          tokenManager: getIt<TokenManager>(), repository: getIt<CompanionRepository>(), // 🔥 AGREGAR TOKEN MANAGER
         ),
       );
       print('✅ [INJECTION] CompanionCubit registered WITH TOKEN MANAGER');
@@ -820,8 +820,6 @@ void debugDependencies() {
   print('🔍 GetContentsByTopicUseCase: ${getIt.isRegistered<GetContentsByTopicUseCase>()}');
   print('🔍 ContentCubit: ${getIt.isRegistered<ContentCubit>()}');
   print('🔍 TopicContentsCubit: ${getIt.isRegistered<TopicContentsCubit>()}');
-  
-  // 🆕 COMPANION DEBUG
   print('🔍 CompanionRemoteDataSource: ${getIt.isRegistered<CompanionRemoteDataSource>()}');
   print('🔍 CompanionLocalDataSource: ${getIt.isRegistered<CompanionLocalDataSource>()}');
   print('🔍 CompanionRepository: ${getIt.isRegistered<CompanionRepository>()}');
@@ -832,17 +830,23 @@ void debugDependencies() {
   print('🔍 EvolveCompanionUseCase: ${getIt.isRegistered<EvolveCompanionUseCase>()}');
   print('🔍 FeedCompanionUseCase: ${getIt.isRegistered<FeedCompanionUseCase>()}');
   print('🔍 LoveCompanionUseCase: ${getIt.isRegistered<LoveCompanionUseCase>()}');
-  
-  // 🔧 NUEVOS USE CASES DEBUG
   print('🔍 EvolveCompanionViaApiUseCase: ${getIt.isRegistered<EvolveCompanionViaApiUseCase>()}');
   print('🔍 FeatureCompanionUseCase: ${getIt.isRegistered<FeatureCompanionUseCase>()}');
-  
   print('🔍 CompanionCubit: ${getIt.isRegistered<CompanionCubit>()}');
   print('🔍 CompanionShopCubit: ${getIt.isRegistered<CompanionShopCubit>()}');
   print('🔍 CompanionDetailCubit: ${getIt.isRegistered<CompanionDetailCubit>()}');
-  
-  // LEARNING & NEWS DEBUG
+  print('🔍 WelcomeCompanionCubit: ${getIt.isRegistered<WelcomeCompanionCubit>()}');
+  print('🔍 LearningRemoteDataSource: ${getIt.isRegistered<LearningRemoteDataSource>()}');
+  print('🔍 LearningRepository: ${getIt.isRegistered<LearningRepository>()}');
+  print('🔍 GetCategoriesUseCase: ${getIt.isRegistered<GetCategoriesUseCase>()}');
+  print('🔍 GetLessonsByCategoryUseCase: ${getIt.isRegistered<GetLessonsByCategoryUseCase>()}');
+  print('🔍 GetLessonContentUseCase: ${getIt.isRegistered<GetLessonContentUseCase>()}');
+  print('🔍 UpdateLessonProgressUseCase: ${getIt.isRegistered<UpdateLessonProgressUseCase>()}');
+  print('🔍 CompleteLessonUseCase: ${getIt.isRegistered<CompleteLessonUseCase>()}');
+  print('🔍 SearchLessonsUseCase: ${getIt.isRegistered<SearchLessonsUseCase>()}');
   print('🔍 LearningCubit: ${getIt.isRegistered<LearningCubit>()}');
+  print('🔍 LessonListCubit: ${getIt.isRegistered<LessonListCubit>()}');
+  print('🔍 LessonContentCubit: ${getIt.isRegistered<LessonContentCubit>()}');
   print('🔍 NewsRemoteDataSource: ${getIt.isRegistered<NewsRemoteDataSource>()}');
   print('🔍 NewsLocalDataSource: ${getIt.isRegistered<NewsLocalDataSource>()}');
   print('🔍 NewsRepository: ${getIt.isRegistered<NewsRepository>()}');
@@ -850,72 +854,5 @@ void debugDependencies() {
   print('🔍 GetCachedNewsUseCase: ${getIt.isRegistered<GetCachedNewsUseCase>()}');
   print('🔍 RefreshNewsUseCase: ${getIt.isRegistered<RefreshNewsUseCase>()}');
   print('🔍 NewsCubit: ${getIt.isRegistered<NewsCubit>()}');
-  
-  print('🔍 [INJECTION] === END DEBUG ===');
+  print('🔍 [INJECTION] === DEBUG COMPLETE ===');
 }
-
-void clearAllDependencies() {
-  getIt.reset();
-  print('🧹 [INJECTION] All dependencies cleared');
-}
-
-// ==================== 🔧 COMPANION MODULE (OPCIONAL PARA @module) ====================
-// Si decides usar @module en el futuro, aquí tienes la estructura:
-
-/*
-@module
-abstract class CompanionModule {
-  // Data Sources
-  @injectable
-  CompanionRemoteDataSource get companionRemoteDataSource;
-  
-  @injectable
-  CompanionLocalDataSource get companionLocalDataSource;
-  
-  // Repository
-  @injectable
-  CompanionRepository get companionRepository;
-  
-  // Use Cases Existentes
-  @injectable
-  GetUserCompanionsUseCase get getUserCompanionsUseCase;
-  
-  @injectable
-  GetAvailableCompanionsUseCase get getAvailableCompanionsUseCase;
-  
-  @injectable
-  GetCompanionShopUseCase get getCompanionShopUseCase;
-  
-  @injectable
-  PurchaseCompanionUseCase get purchaseCompanionUseCase;
-  
-  @injectable
-  EvolveCompanionUseCase get evolveCompanionUseCase;
-  
-  @injectable
-  FeedCompanionUseCase get feedCompanionUseCase;
-  
-  @injectable
-  LoveCompanionUseCase get loveCompanionUseCase;
-  
-  // 🔧 NUEVOS USE CASES PARA API
-  @injectable
-  EvolveCompanionViaApiUseCase get evolveCompanionViaApiUseCase;
-  
-  @injectable
-  FeatureCompanionUseCase get featureCompanionUseCase;
-  
-  // Cubits
-  @injectable
-  CompanionCubit get companionCubit;
-  
-  @injectable
-  CompanionShopCubit get companionShopCubit;
-  
-  @injectable
-  CompanionDetailCubit get companionDetailCubit;
-  
-  @injectable
-  WelcomeCompanionCubit get welcomeCompanionCubit;
-}
-*/

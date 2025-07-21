@@ -1,4 +1,4 @@
-// 🔧 REEMPLAZAR CompanionCubit en lib/features/companion/presentation/cubit/companion_cubit.dart
+// lib/features/companion/presentation/cubit/companion_cubit.dart - CORREGIDO
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,6 +10,7 @@ import '../../domain/entities/companion_entity.dart';
 import '../../domain/entities/companion_stats_entity.dart';
 import '../../domain/usecases/get_user_companions_usecase.dart';
 import '../../domain/usecases/get_companion_shop_usecase.dart';
+import '../../domain/repositories/companion_repository.dart'; // 🔥 AGREGAR IMPORT
 
 // States (sin cambios)
 abstract class CompanionState extends Equatable {
@@ -45,23 +46,21 @@ class CompanionError extends CompanionState {
   List<Object> get props => [message];
 }
 
-// 🔧 CUBIT MEJORADO CON USER ID REAL
+// 🔧 CUBIT CORREGIDO CON REPOSITORY INYECTADO
 @injectable
 class CompanionCubit extends Cubit<CompanionState> {
   final GetUserCompanionsUseCase getUserCompanionsUseCase;
   final GetCompanionShopUseCase getCompanionShopUseCase;
   final TokenManager tokenManager;
-   
+  final CompanionRepository repository; // 🔥 AGREGAR REPOSITORY
 
   CompanionCubit({
     required this.getUserCompanionsUseCase,
     required this.getCompanionShopUseCase,
     required this.tokenManager,
+    required this.repository, // 🔥 INYECTAR REPOSITORY
   }) : super(CompanionInitial());
-  
-  get repository => null;
 
-  // 🔧 MÉTODO MEJORADO CON USER ID REAL
   // 🔧 MÉTODO MEJORADO CON MANEJO CORRECTO DE DATOS
   Future<void> loadCompanions() async {
     try {
@@ -103,7 +102,7 @@ class CompanionCubit extends Cubit<CompanionState> {
         },
       );
       
-      // 🔥 OBTENER ESTADÍSTICAS
+      // 🔥 OBTENER ESTADÍSTICAS - AHORA CON REPOSITORY REAL
       debugPrint('📊 [COMPANION_CUBIT] Obteniendo estadísticas...');
       final statsResult = await repository.getCompanionStats(userId);
       
@@ -114,8 +113,6 @@ class CompanionCubit extends Cubit<CompanionState> {
         },
         (stats) {
           debugPrint('✅ [COMPANION_CUBIT] Stats obtenidas: ${stats.availablePoints} puntos, ${stats.ownedCompanions} mascotas');
-          
-         
           
           // 🔧 ASEGURAR QUE TENGA AL MENOS UNA MASCOTA ACTIVA
           if (!ownedCompanions.any((c) => c.isSelected)) {
@@ -131,9 +128,11 @@ class CompanionCubit extends Cubit<CompanionState> {
           
           final activeCompanion = ownedCompanions.where((c) => c.isSelected).isNotEmpty 
               ? ownedCompanions.firstWhere((c) => c.isSelected)
-              : ownedCompanions.first;
+              : (ownedCompanions.isNotEmpty ? ownedCompanions.first : null);
               
-          debugPrint('⭐ [COMPANION_CUBIT] Compañero activo: ${activeCompanion.displayName}');
+          if (activeCompanion != null) {
+            debugPrint('⭐ [COMPANION_CUBIT] Compañero activo: ${activeCompanion.displayName}');
+          }
           
           // 🔥 OBTENER TIENDA (mascotas disponibles para comprar)
           debugPrint('🏪 [COMPANION_CUBIT] Obteniendo tienda...');
@@ -177,65 +176,6 @@ class CompanionCubit extends Cubit<CompanionState> {
       emit(CompanionError(message: 'Error inesperado: ${e.toString()}'));
     }
   }
-
-
-  Future<void> _loadUserCompanions(String userId, dynamic shopData) async {
-    try {
-      debugPrint('🔍 [COMPANION_CUBIT] === OBTENIENDO MASCOTAS DEL USUARIO ===');
-      
-      // Obtener mascotas del usuario directamente desde el repository
-      final userCompanionsResult = await getUserCompanionsUseCase(
-        GetUserCompanionsParams(userId: userId),
-      );
-      
-      userCompanionsResult.fold(
-        (failure) {
-          debugPrint('⚠️ [COMPANION_CUBIT] Error obteniendo mascotas usuario: ${failure.message}');
-          
-          
-          
-         
-        },
-        (userCompanions) {
-          debugPrint('✅ [COMPANION_CUBIT] Mascotas del usuario: ${userCompanions.length}');
-          
-          // Verificar que tenga al menos una mascota
-          List<CompanionEntity> finalOwnedCompanions = List.from(userCompanions);
-          
-      
-          
-          // 🔧 ENCONTRAR COMPAÑERO ACTIVO
-          final activeCompanion = finalOwnedCompanions
-              .where((c) => c.isSelected)
-              .isNotEmpty 
-              ? finalOwnedCompanions.firstWhere((c) => c.isSelected)
-              : finalOwnedCompanions.first;
-              
-          debugPrint('⭐ [COMPANION_CUBIT] Compañero activo: ${activeCompanion.displayName}');
-          
-          // Debug detallado de las mascotas
-          for (final companion in finalOwnedCompanions) {
-            debugPrint('🐾 [COMPANION_CUBIT] - ${companion.displayName} (${companion.id}): Owned=${companion.isOwned}, Selected=${companion.isSelected}');
-          }
-
-          emit(CompanionLoaded(
-            allCompanions: shopData.availableCompanions,
-            ownedCompanions: finalOwnedCompanions,
-            activeCompanion: activeCompanion,
-            userStats: shopData.userStats,
-          ));
-          
-          debugPrint('🎯 [COMPANION_CUBIT] === CARGA COMPLETADA ===');
-        },
-      );
-      
-    } catch (e) {
-      debugPrint('💥 [COMPANION_CUBIT] Error cargando mascotas usuario: $e');
-      emit(CompanionError(message: 'Error cargando tus mascotas: ${e.toString()}'));
-    }
-  }
-
-  
 
   void refreshCompanions() {
     debugPrint('🔄 [COMPANION_CUBIT] REFRESH solicitado');

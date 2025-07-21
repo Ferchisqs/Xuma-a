@@ -406,11 +406,6 @@ extension GetItInjectableX on _i174.GetIt {
           authService: gh<_i88.AuthService>(),
           profileService: gh<_i92.ProfileService>(),
         ));
-    gh.factory<_i917.CompanionCubit>(() => _i917.CompanionCubit(
-          getUserCompanionsUseCase: gh<_i574.GetUserCompanionsUseCase>(),
-          getCompanionShopUseCase: gh<_i76.GetCompanionShopUseCase>(),
-          tokenManager: gh<_i497.TokenManager>(),
-        ));
     gh.factory<_i522.CompleteChallengeUseCase>(
         () => _i522.CompleteChallengeUseCase(gh<_i959.ChallengesRepository>()));
     gh.factory<_i929.GetActiveChallengesUseCase>(() =>
@@ -441,6 +436,12 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i568.LessonListCubit>(() => _i568.LessonListCubit(
           getLessonsByCategoryUseCase: gh<_i194.GetLessonsByCategoryUseCase>(),
           searchLessonsUseCase: gh<_i420.SearchLessonsUseCase>(),
+        ));
+    gh.factory<_i917.CompanionCubit>(() => _i917.CompanionCubit(
+          getUserCompanionsUseCase: gh<_i574.GetUserCompanionsUseCase>(),
+          getCompanionShopUseCase: gh<_i76.GetCompanionShopUseCase>(),
+          tokenManager: gh<_i497.TokenManager>(),
+          repository: gh<_i770.CompanionRepository>(),
         ));
     gh.factory<_i19.ContentRepository>(() => _i577.ContentRepositoryImpl(
           remoteDataSource: gh<_i605.ContentRemoteDataSource>(),

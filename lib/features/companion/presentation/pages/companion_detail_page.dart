@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../di/injection.dart';
 import '../../domain/entities/companion_entity.dart';
 import '../cubit/companion_detail_cubit.dart';
-import '../cubit/companion_actions_cubit.dart'; // 🆕 IMPORTAR ACTIONS CUBIT
+import '../cubit/companion_actions_cubit.dart'; 
 import '../widgets/companion_animation_widget.dart';
 import '../widgets/companion_evolution_dialog.dart';
 import '../widgets/companion_info_dialog.dart';
