@@ -155,47 +155,7 @@ class CompanionErrorHandler {
     debugPrint('❌ [ERROR_HANDLER] ==========================================');
   }
   
-  /// Método para probar diferentes tipos de errores
-  static void testErrorScenarios() {
-    debugPrint('🧪 [ERROR_HANDLER] === TESTING ERROR SCENARIOS ===');
-    
-    // Test Error 500
-    final error500 = DioException(
-      requestOptions: RequestOptions(path: '/test'),
-      response: Response(
-        requestOptions: RequestOptions(path: '/test'),
-        statusCode: 500,
-        data: {'error': 'Internal Server Error'},
-      ),
-    );
-    debugPrint('🧪 Error 500 should use fallback: ${shouldUseFallback(error500)}');
-    
-    // Test Error 404
-    final error404 = DioException(
-      requestOptions: RequestOptions(path: '/test'),
-      response: Response(
-        requestOptions: RequestOptions(path: '/test'),
-        statusCode: 404,
-        data: {'error': 'Not Found'},
-      ),
-    );
-    debugPrint('🧪 Error 404 should use fallback: ${shouldUseFallback(error404)}');
-    
-    // Test Timeout
-    final timeoutError = DioException(
-      requestOptions: RequestOptions(path: '/test'),
-      type: DioExceptionType.connectionTimeout,
-    );
-    debugPrint('🧪 Timeout should use fallback: ${shouldUseFallback(timeoutError)}');
-    
-    // Test respuestas vacías
-    debugPrint('🧪 Empty list should use fallback: ${isEmptyOrInvalidResponse([])}');
-    debugPrint('🧪 Null response should use fallback: ${isEmptyOrInvalidResponse(null)}');
-    debugPrint('🧪 Empty data map should use fallback: ${isEmptyOrInvalidResponse({'data': []})}');
-    
-    debugPrint('🧪 [ERROR_HANDLER] === TEST COMPLETED ===');
-  }
-  
+  /// Generar ID local único para un compañero
   /// Verificar si el servidor está disponible
   static Future<bool> isServerAvailable(String baseUrl) async {
     try {

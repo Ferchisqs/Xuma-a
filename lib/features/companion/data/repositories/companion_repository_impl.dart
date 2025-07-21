@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/utils/either.dart';
 import '../../../../core/errors/failures.dart';
-import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/network_info.dart';
 import '../../../../core/services/token_manager.dart';
 import '../../domain/entities/companion_entity.dart';
@@ -42,7 +41,7 @@ class CompanionRepositoryImpl implements CompanionRepository {
 
   // ==================== OBTENER MASCOTAS DEL USUARIO ====================
 
-  @override
+   @override
   Future<Either<Failure, List<CompanionEntity>>> getUserCompanions(
       String userId) async {
     try {
@@ -63,17 +62,25 @@ class CompanionRepositoryImpl implements CompanionRepository {
             return await _getLocalCompanions(realUserId);
           }
 
-          // 🔥 LLAMADA A TU API REAL CON USER ID REAL
+          // 🔥 LLAMADA A LA API REAL PARA MASCOTAS DEL USUARIO
           final remoteCompanions =
               await remoteDataSource.getUserCompanions(realUserId);
           debugPrint(
               '✅ [REPO] API devolvió ${remoteCompanions.length} mascotas');
 
-          // Guardar en cache para uso offline
-          await localDataSource.cacheCompanions(realUserId, remoteCompanions);
-          debugPrint('💾 [REPO] Mascotas guardadas en cache');
+          // Si no tiene mascotas, añadir Dexter inicial automáticamente
+          if (remoteCompanions.isEmpty) {
+            debugPrint('🔧 Usuario sin mascotas, agregando Dexter inicial');
+            final dexterInitial = await _createInitialDexterBaby();
+            final updatedCompanions = [dexterInitial, ...remoteCompanions];
+            await localDataSource.cacheCompanions(realUserId, updatedCompanions);
+            return Right(updatedCompanions);
+          }
 
+          // Guardar en cache
+          await localDataSource.cacheCompanions(realUserId, remoteCompanions);
           return Right(remoteCompanions);
+          
         } catch (e) {
           debugPrint('❌ [REPO] Error con API, fallback a local: $e');
           return await _getLocalCompanions(realUserId);
@@ -527,6 +534,29 @@ class CompanionRepositoryImpl implements CompanionRepository {
   }
 
   // ==================== MÉTODOS HELPER PRIVADOS ====================
+
+  Future<CompanionModel> _createInitialDexterBaby() async {
+    return CompanionModel(
+      id: 'dexter_baby',
+      type: CompanionType.dexter,
+      stage: CompanionStage.baby,
+      name: 'Dexter',
+      description: 'Tu primer compañero, un chihuahua bebé lleno de energía',
+      level: 1,
+      experience: 0,
+      happiness: 100,
+      hunger: 100,
+      energy: 100,
+      isOwned: true,
+      isSelected: true,
+      purchasedAt: DateTime.now(),
+      currentMood: CompanionMood.happy,
+      purchasePrice: 0,
+      evolutionPrice: 50,
+      unlockedAnimations: ['idle', 'blink', 'happy', 'eating'],
+      createdAt: DateTime.now(),
+    );
+  }
 
   Future<Either<Failure, List<CompanionEntity>>> _getLocalCompanions(
       String userId) async {

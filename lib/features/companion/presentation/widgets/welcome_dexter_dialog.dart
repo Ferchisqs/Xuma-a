@@ -80,58 +80,99 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-      onWillPop: () async => false, // No permitir cerrar con back button
+      onWillPop: () async => true, // 🔧 Permitir cerrar con back button
       child: Dialog(
         backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24), // 🔧 Padding ajustado
         child: SlideTransition(
           position: _slideAnimation,
           child: ScaleTransition(
             scale: _scaleAnimation,
-            child: Container(
-              margin: const EdgeInsets.all(20),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(25),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.green[400]!,
-                    Colors.green[600]!,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85, // 🔧 Altura máxima del 85%
+                maxWidth: MediaQuery.of(context).size.width * 0.9,   // 🔧 Ancho máximo del 90%
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(20), // 🔧 Padding reducido
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(25),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.green[400]!,
+                      Colors.green[600]!,
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withOpacity(0.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
                   ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.green.withOpacity(0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Efectos de brillos
-                  _buildSparkleEffects(),
-                  
-                  // Título de bienvenida
-                  _buildWelcomeTitle(),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Imagen de Dexter baby
-                  _buildDexterImage(),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Mensaje de bienvenida
-                  _buildWelcomeMessage(),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Botón continuar
-                  _buildContinueButton(),
-                ],
+                child: Stack( // 🔧 Stack para el botón X
+                  children: [
+                    // Botón cerrar (X)
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: () {
+                          debugPrint('❌ [WELCOME_DIALOG] Usuario cerró el diálogo sin adoptar');
+                          Navigator.of(context).pop();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    // Contenido principal
+                    SingleChildScrollView( // 🔧 Scroll si es necesario
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(height: 12), // 🔧 Espacio para el botón X
+                          
+                          // Efectos de brillos
+                          _buildSparkleEffects(),
+                          
+                          // Título de bienvenida
+                          _buildWelcomeTitle(),
+                          
+                          const SizedBox(height: 16), // 🔧 Espaciado reducido
+                          
+                          // Imagen de Dexter baby
+                          _buildDexterImage(),
+                          
+                          const SizedBox(height: 16), // 🔧 Espaciado reducido
+                          
+                          // Mensaje de bienvenida
+                          _buildWelcomeMessage(),
+                          
+                          const SizedBox(height: 20), // 🔧 Espaciado reducido
+                          
+                          // Botones
+                          _buildButtons(),
+                          
+                          const SizedBox(height: 8), // 🔧 Espacio extra inferior
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -145,20 +186,20 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
       animation: _sparkleAnimation,
       builder: (context, child) {
         return SizedBox(
-          height: 50,
+          height: 40, // 🔧 Altura reducida
           child: Stack(
             children: List.generate(6, (index) {
               final angle = (index * pi * 2) / 6;
-              final radius = 20 + (sin(_sparkleAnimation.value * pi * 2) * 10);
+              final radius = 15 + (sin(_sparkleAnimation.value * pi * 2) * 8); // 🔧 Radio reducido
               return Positioned(
-                left: 150 + cos(angle + _sparkleAnimation.value * pi * 2) * radius,
-                top: 25 + sin(angle + _sparkleAnimation.value * pi * 2) * radius,
+                left: MediaQuery.of(context).size.width * 0.4 + cos(angle + _sparkleAnimation.value * pi * 2) * radius,
+                top: 20 + sin(angle + _sparkleAnimation.value * pi * 2) * radius,
                 child: Transform.scale(
-                  scale: 0.3 + (sin(_sparkleAnimation.value * pi * 4 + index) * 0.4),
+                  scale: 0.3 + (sin(_sparkleAnimation.value * pi * 4 + index) * 0.3), // 🔧 Escala reducida
                   child: Icon(
                     Icons.auto_awesome,
                     color: Colors.yellow[300]!.withOpacity(0.9),
-                    size: 16,
+                    size: 14, // 🔧 Tamaño reducido
                   ),
                 ),
               );
@@ -178,13 +219,13 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
             Icon(
               Icons.celebration,
               color: Colors.yellow[300],
-              size: 32,
+              size: 28, // 🔧 Tamaño reducido
             ),
             const SizedBox(width: 12),
             const Text(
               '¡BIENVENIDO!',
               style: TextStyle(
-                fontSize: 28,
+                fontSize: 24, // 🔧 Tamaño reducido
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
                 letterSpacing: 1.2,
@@ -194,17 +235,17 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
             Icon(
               Icons.celebration,
               color: Colors.yellow[300],
-              size: 32,
+              size: 28, // 🔧 Tamaño reducido
             ),
           ],
         ),
         
-        const SizedBox(height: 8),
+        const SizedBox(height: 6), // 🔧 Espaciado reducido
         
         Text(
           'Has recibido tu primer compañero',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 14, // 🔧 Tamaño reducido
             color: Colors.white.withOpacity(0.9),
             fontWeight: FontWeight.w500,
           ),
@@ -215,8 +256,8 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
   
   Widget _buildDexterImage() {
     return Container(
-      height: 180,
-      width: 180,
+      height: 140, // 🔧 Altura reducida
+      width: 140,  // 🔧 Ancho reducido
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         color: Colors.white.withOpacity(0.1),
@@ -236,7 +277,7 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
         borderRadius: BorderRadius.circular(18),
         child: CompanionAnimationWidget(
           companion: widget.dexterBaby,
-          size: 160,
+          size: 120, // 🔧 Tamaño reducido
           isInteracting: false,
         ),
       ),
@@ -245,7 +286,7 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
   
   Widget _buildWelcomeMessage() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14), // 🔧 Padding reducido
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(15),
@@ -263,13 +304,13 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
               Icon(
                 Icons.pets,
                 color: Colors.white,
-                size: 20,
+                size: 18, // 🔧 Tamaño reducido
               ),
               const SizedBox(width: 8),
               Text(
                 '${widget.dexterBaby.displayName} Bebé',
                 style: const TextStyle(
-                  fontSize: 20,
+                  fontSize: 18, // 🔧 Tamaño reducido
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
@@ -277,21 +318,21 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
             ],
           ),
           
-          const SizedBox(height: 8),
+          const SizedBox(height: 6), // 🔧 Espaciado reducido
           
           Text(
-            widget.dexterBaby.typeDescription,
+            'Chihuahua', // 🔧 Descripción más corta
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13, // 🔧 Tamaño reducido
               color: Colors.white.withOpacity(0.8),
             ),
           ),
           
-          const SizedBox(height: 12),
+          const SizedBox(height: 10), // 🔧 Espaciado reducido
           
           // Mensaje especial
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10), // 🔧 Padding reducido
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
@@ -303,14 +344,14 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
                     Icon(
                       Icons.auto_awesome,
                       color: Colors.yellow[300],
-                      size: 16,
+                      size: 14, // 🔧 Tamaño reducido
                     ),
                     const SizedBox(width: 6),
                     const Expanded(
                       child: Text(
                         'Características especiales:',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11, // 🔧 Tamaño reducido
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
@@ -319,11 +360,11 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
                   ],
                 ),
                 
-                const SizedBox(height: 8),
+                const SizedBox(height: 6), // 🔧 Espaciado reducido
                 
                 Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
+                  spacing: 4, // 🔧 Espaciado reducido
+                  runSpacing: 3, // 🔧 Espaciado reducido
                   children: [
                     _buildFeatureChip('Gratuito'),
                     _buildFeatureChip('Fácil cuidado'),
@@ -334,13 +375,13 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
             ),
           ),
           
-          const SizedBox(height: 12),
+          const SizedBox(height: 10), // 🔧 Espaciado reducido
           
           Text(
-            '¡${widget.dexterBaby.displayName} será tu compañero en esta aventura ecológica!',
+            '¡${widget.dexterBaby.displayName} será tu compañero en esta aventura!',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12, // 🔧 Tamaño reducido
               color: Colors.white.withOpacity(0.9),
               fontStyle: FontStyle.italic,
             ),
@@ -352,15 +393,15 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
   
   Widget _buildFeatureChip(String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), // 🔧 Padding reducido
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10), // 🔧 Border radius reducido
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 9, // 🔧 Tamaño reducido
           color: Colors.white.withOpacity(0.9),
           fontWeight: FontWeight.w600,
         ),
@@ -368,37 +409,76 @@ class _WelcomeDexterDialogState extends State<WelcomeDexterDialog>
     );
   }
   
-  Widget _buildContinueButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () {
-          debugPrint('🎉 [WELCOME_DIALOG] Usuario continuó después de bienvenida');
-          widget.onContinue();
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.green[600],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+  Widget _buildButtons() {
+    return Column(
+      children: [
+        // Botón principal - Conocer a Dexter
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          child: ElevatedButton.icon(
+            onPressed: () {
+              debugPrint('🎉 [WELCOME_DIALOG] Usuario continuó después de bienvenida');
+              Navigator.of(context).pop();
+              widget.onContinue();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.green[600],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              elevation: 4,
+            ),
+            icon: Icon(
+              Icons.arrow_forward,
+              size: 18,
+              color: Colors.green[600],
+            ),
+            label: Text(
+              '¡Conocer a ${widget.dexterBaby.displayName}!',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.green[600],
+              ),
+            ),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          elevation: 4,
         ),
-        icon: Icon(
-          Icons.arrow_forward,
-          size: 20,
-          color: Colors.green[600],
-        ),
-        label: Text(
-          '¡Conocer a ${widget.dexterBaby.displayName}!',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.green[600],
+        
+        const SizedBox(height: 8),
+        
+        // Botón secundario - Ahora no
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          child: TextButton(
+            onPressed: () {
+              debugPrint('⏭️ [WELCOME_DIALOG] Usuario saltó la bienvenida');
+              Navigator.of(context).pop();
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white.withOpacity(0.8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+                side: BorderSide(
+                  color: Colors.white.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: const Text(
+              'Ahora no, gracias',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
   

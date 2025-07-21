@@ -16,13 +16,15 @@ class GetUserCompanionsParams extends Equatable {
 }
 
 @injectable
-class GetUserCompanionsUseCase implements UseCase<List<CompanionEntity>, GetUserCompanionsParams> {
+class GetUserCompanionsUseCase
+    implements UseCase<List<CompanionEntity>, GetUserCompanionsParams> {
   final CompanionRepository repository;
 
   GetUserCompanionsUseCase(this.repository);
 
   @override
-  Future<Either<Failure, List<CompanionEntity>>> call(GetUserCompanionsParams params) {
+  Future<Either<Failure, List<CompanionEntity>>> call(
+      GetUserCompanionsParams params) {
     return repository.getUserCompanions(params.userId);
   }
 }

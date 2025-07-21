@@ -23,7 +23,8 @@ class CompanionMainPage extends StatelessWidget {
       providers: [
         // 🆕 WELCOME CUBIT PARA VERIFICAR PRIMERA VEZ
         BlocProvider(
-          create: (context) => getIt<WelcomeCompanionCubit>()..checkAndShowWelcomeIfNeeded(),
+          create: (context) =>
+              getIt<WelcomeCompanionCubit>()..checkAndShowWelcomeIfNeeded(),
         ),
         BlocProvider(
           create: (context) => getIt<CompanionCubit>()..loadCompanions(),
@@ -49,25 +50,12 @@ class _CompanionMainView extends StatelessWidget {
         title: const Text('Compañeros'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.white), 
+        iconTheme: const IconThemeData(color: Colors.white),
         titleTextStyle: const TextStyle(
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
-        actions: [
-          // 🔧 BOTÓN PARA PROBAR CONECTIVIDAD API
-          IconButton(
-            icon: const Icon(Icons.api, color: Colors.white),
-            tooltip: 'Probar API Real',
-            onPressed: () => _testApiConnection(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            tooltip: 'Refrescar',
-            onPressed: () => _refreshAll(context),
-          ),
-        ],
       ),
       body: SafeArea(
         child: Stack(
@@ -80,7 +68,8 @@ class _CompanionMainView extends StatelessWidget {
                 } else if (state is CompanionError) {
                   return _ErrorView(
                     message: state.message,
-                    onRetry: () => context.read<CompanionCubit>().loadCompanions(),
+                    onRetry: () =>
+                        context.read<CompanionCubit>().loadCompanions(),
                   );
                 } else if (state is CompanionLoaded) {
                   return _LoadedView(state: state);
@@ -89,7 +78,7 @@ class _CompanionMainView extends StatelessWidget {
                 return const _LoadingView();
               },
             ),
-            
+
             // 🆕 OVERLAY PARA BIENVENIDA DE DEXTER
             BlocConsumer<WelcomeCompanionCubit, WelcomeCompanionState>(
               listener: (context, state) {
@@ -98,13 +87,13 @@ class _CompanionMainView extends StatelessWidget {
               builder: (context, welcomeState) {
                 if (welcomeState is WelcomeCompanionShowDexterWelcome) {
                   debugPrint('🎉 [WELCOME] Mostrando diálogo de bienvenida');
-                  
+
                   // Mostrar diálogo de bienvenida
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     _showWelcomeDialog(context, welcomeState.dexterBaby);
                   });
                 }
-                
+
                 return const SizedBox.shrink();
               },
             ),
@@ -124,13 +113,13 @@ class _CompanionMainView extends StatelessWidget {
         onContinue: () {
           debugPrint('🎉 [WELCOME] Bienvenida completada');
           Navigator.of(dialogContext).pop();
-          
+
           // Marcar bienvenida como completada
           context.read<WelcomeCompanionCubit>().completeWelcome();
-          
+
           // Refrescar los companions para mostrar Dexter
           context.read<CompanionCubit>().refreshCompanions();
-          
+
           // Mostrar mensaje de confirmación
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -156,99 +145,6 @@ class _CompanionMainView extends StatelessWidget {
   }
 
   // 🔧 PROBAR CONECTIVIDAD CON LA API REAL
-  void _testApiConnection(BuildContext context) async {
-    debugPrint('🧪 [MAIN] === PROBANDO CONECTIVIDAD API ===');
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.api, color: Colors.blue),
-            SizedBox(width: 8),
-            Text('🧪 Test API Real'),
-          ],
-        ),
-        content: const Text(
-          '¿Quieres probar la conexión con la API real de mascotas?\n\n'
-          'Esto verificará:\n'
-          '• Endpoint /pets/available\n'
-          '• Mapeo de datos\n'
-          '• Dexter baby inicial\n'
-          '• Mascotas de la tienda',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              debugPrint('🧪 [MAIN] Ejecutando test completo...');
-              
-              // Mostrar loading
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => const Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(color: Colors.blue),
-                      SizedBox(height: 16),
-                      Text(
-                        '🚀 Conectando con API real...',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-              
-              // Simular test
-              Future.delayed(const Duration(seconds: 2), () {
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                  _refreshAll(context);
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Row(
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.white),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '🎉 API conectada! Datos actualizados desde el servidor.',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                      backgroundColor: Colors.blue,
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
-                }
-              });
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-            child: const Text(
-              'Probar API',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _refreshAll(BuildContext context) {
-    debugPrint('🔄 [MAIN] Refrescando todos los datos...');
-    context.read<CompanionCubit>().refreshCompanions();
-    context.read<WelcomeCompanionCubit>().checkAndShowWelcomeIfNeeded();
-  }
 }
 
 // ==================== VISTAS AUXILIARES ====================
@@ -267,19 +163,11 @@ class _LoadingView extends StatelessWidget {
           ),
           SizedBox(height: 16),
           Text(
-            '🚀 Conectando con API real...',
+            'Cargando compañeros...',
             style: TextStyle(
               fontSize: 16,
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w500,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Cargando tus compañeros desde el servidor',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textHint,
             ),
           ),
         ],
@@ -319,9 +207,7 @@ class _ErrorView extends StatelessWidget {
                 color: Colors.red[400],
               ),
             ),
-            
             const SizedBox(height: 20),
-            
             Text(
               '📡 Error de Conexión API',
               style: TextStyle(
@@ -330,9 +216,7 @@ class _ErrorView extends StatelessWidget {
                 color: Colors.red[700],
               ),
             ),
-            
             const SizedBox(height: 12),
-            
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -348,26 +232,24 @@ class _ErrorView extends StatelessWidget {
                 ),
               ),
             ),
-            
             const SizedBox(height: 24),
-            
             Column(
               children: [
                 ElevatedButton.icon(
                   onPressed: onRetry,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                   ),
                   icon: const Icon(Icons.refresh, color: Colors.white),
                   label: const Text(
                     'Reintentar Conexión',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
-                
                 const SizedBox(height: 12),
-                
                 OutlinedButton.icon(
                   onPressed: () {
                     // Mostrar modo offline con datos locales
@@ -398,8 +280,10 @@ class _LoadedView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     debugPrint('📱 [MAIN] === MOSTRANDO VISTA CARGADA ===');
-    debugPrint('🐾 [MAIN] Compañeros poseídos: ${state.ownedCompanions.length}');
-    debugPrint('💰 [MAIN] Puntos disponibles: ${state.userStats.availablePoints}');
+    debugPrint(
+        '🐾 [MAIN] Compañeros poseídos: ${state.ownedCompanions.length}');
+    debugPrint(
+        '💰 [MAIN] Puntos disponibles: ${state.userStats.availablePoints}');
 
     return CustomScrollView(
       slivers: [
@@ -425,7 +309,8 @@ class _LoadedView extends StatelessWidget {
                     color: Colors.green,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.cloud_done, color: Colors.white, size: 20),
+                  child: const Icon(Icons.cloud_done,
+                      color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -451,7 +336,8 @@ class _LoadedView extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.blue[100],
                     borderRadius: BorderRadius.circular(8),
@@ -585,7 +471,8 @@ class _LoadedView extends StatelessWidget {
               top: 0,
               left: 0,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(15),
@@ -723,7 +610,8 @@ class _LoadedView extends StatelessWidget {
               label: const Text('Ir a la Tienda'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
           ],
@@ -746,23 +634,15 @@ class _LoadedView extends StatelessWidget {
   }
 
   void _navigateToShop(BuildContext context) {
-    debugPrint('🏪 [MAIN] Navegando a la tienda...');
-    Navigator.of(context)
-        .push(
-      MaterialPageRoute(
-        builder: (context) => const CompanionShopPage(),
-      ),
-    )
-        .then((_) {
-      debugPrint('🔄 [MAIN] Regresando de la tienda - REFRESCANDO TODO...');
-      context.read<CompanionCubit>().refreshCompanions();
-
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (context.mounted) {
-          debugPrint('🔄 [MAIN] Refresh adicional...');
-          context.read<CompanionCubit>().loadCompanions();
-        }
-      });
-    });
-  }
+  Navigator.of(context)
+      .push(
+    MaterialPageRoute(
+      builder: (context) => const CompanionShopPage(),
+    ),
+  )
+      .then((_) {
+    // Refrescar cuando regrese de la tienda
+    context.read<CompanionCubit>().refreshCompanions();
+  });
+}
 }
