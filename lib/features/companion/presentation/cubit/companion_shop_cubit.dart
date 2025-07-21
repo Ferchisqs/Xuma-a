@@ -86,13 +86,21 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
   }) : super(CompanionShopInitial());
 
   Future<void> loadShop() async {
-    try {
-      debugPrint('🏪 Cargando tienda...');
-      emit(CompanionShopLoading());
+   try {
+    debugPrint('🏪 Cargando tienda...');
+    emit(CompanionShopLoading());
 
-      final result = await getCompanionShopUseCase(
-        const GetCompanionShopParams(userId: ''),
-      );
+    final userId = await tokenManager.getUserId(); // ✅ OBTÉN EL USER ID
+
+    if (userId == null || userId.isEmpty) {
+      emit(CompanionShopError(message: 'Usuario no autenticado'));
+      return;
+    }
+
+    final result = await getCompanionShopUseCase(
+      GetCompanionShopParams(userId: userId), // ✅ PASA EL USER ID
+    );
+      
 
       result.fold(
         (failure) {
@@ -122,7 +130,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
             purchasableCompanions: purchasableCompanions,
             userStats: shopData.userStats,
             availablePetIds:
-                Map.from(_localIdToApiPetId), // 🆕 EXPONER EL MAPEO
+                Map.from(_localIdToApiPetId),
           ));
         },
       );

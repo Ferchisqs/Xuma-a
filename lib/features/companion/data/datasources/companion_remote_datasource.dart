@@ -1,4 +1,3 @@
-// lib/features/companion/data/datasources/companion_remote_datasource.dart - PRODUCCIÓN FINAL
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/network/api_client.dart';
@@ -13,11 +12,14 @@ abstract class CompanionRemoteDataSource {
   Future<List<CompanionModel>> getUserCompanions(String userId);
   Future<List<CompanionModel>> getAvailableCompanions();
   Future<List<CompanionModel>> getStoreCompanions({required String userId});
-  Future<CompanionModel> adoptCompanion({required String userId, required String petId, String? nickname});
+  Future<CompanionModel> adoptCompanion(
+      {required String userId, required String petId, String? nickname});
   Future<CompanionStatsModel> getCompanionStats(String userId);
   Future<int> getUserPoints(String userId);
-  Future<CompanionModel> evolvePet({required String userId, required String petId});
-  Future<CompanionModel> featurePet({required String userId, required String petId});
+  Future<CompanionModel> evolvePet(
+      {required String userId, required String petId});
+  Future<CompanionModel> featurePet(
+      {required String userId, required String petId});
 }
 
 @Injectable(as: CompanionRemoteDataSource)
@@ -38,7 +40,8 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         requireAuth: false,
       );
 
-      debugPrint('✅ [API] Mascotas disponibles obtenidas: ${response.statusCode}');
+      debugPrint(
+          '✅ [API] Mascotas disponibles obtenidas: ${response.statusCode}');
 
       if (response.data == null || response.data is! List) {
         debugPrint('⚠️ [API] Respuesta vacía o inválida');
@@ -66,95 +69,107 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
   }
 
   // ==================== 🆕 MASCOTAS ADQUIRIDAS POR EL USUARIO ====================
-  @override
-  Future<List<CompanionModel>> getUserCompanions(String userId) async {
-    try {
-      debugPrint('👤 [API] === OBTENIENDO MASCOTAS DEL USUARIO ===');
-      debugPrint('👤 [API] Usuario ID: $userId');
+ @override
+Future<List<CompanionModel>> getUserCompanions(String userId) async {
+  try {
+    debugPrint('👤 [API] === OBTENIENDO MASCOTAS DEL USUARIO ===');
+    debugPrint('👤 [API] Usuario ID: $userId');
 
-      // 🔥 USAR TU ENDPOINT CORRECTO
-      final response = await apiClient.getGamification(
-        '/api/gamification/pets/$userId',
-        requireAuth: true,
-      );
+    // 🔥 USAR TU ENDPOINT CORRECTO
+    final response = await apiClient.getGamification(
+      '/api/gamification/pets/$userId',
+      requireAuth: true,
+    );
 
-      debugPrint('✅ [API] Respuesta mascotas usuario: ${response.statusCode}');
-      debugPrint('📄 [API] Raw data type: ${response.data.runtimeType}');
-      debugPrint('📄 [API] Raw data: ${response.data}');
+    debugPrint('✅ [API] Respuesta mascotas usuario: ${response.statusCode}');
+    debugPrint('📄 [API] Raw data type: ${response.data.runtimeType}');
+    debugPrint('📄 [API] Raw data: ${response.data}');
 
-      if (response.data == null) {
-        debugPrint('ℹ️ [API] Usuario sin mascotas adoptadas');
-        return [];
-      }
-
-      List<CompanionModel> adoptedCompanions = [];
-
-      // 🔧 MANEJAR DIFERENTES FORMATOS DE RESPUESTA
-      dynamic petsData;
-
-      if (response.data is List) {
-        petsData = response.data as List;
-      } else if (response.data is Map<String, dynamic>) {
-        final dataMap = response.data as Map<String, dynamic>;
-        // Buscar en diferentes campos posibles
-        petsData = dataMap['pets'] ??
-            dataMap['data'] ??
-            dataMap['owned_pets'] ??
-            dataMap['companions'] ??
-            [];
-
-        debugPrint('🔍 [API] Buscando en campos: ${dataMap.keys.toList()}');
-      } else {
-        debugPrint('⚠️ [API] Formato de respuesta inesperado: ${response.data.runtimeType}');
-        return [];
-      }
-
-      if (petsData is! List) {
-        debugPrint('⚠️ [API] Los datos de mascotas no son una lista');
-        return [];
-      }
-
-      debugPrint('📝 [API] Procesando ${petsData.length} mascotas adoptadas');
-
-      for (int i = 0; i < petsData.length; i++) {
-        try {
-          final petData = petsData[i];
-          debugPrint('🐾 [API] Procesando mascota $i: $petData');
-
-          if (petData is Map<String, dynamic>) {
-            // Mapear mascota adoptada del backend a nuestro modelo
-            final companion = _mapAdoptedPetToCompanion(petData);
-            adoptedCompanions.add(companion);
-
-            debugPrint('✅ [API] Mascota mapeada: ${companion.displayName} (${companion.id})');
-          } else {
-            debugPrint('⚠️ [API] Dato de mascota no es un mapa: ${petData.runtimeType}');
-          }
-        } catch (e) {
-          debugPrint('❌ [API] Error mapeando mascota $i: $e');
-        }
-      }
-
-      debugPrint('✅ [API] === MASCOTAS USUARIO PROCESADAS ===');
-      debugPrint('🏠 [API] Total mascotas del usuario: ${adoptedCompanions.length}');
-
-      // 🔧 MARCAR TODAS COMO POSEÍDAS Y LA PRIMERA COMO ACTIVA
-      for (int i = 0; i < adoptedCompanions.length; i++) {
-        adoptedCompanions[i] = adoptedCompanions[i].copyWith(
-          isOwned: true,
-          isSelected: i == 0, // Primera mascota activa
-        );
-      }
-
-      return adoptedCompanions;
-    } catch (e) {
-      debugPrint('❌ [API] Error obteniendo mascotas usuario: $e');
-
-      // 🔧 SI HAY ERROR, RETORNAR LISTA VACÍA EN LUGAR DE FALLAR
-      debugPrint('🔧 [API] Retornando lista vacía por error');
+    if (response.data == null) {
+      debugPrint('ℹ️ [API] Usuario sin mascotas adoptadas');
       return [];
     }
+
+    List<CompanionModel> adoptedCompanions = [];
+
+    // 🔧 MANEJAR DIFERENTES FORMATOS DE RESPUESTA
+    dynamic petsData;
+
+    if (response.data is List) {
+      petsData = response.data as List;
+    } else if (response.data is Map<String, dynamic>) {
+      final dataMap = response.data as Map<String, dynamic>;
+      // Buscar en diferentes campos posibles
+      petsData = dataMap['pets'] ??
+          dataMap['data'] ??
+          dataMap['owned_pets'] ??
+          dataMap['companions'] ??
+          [];
+
+      debugPrint('🔍 [API] Buscando en campos: ${dataMap.keys.toList()}');
+    } else {
+      debugPrint(
+          '⚠️ [API] Formato de respuesta inesperado: ${response.data.runtimeType}');
+      return [];
+    }
+
+    if (petsData is! List) {
+      debugPrint('⚠️ [API] Los datos de mascotas no son una lista');
+      return [];
+    }
+
+    debugPrint('📝 [API] Procesando ${petsData.length} mascotas adoptadas');
+
+    for (int i = 0; i < petsData.length; i++) {
+      try {
+        final petData = petsData[i];
+        debugPrint('🐾 [API] Procesando mascota $i: $petData');
+
+        if (petData is Map<String, dynamic>) {
+          // Mapear mascota adoptada del backend a nuestro modelo
+          final companion = _mapAdoptedPetToCompanion(petData);
+          adoptedCompanions.add(companion);
+
+          debugPrint(
+              '✅ [API] Mascota mapeada: ${companion.displayName} (${companion.id})');
+        } else {
+          debugPrint(
+              '⚠️ [API] Dato de mascota no es un mapa: ${petData.runtimeType}');
+        }
+      } catch (e) {
+        debugPrint('❌ [API] Error mapeando mascota $i: $e');
+      }
+    }
+
+    debugPrint('✅ [API] === MASCOTAS USUARIO PROCESADAS ===');
+    debugPrint(
+        '🏠 [API] Total mascotas del usuario: ${adoptedCompanions.length}');
+
+    // 🔧 MARCAR TODAS LAS MASCOTAS DE LA API COMO POSEÍDAS
+    for (int i = 0; i < adoptedCompanions.length; i++) {
+      adoptedCompanions[i] = adoptedCompanions[i].copyWith(
+        isOwned: true,  // 🔥 CRÍTICO: Marcar como poseída
+        isSelected: i == 0, // Primera activa
+      );
+      debugPrint('✅ [REPO] Mascota ${i}: ${adoptedCompanions[i].displayName} - owned: ${adoptedCompanions[i].isOwned}');
+    }
+
+    // 🔥 VALIDACIÓN ADICIONAL: Si hay mascotas pero ninguna está seleccionada
+    if (adoptedCompanions.isNotEmpty && 
+        !adoptedCompanions.any((c) => c.isSelected)) {
+      adoptedCompanions[0] = adoptedCompanions[0].copyWith(isSelected: true);
+      debugPrint('⭐ [REPO] Activando primera mascota: ${adoptedCompanions[0].displayName}');
+    }
+
+    return adoptedCompanions;
+  } catch (e) {
+    debugPrint('❌ [API] Error obteniendo mascotas usuario: $e');
+
+    // 🔧 SI HAY ERROR, RETORNAR LISTA VACÍA EN LUGAR DE FALLAR
+    debugPrint('🔧 [API] Retornando lista vacía por error');
+    return [];
   }
+}
 
   // ==================== 🆕 PUNTOS REALES DEL USUARIO ====================
   @override
@@ -186,7 +201,8 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         points = (data['available_quiz_points'] ?? 0).toInt();
 
         debugPrint('🔍 [API] Todos los campos: ${data.keys.toList()}');
-        debugPrint('💰 [API] available_quiz_points: ${data['available_quiz_points']}');
+        debugPrint(
+            '💰 [API] available_quiz_points: ${data['available_quiz_points']}');
         debugPrint('💰 [API] total_quiz_points: ${data['total_quiz_points']}');
         debugPrint('💰 [API] spent_quiz_points: ${data['spent_quiz_points']}');
       } else if (response.data is int) {
@@ -194,7 +210,8 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       } else if (response.data is String) {
         points = int.tryParse(response.data as String) ?? 0;
       } else {
-        debugPrint('⚠️ [API] Tipo de respuesta inesperado: ${response.data.runtimeType}');
+        debugPrint(
+            '⚠️ [API] Tipo de respuesta inesperado: ${response.data.runtimeType}');
         debugPrint('📄 [API] Valor: ${response.data}');
       }
 
@@ -211,11 +228,17 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
   }
 
   // ==================== TIENDA (MASCOTAS DISPONIBLES - NO ADOPTADAS) ====================
+ // ==================== TIENDA (MASCOTAS DISPONIBLES - NO ADOPTADAS) - CORREGIDO ====================
   @override
   Future<List<CompanionModel>> getStoreCompanions({required String userId}) async {
     try {
-      debugPrint('🏪 [API] === OBTENIENDO TIENDA ===');
+      debugPrint('🏪 [API] === OBTENIENDO TIENDA CON USER ID REAL ===');
       debugPrint('👤 [API] Usuario: $userId');
+
+      if (userId.isEmpty) {
+        debugPrint('❌ [API] User ID vacío, no se puede obtener tienda');
+        throw Exception('User ID requerido para obtener tienda');
+      }
 
       // 🔥 OBTENER TODAS LAS MASCOTAS DISPONIBLES DESDE TU API
       debugPrint('📡 [API] Obteniendo mascotas disponibles...');
@@ -228,43 +251,51 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       debugPrint('✅ [API] Mascotas del usuario: ${userCompanions.length}');
 
       // 🔧 CREAR SET DE IDs ADOPTADOS PARA FILTRAR
-      final adoptedIds = userCompanions.map((c) => c.id).toSet();
-      debugPrint('🔍 [API] IDs adoptados: $adoptedIds');
+      final adoptedIds = <String>{};
+      
+      // Agregar IDs locales de mascotas adoptadas
+      for (final companion in userCompanions) {
+        adoptedIds.add(companion.id);
+        
+        // También agregar por tipo y etapa para compatibilidad
+        final localId = '${companion.type.name}_${companion.stage.name}';
+        adoptedIds.add(localId);
+        
+        debugPrint('🔍 [API] Mascota adoptada: ${companion.id} (${companion.displayName})');
+      }
+      
+      debugPrint('🔍 [API] Total IDs adoptados: $adoptedIds');
 
       // 🔧 FILTRAR MASCOTAS NO ADOPTADAS PARA LA TIENDA
-      final storeCompanions = allCompanions.where((companion) {
+      final storeCompanions = <CompanionModel>[];
+      
+      for (final companion in allCompanions) {
         final isNotAdopted = !adoptedIds.contains(companion.id);
+        
         debugPrint('🔍 [API] ${companion.id}: ${isNotAdopted ? "EN TIENDA" : "YA ADOPTADO"}');
-        return isNotAdopted;
-      }).toList();
+        
+        if (isNotAdopted) {
+          storeCompanions.add(companion);
+        }
+      }
 
       // 🔧 AGREGAR DEXTER JOVEN GRATIS SI NO LO TIENE
       final hasDexterYoung = userCompanions.any((c) =>
           c.type == CompanionType.dexter && c.stage == CompanionStage.young);
 
       if (!hasDexterYoung) {
-        debugPrint('🎁 [API] Agregando Dexter joven gratis a la tienda');
-        final dexterYoung = CompanionModel(
-          id: 'dexter_young',
-          type: CompanionType.dexter,
-          stage: CompanionStage.young,
-          name: 'Dexter',
-          description: 'Tu primer compañero gratuito',
-          level: 1,
-          experience: 0,
-          happiness: 100,
-          hunger: 100,
-          energy: 100,
-          isOwned: false,
-          isSelected: false,
-          purchasedAt: null,
-          currentMood: CompanionMood.happy,
-          purchasePrice: 0, // GRATIS
-          evolutionPrice: 50,
-          unlockedAnimations: ['idle', 'blink', 'happy'],
-          createdAt: DateTime.now(),
+        debugPrint('🎁 [API] Usuario no tiene Dexter joven, agregándolo gratis a la tienda');
+        
+        // Buscar si ya existe en la tienda
+        final existingDexterYoung = storeCompanions.firstWhere(
+          (c) => c.type == CompanionType.dexter && c.stage == CompanionStage.young,
+          orElse: () => _createDexterYoungForStore(),
         );
-        storeCompanions.insert(0, dexterYoung); // Primero en la lista
+        
+        // Si no existe, agregarlo
+        if (!storeCompanions.any((c) => c.type == CompanionType.dexter && c.stage == CompanionStage.young)) {
+          storeCompanions.insert(0, existingDexterYoung);
+        }
       }
 
       // 🔧 ORDENAR POR PRECIO (MÁS BARATOS PRIMERO)
@@ -278,10 +309,35 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       }
 
       return storeCompanions;
+      
     } catch (e) {
       debugPrint('❌ [API] Error obteniendo tienda: $e');
       throw ServerException('Error obteniendo tienda: ${e.toString()}');
     }
+  }
+
+  // 🔧 CREAR DEXTER JOVEN PARA LA TIENDA
+  CompanionModel _createDexterYoungForStore() {
+    return CompanionModel(
+      id: 'dexter_young',
+      type: CompanionType.dexter,
+      stage: CompanionStage.young,
+      name: 'Dexter',
+      description: 'Tu primer compañero gratuito',
+      level: 1,
+      experience: 0,
+      happiness: 100,
+      hunger: 100,
+      energy: 100,
+      isOwned: false,
+      isSelected: false,
+      purchasedAt: null,
+      currentMood: CompanionMood.happy,
+      purchasePrice: 0, // GRATIS
+      evolutionPrice: 50,
+      unlockedAnimations: ['idle', 'blink', 'happy'],
+      createdAt: DateTime.now(),
+    );
   }
 
   // ==================== 🔥 ADOPCIÓN CON MANEJO CORRECTO DE 204 ====================
@@ -315,7 +371,9 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       debugPrint('📄 [API] Response data: ${response.data}');
 
       // 🔥 MANEJAR CORRECTAMENTE LOS CÓDIGOS DE ÉXITO
-      if (response.statusCode == 204 || response.statusCode == 200 || response.statusCode == 201) {
+      if (response.statusCode == 204 ||
+          response.statusCode == 200 ||
+          response.statusCode == 201) {
         debugPrint('🎉 [API] Adopción exitosa (código ${response.statusCode})');
 
         // 🔧 CREAR COMPANION ADOPTADO BASADO EN EL PET ID
@@ -327,7 +385,8 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         debugPrint('✅ [API] Companion creado: ${adoptedCompanion.displayName}');
         return adoptedCompanion;
       } else {
-        throw ServerException('Error en adopción: código ${response.statusCode}, data: ${response.data}');
+        throw ServerException(
+            'Error en adopción: código ${response.statusCode}, data: ${response.data}');
       }
     } catch (e) {
       debugPrint('❌ [API] Error en adopción: $e');
@@ -335,13 +394,17 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       // 🔧 MANEJO ESPECÍFICO DE ERRORES SEGÚN TU API
       final errorMessage = e.toString().toLowerCase();
 
-      if (errorMessage.contains('already') || errorMessage.contains('adoptada')) {
+      if (errorMessage.contains('already') ||
+          errorMessage.contains('adoptada')) {
         throw ServerException('Ya tienes esta mascota');
-      } else if (errorMessage.contains('insufficient') || errorMessage.contains('puntos')) {
+      } else if (errorMessage.contains('insufficient') ||
+          errorMessage.contains('puntos')) {
         throw ServerException('No tienes suficientes puntos');
-      } else if (errorMessage.contains('not found') || errorMessage.contains('encontrada')) {
+      } else if (errorMessage.contains('not found') ||
+          errorMessage.contains('encontrada')) {
         throw ServerException('Mascota no encontrada');
-      } else if (errorMessage.contains('401') || errorMessage.contains('unauthorized')) {
+      } else if (errorMessage.contains('401') ||
+          errorMessage.contains('unauthorized')) {
         throw ServerException('Error de autenticación');
       } else {
         throw ServerException('Error en adopción: ${e.toString()}');
@@ -362,7 +425,8 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
 
       final ownedCount = userCompanions.length;
       final totalCount = allCompanions.length;
-      final activeCompanionId = userCompanions.isNotEmpty ? userCompanions.first.id : '';
+      final activeCompanionId =
+          userCompanions.isNotEmpty ? userCompanions.first.id : '';
 
       // Calcular puntos gastados (estimado)
       int spentPoints = 0;
@@ -383,7 +447,8 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         lastActivity: DateTime.now(),
       );
 
-      debugPrint('📊 [API] Stats: ${stats.ownedCompanions}/${stats.totalCompanions}, ${stats.availablePoints}★');
+      debugPrint(
+          '📊 [API] Stats: ${stats.ownedCompanions}/${stats.totalCompanions}, ${stats.availablePoints}★');
       return stats;
     } catch (e) {
       debugPrint('❌ [API] Error calculando stats: $e');
@@ -392,9 +457,11 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
   }
 
   @override
-  Future<CompanionModel> evolvePet({required String userId, required String petId}) async {
+  Future<CompanionModel> evolvePet(
+      {required String userId, required String petId}) async {
     try {
-      debugPrint('🚀 [API] Iniciando evolución para petId: $petId, userId: $userId');
+      debugPrint(
+          '🚀 [API] Iniciando evolución para petId: $petId, userId: $userId');
       final endpoint = '/api/gamification/pets/$userId/evolve';
       final requestBody = {'petId': petId};
 
@@ -407,12 +474,11 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       debugPrint('📄 [API] Response data: ${response.data}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Asumiendo que la API devuelve los datos de la mascota evolucionada o un 200/201
-        // Si la API no devuelve la mascota actualizada, la creamos localmente.
         debugPrint('🎉 [API] Evolución exitosa');
         return _createEvolvedCompanionFromPetId(petId);
       } else {
-        throw ServerException('Error en evolución: código ${response.statusCode}, data: ${response.data}');
+        throw ServerException(
+            'Error en evolución: código ${response.statusCode}, data: ${response.data}');
       }
     } catch (e) {
       debugPrint('❌ [API] Error en evolución: $e');
@@ -421,9 +487,11 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
   }
 
   @override
-  Future<CompanionModel> featurePet({required String userId, required String petId}) async {
+  Future<CompanionModel> featurePet(
+      {required String userId, required String petId}) async {
     try {
-      debugPrint('⭐ [API] Iniciando feature para petId: $petId, userId: $userId');
+      debugPrint(
+          '⭐ [API] Iniciando feature para petId: $petId, userId: $userId');
       final endpoint = '/api/gamification/pets/$userId/feature';
       final requestBody = {'petId': petId};
 
@@ -439,7 +507,8 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         debugPrint('🎉 [API] Feature exitoso');
         return _createFeaturedCompanionFromPetId(petId);
       } else {
-        throw ServerException('Error al destacar mascota: código ${response.statusCode}, data: ${response.data}');
+        throw ServerException(
+            'Error al destacar mascota: código ${response.statusCode}, data: ${response.data}');
       }
     } catch (e) {
       debugPrint('❌ [API] Error al destacar mascota: $e');
@@ -458,7 +527,8 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
 
     // 1. Si es CompanionModelWithPetId, usar el petId directo
     if (companion is CompanionModelWithPetId) {
-      debugPrint('✅ [PET_ID] Found petId in CompanionModelWithPetId: ${companion.petId}');
+      debugPrint(
+          '✅ [PET_ID] Found petId in CompanionModelWithPetId: ${companion.petId}');
       return companion.petId;
     }
 
@@ -506,8 +576,8 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
   }
 
   /// Actualizar método _mapAdoptedPetToCompanion para preservar petId
-  CompanionModel _mapAdoptedPetToCompanion(Map<String, dynamic> adoptedPet) {
-    debugPrint('🔄 [MAPPING] === MAPEANDO MASCOTA ADOPTADA CON PET ID ===');
+    CompanionModel _mapAdoptedPetToCompanion(Map<String, dynamic> adoptedPet) {
+    debugPrint('🔄 [MAPPING] === MAPEANDO MASCOTA ADOPTADA CORREGIDO ===');
     debugPrint('📄 [MAPPING] Raw pet data: $adoptedPet');
 
     // Extraer Pet ID REAL de la respuesta de la API
@@ -526,56 +596,46 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     final speciesType = adoptedPet['species_type'] as String? ??
         adoptedPet['speciesType'] as String? ??
         adoptedPet['type'] as String? ??
-        'dog';
+        'mammal';
 
     final adoptedAt = adoptedPet['adopted_at'] as String? ??
         adoptedPet['adoptedAt'] as String? ??
         adoptedPet['created_at'] as String? ??
         adoptedPet['createdAt'] as String?;
 
-    // Extraer stage/etapa
-    final stage = adoptedPet['stage'] as String? ??
-        adoptedPet['evolution_stage'] as String? ??
-        adoptedPet['current_stage'] as String? ??
-        adoptedPet['selected_stage'] as String? ?? // 🆕 AGREGAR selected_stage
-        'young';
-
-    // Extraer si está destacada/activa
-    final isFeatured = adoptedPet['featured'] as bool? ??
-        adoptedPet['is_featured'] as bool? ??
-        adoptedPet['selected'] as bool? ??
-        adoptedPet['is_selected'] as bool? ??
-        false;
-
-    debugPrint('🔍 [MAPPING] Name: $name');
+    // 🔧 MAPEO CORRECTO POR NOMBRE DE LA MASCOTA
+    debugPrint('🔍 [MAPPING] Name from API: $name');
     debugPrint('🔍 [MAPPING] Species: $speciesType');
-    debugPrint('🔍 [MAPPING] Stage: $stage');
-    debugPrint('🔍 [MAPPING] Featured: $isFeatured');
-
-    // Mapear species_type a nuestro sistema
-    final companionType = _mapSpeciesTypeToCompanionType(speciesType);
-    final companionStage = _mapStageStringToCompanionStage(stage);
-
+    
+    final companionType = _mapNameToCompanionType(name);
+    final companionStage = CompanionStage.young; // Por defecto young, ya que no tenemos stage en la API
+    
     // Crear ID local consistente
     final localId = '${companionType.name}_${companionStage.name}';
+    
+    // 🔧 SI ES PAXOLOTH, CORREGIR A PAXOLOTL
+    final correctedName = name == 'Paxoloth' ? 'Paxolotl' : name;
 
-    debugPrint('✅ [MAPPING] Mapped to: $localId (${companionType.name} ${companionStage.name})');
-    debugPrint('🆔 [MAPPING] Preserving real Pet ID: $realPetId');
+    debugPrint('✅ [MAPPING] MAPEO CORREGIDO:');
+    debugPrint('🔍 [MAPPING] Nombre original: $name -> Corregido: $correctedName');
+    debugPrint('🔍 [MAPPING] Tipo detectado: ${companionType.name}');
+    debugPrint('🔍 [MAPPING] ID local generado: $localId');
+    debugPrint('🆔 [MAPPING] Pet ID preservado: $realPetId');
 
     // 🔥 USAR CompanionModelWithPetId PARA PRESERVAR EL PET ID REAL
     return CompanionModelWithPetId(
       id: localId,
       type: companionType,
       stage: companionStage,
-      name: name,
-      description: _generateDescription(companionType, companionStage),
-      level: (adoptedPet['level'] as int?) ?? 1,
-      experience: (adoptedPet['experience'] as int?) ?? 0,
-      happiness: (adoptedPet['happiness'] as int?) ?? 100,
-      hunger: (adoptedPet['hunger'] as int?) ?? 100,
-      energy: (adoptedPet['energy'] as int?) ?? 100,
+      name: correctedName,
+      description: adoptedPet['description'] as String? ?? _generateDescription(companionType, companionStage),
+      level: 1,
+      experience: 0,
+      happiness: 100,
+      hunger: 100,
+      energy: 100,
       isOwned: true, // Siempre true porque fue adoptada
-      isSelected: isFeatured, // Usar el campo featured/selected de la API
+      isSelected: false, // Por defecto no seleccionada
       purchasedAt: adoptedAt != null ? DateTime.tryParse(adoptedAt) ?? DateTime.now() : DateTime.now(),
       currentMood: CompanionMood.happy,
       purchasePrice: _getDefaultPrice(companionType, companionStage),
@@ -584,6 +644,31 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       createdAt: DateTime.now(),
       petId: realPetId, // 🔥 PRESERVAR EL PET ID REAL DE LA API
     );
+  }
+  
+  // 🔧 MAPEO CORRECTO POR NOMBRE DE LA MASCOTA
+  CompanionType _mapNameToCompanionType(String name) {
+    final nameLower = name.toLowerCase();
+    
+    debugPrint('🔍 [NAME_MAPPING] Mapeando nombre: $name');
+    
+    if (nameLower.contains('dexter')) {
+      debugPrint('✅ [NAME_MAPPING] -> CompanionType.dexter');
+      return CompanionType.dexter;
+    } else if (nameLower.contains('elly')) {
+      debugPrint('✅ [NAME_MAPPING] -> CompanionType.elly');
+      return CompanionType.elly;
+    } else if (nameLower.contains('paxoloth') || nameLower.contains('paxolotl')) {
+      debugPrint('✅ [NAME_MAPPING] -> CompanionType.paxolotl');
+      return CompanionType.paxolotl;
+    } else if (nameLower.contains('yami')) {
+      debugPrint('✅ [NAME_MAPPING] -> CompanionType.yami');
+      return CompanionType.yami;
+    }
+    
+    // 🔧 FALLBACK: Mapear por species_type si el nombre no coincide
+    debugPrint('⚠️ [NAME_MAPPING] Nombre no reconocido, usando fallback');
+    return CompanionType.dexter; // Por defecto
   }
 
   /// Actualizar métodos de evolución y feature para usar Pet ID real
@@ -602,12 +687,13 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         companionStage = CompanionStage.adult;
         break;
       case CompanionStage.adult:
-      // Ya está al máximo
+        // Ya está al máximo
         break;
     }
 
     final localId = '${companionType.name}_${companionStage.name}';
-    debugPrint('🆔 [EVOLUTION] New local ID: $localId, preserving petId: $petId');
+    debugPrint(
+        '🆔 [EVOLUTION] New local ID: $localId, preserving petId: $petId');
 
     return CompanionModelWithPetId(
       id: localId,
@@ -667,7 +753,8 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
   // ==================== 🔧 MÉTODOS HELPER PARA MAPEO ====================
 
   /// Crear companion adoptado desde petId
-  CompanionModel _createAdoptedCompanionFromPetId(String petId, String nickname) {
+  CompanionModel _createAdoptedCompanionFromPetId(
+      String petId, String nickname) {
     final companionType = _mapPetIdToCompanionType(petId);
     final companionStage = _mapPetIdToCompanionStage(petId);
 
@@ -718,14 +805,12 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         petIdLower.contains('dog') ||
         petIdLower.contains('chihuahua')) {
       return CompanionType.dexter;
-    } else if (petIdLower.contains('elly') ||
-        petIdLower.contains('panda')) {
+    } else if (petIdLower.contains('elly') || petIdLower.contains('panda')) {
       return CompanionType.elly;
     } else if (petIdLower.contains('paxolotl') ||
         petIdLower.contains('axolotl')) {
       return CompanionType.paxolotl;
-    } else if (petIdLower.contains('yami') ||
-        petIdLower.contains('jaguar')) {
+    } else if (petIdLower.contains('yami') || petIdLower.contains('jaguar')) {
       return CompanionType.yami;
     }
 
@@ -749,18 +834,24 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
   CompanionStage _mapStageStringToCompanionStage(String stage) {
     final stageLower = stage.toLowerCase().trim();
 
-    if (stageLower.contains('baby') || stageLower.contains('1') || stageLower == 'peque') {
+    if (stageLower.contains('baby') ||
+        stageLower.contains('1') ||
+        stageLower == 'peque') {
       return CompanionStage.baby;
-    } else if (stageLower.contains('young') || stageLower.contains('2') || stageLower == 'joven') {
+    } else if (stageLower.contains('young') ||
+        stageLower.contains('2') ||
+        stageLower == 'joven') {
       return CompanionStage.young;
-    } else if (stageLower.contains('adult') || stageLower.contains('3') || stageLower == 'adulto') {
+    } else if (stageLower.contains('adult') ||
+        stageLower.contains('3') ||
+        stageLower == 'adulto') {
       return CompanionStage.adult;
     }
 
-    debugPrint('⚠️ [MAPPING] Stage desconocido: $stage, usando young por defecto');
+    debugPrint(
+        '⚠️ [MAPPING] Stage desconocido: $stage, usando young por defecto');
     return CompanionStage.young; // Por defecto
   }
-
 
   CompanionStage _inferStageFromPetId(String petId) {
     return _mapPetIdToCompanionStage(petId);
