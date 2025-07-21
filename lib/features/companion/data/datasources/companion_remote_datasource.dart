@@ -16,8 +16,9 @@ abstract class CompanionRemoteDataSource {
   Future<CompanionModel> adoptCompanion({required String userId, required String petId, String? nickname});
   Future<CompanionStatsModel> getCompanionStats(String userId);
   Future<int> getUserPoints(String userId);
-  Future<CompanionModel> featurePet({required String userId, required String petId});
   Future<CompanionModel> evolvePet({required String userId, required String petId});
+  Future<CompanionModel> featurePet({required String userId, required String petId});
+
 }
 
 @Injectable(as: CompanionRemoteDataSource)
@@ -658,86 +659,8 @@ CompanionStage _mapStageStringToCompanionStage(String stage) {
     
     return companions;
   }
-  Future<CompanionModel> featurePet({
-  required String userId,
-  required String petId,
-}) async {
-  try {
-    debugPrint('⭐ [API] === DESTACANDO MASCOTA ===');
-    debugPrint('👤 [API] User ID: $userId');
-    debugPrint('🆔 [API] Pet ID: $petId');
-    
-    final endpoint = '/api/gamification/pets/$userId/feature';
-    final requestBody = {
-      'petId': petId,
-    };
-    
-    debugPrint('📦 [API] Request body: $requestBody');
-    
-    final response = await apiClient.postGamification(
-      endpoint,
-      data: requestBody,
-    );
-    
-    debugPrint('✅ [API] Destacar response: ${response.statusCode}');
-    
-    if (response.statusCode == 200 || response.statusCode == 204) {
-      debugPrint('🎉 [API] Mascota destacada exitosamente');
-      
-      // Crear companion destacado
-      final featuredCompanion = _createFeaturedCompanionFromPetId(petId);
-      
-      return featuredCompanion;
-    } else {
-      throw ServerException('Error destacando mascota: código ${response.statusCode}');
-    }
-    
-  } catch (e) {
-    debugPrint('❌ [API] Error destacando mascota: $e');
-    throw ServerException('Error destacando mascota: ${e.toString()}');
-  }
-}
 
-/// 🆕 EVOLUCIONAR MASCOTA
-Future<CompanionModel> evolvePet({
-  required String userId,
-  required String petId,
-}) async {
-  try {
-    debugPrint('🦋 [API] === EVOLUCIONANDO MASCOTA ===');
-    debugPrint('👤 [API] User ID: $userId');
-    debugPrint('🆔 [API] Pet ID: $petId');
-    
-    final endpoint = '/api/gamification/pets/$userId/evolve';
-    final requestBody = {
-      'petId': petId,
-    };
-    
-    debugPrint('📦 [API] Request body: $requestBody');
-    
-    final response = await apiClient.postGamification(
-      endpoint,
-      data: requestBody,
-    );
-    
-    debugPrint('✅ [API] Evolución response: ${response.statusCode}');
-    
-    if (response.statusCode == 200 || response.statusCode == 204) {
-      debugPrint('🎉 [API] Mascota evolucionada exitosamente');
-      
-      // Crear companion evolucionado
-      final evolvedCompanion = _createEvolvedCompanionFromPetId(petId);
-      
-      return evolvedCompanion;
-    } else {
-      throw ServerException('Error evolucionando mascota: código ${response.statusCode}');
-    }
-    
-  } catch (e) {
-    debugPrint('❌ [API] Error evolucionando mascota: $e');
-    throw ServerException('Error evolucionando mascota: ${e.toString()}');
-  }
-}
+
 
 /// 🔧 CREAR COMPANION DESTACADO
 CompanionModel _createFeaturedCompanionFromPetId(String petId) {
@@ -805,4 +728,87 @@ CompanionModel _createEvolvedCompanionFromPetId(String petId) {
     createdAt: DateTime.now(),
   );
 }
+ // ==================== 🆕 EVOLUCIONAR MASCOTA ====================
+  @override
+  Future<CompanionModel> evolvePet({
+    required String userId,
+    required String petId,
+  }) async {
+    try {
+      debugPrint('🦋 [API] === EVOLUCIONANDO MASCOTA ===');
+      debugPrint('👤 [API] User ID: $userId');
+      debugPrint('🆔 [API] Pet ID: $petId');
+      
+      final endpoint = '/api/gamification/pets/$userId/evolve';
+      final requestBody = {
+        'petId': petId,
+      };
+      
+      debugPrint('📦 [API] Request body: $requestBody');
+      
+      final response = await apiClient.postGamification(
+        endpoint,
+        data: requestBody,
+      );
+      
+      debugPrint('✅ [API] Evolución response: ${response.statusCode}');
+      
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        debugPrint('🎉 [API] Mascota evolucionada exitosamente');
+        
+        // Crear companion evolucionado
+        final evolvedCompanion = _createEvolvedCompanionFromPetId(petId);
+        
+        return evolvedCompanion;
+      } else {
+        throw ServerException('Error evolucionando mascota: código ${response.statusCode}');
+      }
+      
+    } catch (e) {
+      debugPrint('❌ [API] Error evolucionando mascota: $e');
+      throw ServerException('Error evolucionando mascota: ${e.toString()}');
+    }
+  }
+
+  // ==================== 🆕 DESTACAR MASCOTA ====================
+  @override
+  Future<CompanionModel> featurePet({
+    required String userId,
+    required String petId,
+  }) async {
+    try {
+      debugPrint('⭐ [API] === DESTACANDO MASCOTA ===');
+      debugPrint('👤 [API] User ID: $userId');
+      debugPrint('🆔 [API] Pet ID: $petId');
+      
+      final endpoint = '/api/gamification/pets/$userId/feature';
+      final requestBody = {
+        'petId': petId,
+      };
+      
+      debugPrint('📦 [API] Request body: $requestBody');
+      
+      final response = await apiClient.postGamification(
+        endpoint,
+        data: requestBody,
+      );
+      
+      debugPrint('✅ [API] Destacar response: ${response.statusCode}');
+      
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        debugPrint('🎉 [API] Mascota destacada exitosamente');
+        
+        // Crear companion destacado
+        final featuredCompanion = _createFeaturedCompanionFromPetId(petId);
+        
+        return featuredCompanion;
+      } else {
+        throw ServerException('Error destacando mascota: código ${response.statusCode}');
+      }
+      
+    } catch (e) {
+      debugPrint('❌ [API] Error destacando mascota: $e');
+      throw ServerException('Error destacando mascota: ${e.toString()}');
+    }
+  }
 }
