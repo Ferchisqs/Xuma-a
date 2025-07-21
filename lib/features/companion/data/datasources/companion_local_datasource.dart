@@ -1,4 +1,4 @@
-// lib/features/companion/data/datasources/companion_local_datasource.dart - CORREGIDO
+// lib/features/companion/data/datasources/companion_local_datasource.dart - SIN DEXTER FORZADO
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/services/cache_service.dart';
@@ -29,7 +29,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
   @override
   Future<List<CompanionModel>> getCachedCompanions(String userId) async {
     try {
-      debugPrint('🐾 [LOCAL_DS] === OBTENIENDO COMPAÑEROS LOCALES ===');
+      debugPrint('🐾 [LOCAL_DS] === OBTENIENDO COMPAÑEROS LOCALES (SIN DEXTER FORZADO) ===');
       debugPrint('👤 [LOCAL_DS] Usuario: $userId');
       
       // Intentar cargar desde cache
@@ -42,34 +42,20 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
             .map((json) => CompanionModel.fromJson(json))
             .toList();
         
-        // 🔧 VERIFICAR QUE DEXTER JOVEN ESTÉ PRESENTE
-        if (!_hasDexterYoung(companions)) {
-          debugPrint('🔧 [LOCAL_DS] Adding missing Dexter young');
-          final dexterYoung = _createInitialDexterYoung();
-          companions.insert(0, dexterYoung);
-          
-          // Guardar la lista actualizada
-          await cacheCompanions(userId, companions);
-        }
-        
-        debugPrint('✅ [LOCAL_DS] Returning ${companions.length} companions');
+        debugPrint('✅ [LOCAL_DS] Returning ${companions.length} companions from cache');
         return companions;
       }
       
-      // Si no hay cache, crear set inicial con Dexter joven
-      debugPrint('🔧 [LOCAL_DS] No cache found, creating initial set');
-      final initialCompanions = _createInitialCompanionSet();
-      await cacheCompanions(userId, initialCompanions);
-      
-      debugPrint('✅ [LOCAL_DS] Created and cached ${initialCompanions.length} initial companions');
-      return initialCompanions;
+      // 🔥 SI NO HAY CACHE, RETORNAR LISTA VACÍA (NO CREAR DEXTER)
+      debugPrint('📭 [LOCAL_DS] No cached companions found - returning empty list');
+      return [];
       
     } catch (e) {
       debugPrint('❌ [LOCAL_DS] Error getting cached companions: $e');
       
-      // Fallback: crear set mínimo con Dexter joven
-      final fallbackCompanions = [_createInitialDexterYoung()];
-      return fallbackCompanions;
+      // 🔥 EN ERROR, TAMBIÉN RETORNAR LISTA VACÍA
+      debugPrint('📭 [LOCAL_DS] Error fallback - returning empty list');
+      return [];
     }
   }
 
@@ -93,6 +79,11 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         final stats = _calculateStatsFromCompanions(userId, companions);
         await cacheStats(stats);
         debugPrint('📊 [LOCAL_DS] Updated stats automatically');
+      } else {
+        // 🔥 SI NO HAY COMPANIONS, CREAR STATS VACÍAS
+        final emptyStats = _getEmptyStats(userId);
+        await cacheStats(emptyStats);
+        debugPrint('📊 [LOCAL_DS] Created empty stats');
       }
     } catch (e) {
       debugPrint('❌ [LOCAL_DS] Error caching companions: $e');
@@ -152,18 +143,17 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         return stats;
       }
       
-      // Si no hay stats, generar basado en companions actuales
-      debugPrint('🔧 [LOCAL_DS] No cached stats, generating from companions');
-      final companions = await getCachedCompanions(userId);
-      final stats = _calculateStatsFromCompanions(userId, companions);
-      await cacheStats(stats);
+      // 🔥 SI NO HAY STATS, GENERAR VACÍAS (NO BASADAS EN COMPANIONS INEXISTENTES)
+      debugPrint('🔧 [LOCAL_DS] No cached stats, generating empty stats');
+      final emptyStats = _getEmptyStats(userId);
+      await cacheStats(emptyStats);
       
-      debugPrint('✅ [LOCAL_DS] Generated and cached new stats');
-      return stats;
+      debugPrint('✅ [LOCAL_DS] Generated and cached empty stats');
+      return emptyStats;
       
     } catch (e) {
       debugPrint('❌ [LOCAL_DS] Error getting cached stats: $e');
-      return _getDefaultStats(userId);
+      return _getEmptyStats(userId);
     }
   }
 
@@ -205,132 +195,14 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
     }
   }
 
-  // ==================== 🔧 MÉTODOS HELPER CORREGIDOS ====================
+  // ==================== 🔧 MÉTODOS HELPER SIMPLIFICADOS ====================
 
-  /// Verificar si Dexter joven está en la lista
-  bool _hasDexterYoung(List<CompanionModel> companions) {
-    return companions.any((c) => 
-      c.type == CompanionType.dexter && 
-      c.stage == CompanionStage.young && 
-      c.isOwned
-    );
-  }
-
-  /// Crear Dexter joven inicial (mascota por defecto)
-  CompanionModel _createInitialDexterYoung() {
-    debugPrint('🐕 [LOCAL_DS] Creating initial Dexter young');
-    
-    return CompanionModel(
-      id: 'dexter_young',
-      type: CompanionType.dexter,
-      stage: CompanionStage.young,
-      name: 'Dexter',
-      description: 'Tu primer compañero, un chihuahua joven lleno de energía',
-      level: 1,
-      experience: 0,
-      happiness: 100,
-      hunger: 100,
-      energy: 100,
-      isOwned: true, // 🔧 SIEMPRE POSEÍDO
-      isSelected: true, // 🔧 ACTIVO POR DEFECTO
-      purchasedAt: DateTime.now(),
-      currentMood: CompanionMood.happy,
-      purchasePrice: 0, // 🔧 GRATIS
-      evolutionPrice: 100,
-      unlockedAnimations: ['idle', 'blink', 'happy', 'eating', 'loving'],
-      createdAt: DateTime.now(),
-    );
-  }
-
-  /// Crear set inicial completo de companions
-  List<CompanionModel> _createInitialCompanionSet() {
-    debugPrint('🎮 [LOCAL_DS] Creating initial companion set');
-    
-    final now = DateTime.now();
-    final companions = <CompanionModel>[];
-    
-    // Agregar Dexter joven como inicial (poseído)
-    companions.add(_createInitialDexterYoung());
-    
-    // Agregar otras etapas de Dexter (no poseídas)
-    companions.add(CompanionModel(
-      id: 'dexter_baby',
-      type: CompanionType.dexter,
-      stage: CompanionStage.baby,
-      name: 'Dexter',
-      description: 'Un adorable chihuahua bebé lleno de energía',
-      level: 1,
-      experience: 0,
-      happiness: 100,
-      hunger: 100,
-      energy: 100,
-      isOwned: false,
-      isSelected: false,
-      purchasedAt: null,
-      currentMood: CompanionMood.happy,
-      purchasePrice: 75,
-      evolutionPrice: 50,
-      unlockedAnimations: ['idle', 'blink', 'happy'],
-      createdAt: now,
-    ));
-    
-    companions.add(CompanionModel(
-      id: 'dexter_adult',
-      type: CompanionType.dexter,
-      stage: CompanionStage.adult,
-      name: 'Dexter',
-      description: 'Dexter adulto, el compañero perfecto',
-      level: 1,
-      experience: 0,
-      happiness: 100,
-      hunger: 100,
-      energy: 100,
-      isOwned: false,
-      isSelected: false,
-      purchasedAt: null,
-      currentMood: CompanionMood.happy,
-      purchasePrice: 150,
-      evolutionPrice: 0,
-      unlockedAnimations: ['idle', 'blink', 'happy'],
-      createdAt: now,
-    ));
-    
-    // Agregar otros tipos (no poseídos)
-    for (final type in [CompanionType.elly, CompanionType.paxolotl, CompanionType.yami]) {
-      for (final stage in CompanionStage.values) {
-        companions.add(CompanionModel(
-          id: '${type.name}_${stage.name}',
-          type: type,
-          stage: stage,
-          name: _getDisplayName(type),
-          description: _generateDescription(type, stage),
-          level: 1,
-          experience: 0,
-          happiness: 100,
-          hunger: 100,
-          energy: 100,
-          isOwned: false,
-          isSelected: false,
-          purchasedAt: null,
-          currentMood: CompanionMood.happy,
-          purchasePrice: _getDefaultPrice(type, stage),
-          evolutionPrice: _getEvolutionPrice(stage),
-          unlockedAnimations: ['idle', 'blink', 'happy'],
-          createdAt: now,
-        ));
-      }
-    }
-    
-    debugPrint('🎮 [LOCAL_DS] Created ${companions.length} companions (1 owned)');
-    return companions;
-  }
-
-  /// Calcular stats desde la lista de companions
+  /// Calcular stats desde la lista de companions (REALES)
   CompanionStatsModel _calculateStatsFromCompanions(String userId, List<CompanionModel> companions) {
     final ownedCount = companions.where((c) => c.isOwned).length;
     final activeCompanionId = companions.where((c) => c.isSelected).isNotEmpty 
         ? companions.firstWhere((c) => c.isSelected).id 
-        : 'dexter_young';
+        : (companions.isNotEmpty ? companions.first.id : '');
     
     // Calcular puntos gastados basado en precios de companions poseídos
     int spentPoints = 0;
@@ -340,9 +212,9 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
     
     return CompanionStatsModel(
       userId: userId,
-      totalCompanions: 12, // 4 tipos x 3 etapas
+      totalCompanions: 12, // 4 tipos x 3 etapas (meta del juego)
       ownedCompanions: ownedCount,
-      totalPoints: 1000, // 🔧 PUNTOS GENEROSOS PARA TESTING
+      totalPoints: 1000, // Puntos base para testing
       spentPoints: spentPoints,
       activeCompanionId: activeCompanionId,
       totalFeedCount: 0,
@@ -352,65 +224,19 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
     );
   }
 
-  /// Stats por defecto
-  CompanionStatsModel _getDefaultStats(String userId) {
+  /// Stats vacías para usuarios sin mascotas
+  CompanionStatsModel _getEmptyStats(String userId) {
     return CompanionStatsModel(
       userId: userId,
-      totalCompanions: 12,
-      ownedCompanions: 1, // Solo Dexter joven inicial
-      totalPoints: 1000,
+      totalCompanions: 12, // Meta del juego
+      ownedCompanions: 0, // 🔥 CERO mascotas
+      totalPoints: 1000, // Puntos iniciales
       spentPoints: 0,
-      activeCompanionId: 'dexter_young',
+      activeCompanionId: '', // 🔥 SIN MASCOTA ACTIVA
       totalFeedCount: 0,
       totalLoveCount: 0,
       totalEvolutions: 0,
       lastActivity: DateTime.now(),
     );
-  }
-
-  // Métodos helper para nombres, descripciones y precios
-  String _getDisplayName(CompanionType type) {
-    switch (type) {
-      case CompanionType.dexter: return 'Dexter';
-      case CompanionType.elly: return 'Elly';
-      case CompanionType.paxolotl: return 'Paxolotl';
-      case CompanionType.yami: return 'Yami';
-    }
-  }
-
-  String _generateDescription(CompanionType type, CompanionStage stage) {
-    final name = _getDisplayName(type);
-    switch (stage) {
-      case CompanionStage.baby:
-        return 'Un adorable $name bebé lleno de energía';
-      case CompanionStage.young:
-        return '$name ha crecido y es más juguetón';
-      case CompanionStage.adult:
-        return '$name adulto, el compañero perfecto';
-    }
-  }
-
-  int _getDefaultPrice(CompanionType type, CompanionStage stage) {
-    int basePrice = 50;
-    switch (type) {
-      case CompanionType.dexter: basePrice = 75; break;
-      case CompanionType.elly: basePrice = 100; break;
-      case CompanionType.paxolotl: basePrice = 150; break;
-      case CompanionType.yami: basePrice = 200; break;
-    }
-    
-    switch (stage) {
-      case CompanionStage.baby: return basePrice;
-      case CompanionStage.young: return basePrice + 25;
-      case CompanionStage.adult: return basePrice + 50;
-    }
-  }
-
-  int _getEvolutionPrice(CompanionStage stage) {
-    switch (stage) {
-      case CompanionStage.baby: return 50;
-      case CompanionStage.young: return 100;
-      case CompanionStage.adult: return 0;
-    }
   }
 }

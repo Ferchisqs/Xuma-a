@@ -115,11 +115,7 @@ class CompanionCubit extends Cubit<CompanionState> {
         (stats) {
           debugPrint('✅ [COMPANION_CUBIT] Stats obtenidas: ${stats.availablePoints} puntos, ${stats.ownedCompanions} mascotas');
           
-          // 🔧 SI NO TIENE MASCOTAS, CREAR DEXTER INICIAL
-          if (ownedCompanions.isEmpty) {
-            debugPrint('🔧 [COMPANION_CUBIT] Usuario sin mascotas, creando Dexter inicial');
-            ownedCompanions = [_createInitialDexterYoung()];
-          }
+         
           
           // 🔧 ASEGURAR QUE TENGA AL MENOS UNA MASCOTA ACTIVA
           if (!ownedCompanions.any((c) => c.isSelected)) {
@@ -182,29 +178,7 @@ class CompanionCubit extends Cubit<CompanionState> {
     }
   }
 
-  // 🔧 CREAR DEXTER JOVEN INICIAL
-  CompanionEntity _createInitialDexterYoung() {
-    return CompanionEntity(
-      id: 'dexter_young',
-      type: CompanionType.dexter,
-      stage: CompanionStage.young,
-      name: 'Dexter',
-      description: 'Tu primer compañero',
-      level: 1,
-      experience: 0,
-      happiness: 100,
-      hunger: 100,
-      energy: 100,
-      isOwned: true,
-      isSelected: true,
-      purchasedAt: DateTime.now(),
-      currentMood: CompanionMood.happy,
-      purchasePrice: 0,
-      evolutionPrice: 50,
-      unlockedAnimations: ['idle', 'blink', 'happy'],
-      createdAt: DateTime.now(),
-    );
-  }
+
   Future<void> _loadUserCompanions(String userId, dynamic shopData) async {
     try {
       debugPrint('🔍 [COMPANION_CUBIT] === OBTENIENDO MASCOTAS DEL USUARIO ===');
@@ -218,15 +192,9 @@ class CompanionCubit extends Cubit<CompanionState> {
         (failure) {
           debugPrint('⚠️ [COMPANION_CUBIT] Error obteniendo mascotas usuario: ${failure.message}');
           
-          // Si el usuario no tiene mascotas, crear estado inicial con Dexter
-          final initialCompanions = [_createInitialDexterYoung()];
           
-          emit(CompanionLoaded(
-            allCompanions: shopData.availableCompanions,
-            ownedCompanions: initialCompanions,
-            activeCompanion: initialCompanions.first,
-            userStats: shopData.userStats,
-          ));
+          
+         
         },
         (userCompanions) {
           debugPrint('✅ [COMPANION_CUBIT] Mascotas del usuario: ${userCompanions.length}');
@@ -234,10 +202,7 @@ class CompanionCubit extends Cubit<CompanionState> {
           // Verificar que tenga al menos una mascota
           List<CompanionEntity> finalOwnedCompanions = List.from(userCompanions);
           
-          if (finalOwnedCompanions.isEmpty) {
-            debugPrint('🔧 [COMPANION_CUBIT] Usuario sin mascotas, agregando Dexter inicial');
-            finalOwnedCompanions.add(_createInitialDexterYoung());
-          }
+      
           
           // 🔧 ENCONTRAR COMPAÑERO ACTIVO
           final activeCompanion = finalOwnedCompanions

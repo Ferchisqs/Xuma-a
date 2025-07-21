@@ -591,51 +591,7 @@ Future<Either<Failure, List<CompanionEntity>>> getAvailableCompanions() async {
 
   // ==================== MÉTODOS HELPER PRIVADOS ====================
 
-  Future<CompanionModel> _createInitialDexterBaby() async {
-    return CompanionModel(
-      id: 'dexter_baby',
-      type: CompanionType.dexter,
-      stage: CompanionStage.baby,
-      name: 'Dexter',
-      description: 'Tu primer compañero, un chihuahua bebé lleno de energía',
-      level: 1,
-      experience: 0,
-      happiness: 100,
-      hunger: 100,
-      energy: 100,
-      isOwned: true,
-      isSelected: true,
-      purchasedAt: DateTime.now(),
-      currentMood: CompanionMood.happy,
-      purchasePrice: 0,
-      evolutionPrice: 50,
-      unlockedAnimations: ['idle', 'blink', 'happy', 'eating'],
-      createdAt: DateTime.now(),
-    );
-  }
 
-  Future<CompanionModel> _createInitialDexterYoung() async {
-    return CompanionModel(
-      id: 'dexter_young',
-      type: CompanionType.dexter,
-      stage: CompanionStage.young,
-      name: 'Dexter',
-      description: 'Tu primer compañero, un chihuahua joven lleno de energía',
-      level: 1,
-      experience: 0,
-      happiness: 100,
-      hunger: 100,
-      energy: 100,
-      isOwned: true,
-      isSelected: true,
-      purchasedAt: DateTime.now(),
-      currentMood: CompanionMood.happy,
-      purchasePrice: 0,
-      evolutionPrice: 100,
-      unlockedAnimations: ['idle', 'blink', 'happy', 'eating'],
-      createdAt: DateTime.now(),
-    );
-  }
 
   Future<Either<Failure, List<CompanionEntity>>> _getLocalCompanions(
       String userId) async {
@@ -644,12 +600,7 @@ Future<Either<Failure, List<CompanionEntity>>> getAvailableCompanions() async {
       debugPrint(
           '📱 [REPO] Local: ${companions.length} compañeros para usuario $userId');
 
-      if (companions.isEmpty) {
-        debugPrint('🔧 [REPO] Creando Dexter inicial para usuario $userId');
-        final initialCompanion = await _createEmergencyCompanion(userId);
-        await localDataSource.cacheCompanions(userId, [initialCompanion]);
-        return Right([initialCompanion]);
-      }
+      
 
       return Right(companions);
     } catch (e) {
