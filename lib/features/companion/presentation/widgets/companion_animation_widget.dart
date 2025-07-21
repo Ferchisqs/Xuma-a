@@ -253,11 +253,11 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       case CompanionType.dexter:
         return 'assets/images/companions/backgrounds/dexter_bg.png';
       case CompanionType.elly:
-        return 'assets/images/companions/backgrounds/panda_bg.png';
+        return 'assets/images/companions/backgrounds/elly_bg.png';
       case CompanionType.paxolotl:
-        return 'assets/images/companions/backgrounds/axolotl_bg.png';
+        return 'assets/images/companions/backgrounds/paxolotl_bg.png';
       case CompanionType.yami:
-        return 'assets/images/companions/backgrounds/jaguar_bg.png';
+        return 'assets/images/companions/backgrounds/yami_bg.png';
     }
   }
 

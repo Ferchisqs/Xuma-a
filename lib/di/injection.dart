@@ -50,7 +50,6 @@ import '../features/companion/domain/usecases/feature_companion_usecase.dart';
 import '../features/companion/presentation/cubit/companion_cubit.dart';
 import '../features/companion/presentation/cubit/companion_shop_cubit.dart';
 import '../features/companion/presentation/cubit/companion_detail_cubit.dart';
-import '../features/companion/presentation/cubit/welcome_companion_cubit.dart';
 
 // News feature imports
 import '../features/news/data/datasources/news_remote_datasource.dart';
@@ -357,16 +356,6 @@ void _registerCompanionDependencies() {
       print('✅ [INJECTION] CompanionDetailCubit registered WITH TOKEN MANAGER AND NEW USE CASES');
     }
 
-    // 🆕 WelcomeCompanionCubit - YA TIENE TOKEN MANAGER
-    if (!getIt.isRegistered<WelcomeCompanionCubit>()) {
-      getIt.registerFactory<WelcomeCompanionCubit>(
-        () => WelcomeCompanionCubit(
-          getUserCompanionsUseCase: getIt<GetUserCompanionsUseCase>(),
-          tokenManager: getIt<TokenManager>(),
-        ),
-      );
-      print('✅ [INJECTION] WelcomeCompanionCubit registered');
-    }
 
     print('🎉 [INJECTION] === COMPANION DEPENDENCIES REGISTERED SUCCESSFULLY WITH ENHANCED FEATURES ===');
   } catch (e, stackTrace) {
@@ -835,7 +824,6 @@ void debugDependencies() {
   print('🔍 CompanionCubit: ${getIt.isRegistered<CompanionCubit>()}');
   print('🔍 CompanionShopCubit: ${getIt.isRegistered<CompanionShopCubit>()}');
   print('🔍 CompanionDetailCubit: ${getIt.isRegistered<CompanionDetailCubit>()}');
-  print('🔍 WelcomeCompanionCubit: ${getIt.isRegistered<WelcomeCompanionCubit>()}');
   print('🔍 LearningRemoteDataSource: ${getIt.isRegistered<LearningRemoteDataSource>()}');
   print('🔍 LearningRepository: ${getIt.isRegistered<LearningRepository>()}');
   print('🔍 GetCategoriesUseCase: ${getIt.isRegistered<GetCategoriesUseCase>()}');

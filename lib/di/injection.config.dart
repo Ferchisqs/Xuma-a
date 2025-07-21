@@ -86,8 +86,6 @@ import '../features/companion/presentation/cubit/companion_detail_cubit.dart'
     as _i0;
 import '../features/companion/presentation/cubit/companion_shop_cubit.dart'
     as _i717;
-import '../features/companion/presentation/cubit/welcome_companion_cubit.dart'
-    as _i503;
 import '../features/home/data/datasources/home_local_datasource.dart' as _i819;
 import '../features/home/data/datasources/home_remote_datasource.dart' as _i75;
 import '../features/home/data/repositories/home_repository_impl.dart' as _i6;
@@ -453,10 +451,6 @@ extension GetItInjectableX on _i174.GetIt {
           completeChallengeUseCase: gh<_i522.CompleteChallengeUseCase>(),
           updateChallengeProgressUseCase:
               gh<_i1056.UpdateChallengeProgressUseCase>(),
-        ));
-    gh.factory<_i503.WelcomeCompanionCubit>(() => _i503.WelcomeCompanionCubit(
-          getUserCompanionsUseCase: gh<_i574.GetUserCompanionsUseCase>(),
-          tokenManager: gh<_i497.TokenManager>(),
         ));
     gh.factory<_i0.CompanionDetailCubit>(() => _i0.CompanionDetailCubit(
           feedCompanionUseCase: gh<_i960.FeedCompanionUseCase>(),

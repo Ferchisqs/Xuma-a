@@ -8,11 +8,9 @@ import '../../../navigation/presentation/widgets/side_nav_bar.dart';
 import '../cubit/companion_cubit.dart';
 import '../cubit/companion_actions_cubit.dart';
 import '../cubit/companion_shop_cubit.dart';
-import '../cubit/welcome_companion_cubit.dart';
 import '../widgets/companion_animation_widget.dart';
 import '../widgets/companion_card_widget.dart';
 import '../widgets/companion_stats_widget.dart';
-import '../widgets/welcome_dexter_dialog.dart';
 import 'companion_detail_page.dart';
 import 'companion_shop_page.dart';
 
@@ -48,18 +46,12 @@ class _CompanionMainView extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocListener(
       listeners: [
-        // Listener para bienvenida
-        BlocListener<WelcomeCompanionCubit, WelcomeCompanionState>(
-          listener: (context, state) {
-            debugPrint('🎉 [WELCOME] Estado cambió: ${state.runtimeType}');
-          },
-        ),
         // Listener para acciones de compañeros
         BlocListener<CompanionActionsCubit, CompanionActionsState>(
           listener: (context, state) {
             if (state is CompanionActionsSuccess) {
               debugPrint('✅ [ACTIONS] Acción exitosa: ${state.action}');
-              
+
               // Mostrar mensaje de éxito
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -77,13 +69,12 @@ class _CompanionMainView extends StatelessWidget {
                   duration: const Duration(seconds: 3),
                 ),
               );
-              
+
               // Refrescar companions después de acción exitosa
               context.read<CompanionCubit>().refreshCompanions();
-              
             } else if (state is CompanionActionsError) {
               debugPrint('❌ [ACTIONS] Error: ${state.message}');
-              
+
               // Mostrar mensaje de error
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -137,25 +128,6 @@ class _CompanionMainView extends StatelessWidget {
                   return const _LoadingView();
                 },
               ),
-
-              // OVERLAY PARA BIENVENIDA DE DEXTER
-              BlocConsumer<WelcomeCompanionCubit, WelcomeCompanionState>(
-                listener: (context, state) {
-                  debugPrint('🎉 [WELCOME] Estado cambió: ${state.runtimeType}');
-                },
-                builder: (context, welcomeState) {
-                  if (welcomeState is WelcomeCompanionShowDexterWelcome) {
-                    debugPrint('🎉 [WELCOME] Mostrando diálogo de bienvenida');
-
-                    // Mostrar diálogo de bienvenida
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _showWelcomeDialog(context, welcomeState.dexterBaby);
-                    });
-                  }
-
-                  return const SizedBox.shrink();
-                },
-              ),
             ],
           ),
         ),
@@ -180,45 +152,6 @@ class _CompanionMainView extends StatelessWidget {
   }
 
   // Mostrar diálogo de bienvenida
-  void _showWelcomeDialog(BuildContext context, dynamic companion) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => WelcomeDexterDialog(
-        dexterBaby: companion,
-        onContinue: () {
-          debugPrint('🎉 [WELCOME] Bienvenida completada');
-          Navigator.of(dialogContext).pop();
-
-          // Marcar bienvenida como completada
-          context.read<WelcomeCompanionCubit>().completeWelcome();
-
-          // Refrescar los companions para mostrar Dexter
-          context.read<CompanionCubit>().refreshCompanions();
-
-          // Mostrar mensaje de confirmación
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.pets, color: Colors.white),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '¡${companion.displayName} se ha unido a tu equipo! 🐕✨',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        },
-      ),
-    );
-  }
 }
 
 // ==================== VISTAS AUXILIARES ====================
@@ -354,8 +287,10 @@ class _LoadedView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     debugPrint('📱 [MAIN] === MOSTRANDO VISTA CARGADA ===');
-    debugPrint('🐾 [MAIN] Compañeros poseídos: ${state.ownedCompanions.length}');
-    debugPrint('💰 [MAIN] Puntos disponibles: ${state.userStats.availablePoints}');
+    debugPrint(
+        '🐾 [MAIN] Compañeros poseídos: ${state.ownedCompanions.length}');
+    debugPrint(
+        '💰 [MAIN] Puntos disponibles: ${state.userStats.availablePoints}');
 
     return CustomScrollView(
       slivers: [
@@ -381,7 +316,8 @@ class _LoadedView extends StatelessWidget {
                     color: Colors.green,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.cloud_done, color: Colors.white, size: 20),
+                  child: const Icon(Icons.cloud_done,
+                      color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -407,7 +343,8 @@ class _LoadedView extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.blue[100],
                     borderRadius: BorderRadius.circular(8),
@@ -457,13 +394,12 @@ class _LoadedView extends StatelessWidget {
                         ),
                       ),
                       // BOTÓN PARA CAMBIAR COMPAÑERO ACTIVO
-                      TextButton.icon(
-                        onPressed: () => _showSelectActiveCompanionDialog(context, state.ownedCompanions),
-                        icon: const Icon(Icons.swap_horiz, color: AppColors.primary),
-                        label: const Text(
-                          'Cambiar',
-                          style: TextStyle(color: AppColors.primary),
-                        ),
+                      IconButton(
+                        onPressed: () => _showSelectActiveCompanionDialog(
+                            context, state.ownedCompanions),
+                        icon: const Icon(Icons.swap_horiz,
+                            color: AppColors.primary),
+                        tooltip: 'Cambiar',
                       ),
                     ],
                   ),
@@ -490,7 +426,8 @@ class _LoadedView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildActiveCompanionCard(context, state.ownedCompanions.first),
+                  _buildActiveCompanionCard(
+                      context, state.ownedCompanions.first),
                 ],
               ),
             ),
@@ -566,7 +503,8 @@ class _LoadedView extends StatelessWidget {
               top: 0,
               left: 0,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(15),
@@ -643,9 +581,9 @@ class _LoadedView extends StatelessWidget {
                   _buildQuickActionButton(
                     icon: Icons.auto_awesome,
                     color: Colors.purple,
-                    onPressed: (companion.canEvolve ?? false) 
-                      ? () => _evolveCompanion(context, companion)
-                      : null,
+                    onPressed: (companion.canEvolve ?? false)
+                        ? () => _evolveCompanion(context, companion)
+                        : null,
                     needsAttention: companion.canEvolve ?? false,
                   ),
                   _buildQuickActionButton(
@@ -674,13 +612,12 @@ class _LoadedView extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: onPressed != null 
-          ? (needsAttention ? color : color.withOpacity(0.7))
-          : Colors.grey.withOpacity(0.3),
+        color: onPressed != null
+            ? (needsAttention ? color : color.withOpacity(0.7))
+            : Colors.grey.withOpacity(0.3),
         borderRadius: BorderRadius.circular(22),
-        border: needsAttention 
-          ? Border.all(color: Colors.white, width: 2)
-          : null,
+        border:
+            needsAttention ? Border.all(color: Colors.white, width: 2) : null,
       ),
       child: IconButton(
         onPressed: onPressed,
@@ -694,7 +631,8 @@ class _LoadedView extends StatelessWidget {
   }
 
   // GRID DE MASCOTAS ADOPTADAS
-  Widget _buildOwnedCompanionsGrid(BuildContext context, List<dynamic> companions) {
+  Widget _buildOwnedCompanionsGrid(
+      BuildContext context, List<dynamic> companions) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       sliver: SliverGrid(
@@ -760,7 +698,8 @@ class _LoadedView extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
           ],
@@ -770,7 +709,8 @@ class _LoadedView extends StatelessWidget {
   }
 
   // DIÁLOGO PARA SELECCIONAR COMPAÑERO ACTIVO
-  void _showSelectActiveCompanionDialog(BuildContext context, List<dynamic> companions) {
+  void _showSelectActiveCompanionDialog(
+      BuildContext context, List<dynamic> companions) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -791,10 +731,11 @@ class _LoadedView extends StatelessWidget {
                   ),
                 ),
                 title: Text(companion.displayName ?? 'Compañero'),
-                subtitle: Text('${companion.typeDescription ?? 'Mascota'} ${companion.stageDisplayName ?? ''}'),
-                trailing: (companion.isSelected ?? false) 
-                  ? const Icon(Icons.star, color: Colors.orange)
-                  : null,
+                subtitle: Text(
+                    '${companion.typeDescription ?? 'Mascota'} ${companion.stageDisplayName ?? ''}'),
+                trailing: (companion.isSelected ?? false)
+                    ? const Icon(Icons.star, color: Colors.orange)
+                    : null,
                 onTap: () {
                   Navigator.of(context).pop();
                   _featureCompanion(context, companion);
@@ -833,34 +774,34 @@ class _LoadedView extends StatelessWidget {
   // Métodos helper
   Color _getCompanionColor(CompanionType? type) {
     if (type == null) return Colors.grey;
-    
+
     switch (type) {
-      case CompanionType.dexter: 
+      case CompanionType.dexter:
         return Colors.brown;
-      case CompanionType.elly: 
+      case CompanionType.elly:
         return Colors.green;
-      case CompanionType.paxolotl: 
+      case CompanionType.paxolotl:
         return Colors.cyan;
-      case CompanionType.yami: 
+      case CompanionType.yami:
         return Colors.purple;
-      default: 
+      default:
         return Colors.grey;
     }
   }
 
   IconData _getCompanionIcon(CompanionType? type) {
     if (type == null) return Icons.pets;
-    
+
     switch (type) {
-      case CompanionType.dexter: 
+      case CompanionType.dexter:
         return Icons.pets;
-      case CompanionType.elly: 
+      case CompanionType.elly:
         return Icons.forest;
-      case CompanionType.paxolotl: 
+      case CompanionType.paxolotl:
         return Icons.water;
-      case CompanionType.yami: 
+      case CompanionType.yami:
         return Icons.nature;
-      default: 
+      default:
         return Icons.pets;
     }
   }
