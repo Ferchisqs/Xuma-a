@@ -87,7 +87,7 @@ class _MainWrapperContent extends StatelessWidget {
         return const _PageWrapper(child: ChallengesMainPage());
         
       case NavigationTab.contact:
-        return const _PageWrapper(child: contact.CompanionMainPage()); // Aquí probablemente debería ser ContactMainPage
+        return const _PageWrapper(child: contact.ContactMainPage()); // Aquí probablemente debería ser ContactMainPage
         
       case NavigationTab.profile:
         return const _PageWrapper(child: ProfileMainPage());

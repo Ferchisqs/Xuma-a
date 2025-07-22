@@ -10,6 +10,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
+  # Firebase
+  firebase_core: ^2.24.2
+  firebase_messaging: ^14.7.10
+  flutter_local_notifications: 15.1.0
 
   # Core
   cupertino_icons: ^1.0.2
@@ -49,8 +54,6 @@ dependencies:
   # Authentication & Security
   crypto: ^3.0.3
 
-
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -79,7 +82,6 @@ flutter:
     - assets/images/companions/backgrounds/  # 4 fondos específicos
     - assets/images/companions/animations/   # Expresiones opcionales
   
-
   fonts:
     - family: Poppins
       fonts:

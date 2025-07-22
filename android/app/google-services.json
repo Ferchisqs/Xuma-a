@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "83757561055",
+    "project_id": "xuma-6f453",
+    "storage_bucket": "xuma-6f453.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:83757561055:android:8a112662d08983e3b0a56a",
+        "android_client_info": {
+          "package_name": "com.example.xuma_a"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB4tChOScDwj50btoLHhlrAF-rKA1vIlSg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

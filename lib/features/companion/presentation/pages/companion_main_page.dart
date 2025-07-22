@@ -295,78 +295,12 @@ class _LoadedView extends StatelessWidget {
     return CustomScrollView(
       slivers: [
         // HEADER CON INFORMACIÓN DE LA API
-        SliverToBoxAdapter(
-          child: Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.topRight,
-                colors: [Colors.blue[50]!, Colors.green[50]!],
-              ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue[200]!),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.cloud_done,
-                      color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '🚀 API Conectada',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green[700],
-                        ),
-                      ),
-                      Text(
-                        'Datos desde: gamification-service-production.up.railway.app',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${state.userStats.availablePoints}★',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue[700],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      
 
         // Estadísticas del usuario
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+             padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
             child: CompanionStatsWidget(
               stats: state.userStats,
               onShopTap: () => _navigateToShop(context),
