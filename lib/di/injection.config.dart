@@ -161,23 +161,37 @@ import '../features/tips/data/repositories/tips_repository_impl.dart' as _i397;
 import '../features/tips/domain/repositories/tips_repository.dart' as _i406;
 import '../features/tips/domain/usecases/get_random_tip_usecase.dart' as _i22;
 import '../features/tips/presentation/cubit/tips_cubit.dart' as _i441;
+import '../features/trivia/data/datasources/quiz_remote_datasource.dart'
+    as _i964;
 import '../features/trivia/data/datasources/trivia_local_datasource.dart'
     as _i430;
 import '../features/trivia/data/datasources/trivia_remote_datasource.dart'
     as _i614;
+import '../features/trivia/data/repositories/quiz_repository_impl.dart'
+    as _i852;
 import '../features/trivia/data/repositories/trivia_repository_impl.dart'
     as _i121;
+import '../features/trivia/domain/repositories/quiz_repository.dart' as _i992;
 import '../features/trivia/domain/repositories/trivia_repository.dart' as _i416;
+import '../features/trivia/domain/usecases/get_quiz_questions_usecase.dart'
+    as _i806;
+import '../features/trivia/domain/usecases/get_quiz_results_usecase.dart'
+    as _i907;
 import '../features/trivia/domain/usecases/get_trivia_categories_usecase.dart'
     as _i828;
 import '../features/trivia/domain/usecases/get_trivia_questions_usecase.dart'
     as _i9;
 import '../features/trivia/domain/usecases/get_user_trivia_history_usecase.dart'
     as _i919;
+import '../features/trivia/domain/usecases/start_quiz_session_usecase.dart'
+    as _i112;
+import '../features/trivia/domain/usecases/submit_quiz_answer_usecase.dart'
+    as _i591;
 import '../features/trivia/domain/usecases/submit_trivia_answer_usecase.dart'
     as _i381;
 import '../features/trivia/domain/usecases/submit_trivia_result_usecase.dart'
     as _i157;
+import '../features/trivia/presentation/cubit/quiz_session_cubit.dart' as _i499;
 import '../features/trivia/presentation/cubit/trivia_cubit.dart' as _i993;
 import '../features/trivia/presentation/cubit/trivia_game_cubit.dart' as _i912;
 import 'modules/external_module.dart' as _i649;
@@ -258,6 +272,8 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i182.AuthLocalDataSource>(),
           gh<_i497.TokenManager>(),
         ));
+    gh.factory<_i964.QuizRemoteDataSource>(
+        () => _i964.QuizRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.lazySingleton<_i850.ProfileRemoteDataSource>(
         () => _i850.ProfileRemoteDataSourceImpl(
               gh<_i510.ApiClient>(),
@@ -293,6 +309,11 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i88.AuthService>(() => _i88.AuthService(
           gh<_i869.AuthRepository>(),
           gh<_i130.AuthRemoteDataSource>(),
+        ));
+    gh.factory<_i992.QuizRepository>(() => _i852.QuizRepositoryImpl(
+          remoteDataSource: gh<_i964.QuizRemoteDataSource>(),
+          localDataSource: gh<_i430.TriviaLocalDataSource>(),
+          networkInfo: gh<_i6.NetworkInfo>(),
         ));
     gh.factory<_i852.LearningRepository>(() => _i378.LearningRepositoryImpl(
           remoteDataSource: gh<_i506.LearningRemoteDataSource>(),
@@ -352,6 +373,14 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i420.SearchLessonsUseCase(gh<_i852.LearningRepository>()));
     gh.factory<_i813.UpdateLessonProgressUseCase>(() =>
         _i813.UpdateLessonProgressUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i806.GetQuizQuestionsUseCase>(
+        () => _i806.GetQuizQuestionsUseCase(gh<_i992.QuizRepository>()));
+    gh.factory<_i907.GetQuizResultsUseCase>(
+        () => _i907.GetQuizResultsUseCase(gh<_i992.QuizRepository>()));
+    gh.factory<_i112.StartQuizSessionUseCase>(
+        () => _i112.StartQuizSessionUseCase(gh<_i992.QuizRepository>()));
+    gh.factory<_i591.SubmitQuizAnswerUseCase>(
+        () => _i591.SubmitQuizAnswerUseCase(gh<_i992.QuizRepository>()));
     gh.factory<_i22.GetRandomTipUseCase>(
         () => _i22.GetRandomTipUseCase(gh<_i406.TipsRepository>()));
     gh.factory<_i22.GetRandomTipWithoutParamsUseCase>(() =>
@@ -369,6 +398,10 @@ extension GetItInjectableX on _i174.GetIt {
             ));
     gh.factory<_i108.EvolveCompanionUseCase>(
         () => _i108.EvolveCompanionUseCase(gh<_i770.CompanionRepository>()));
+    gh.factory<_i711.EvolveCompanionViaApiUseCase>(() =>
+        _i711.EvolveCompanionViaApiUseCase(gh<_i770.CompanionRepository>()));
+    gh.factory<_i913.FeatureCompanionUseCase>(
+        () => _i913.FeatureCompanionUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i960.FeedCompanionUseCase>(
         () => _i960.FeedCompanionUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i720.GetAvailableCompanionsUseCase>(() =>
@@ -381,10 +414,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i820.LoveCompanionUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i395.PurchaseCompanionUseCase>(
         () => _i395.PurchaseCompanionUseCase(gh<_i770.CompanionRepository>()));
-    gh.factory<_i711.EvolveCompanionViaApiUseCase>(() =>
-        _i711.EvolveCompanionViaApiUseCase(gh<_i770.CompanionRepository>()));
-    gh.factory<_i913.FeatureCompanionUseCase>(
-        () => _i913.FeatureCompanionUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i1017.HomeCubit>(() => _i1017.HomeCubit(
           getDailyTipUseCase: gh<_i957.GetDailyTipUseCase>(),
           getUserStatsUseCase: gh<_i762.GetUserStatsUseCase>(),
@@ -392,6 +421,12 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i912.TriviaGameCubit>(() => _i912.TriviaGameCubit(
           getTriviaQuestionsUseCase: gh<_i9.GetTriviaQuestionsUseCase>(),
           submitTriviaResultUseCase: gh<_i157.SubmitTriviaResultUseCase>(),
+        ));
+    gh.factory<_i499.QuizSessionCubit>(() => _i499.QuizSessionCubit(
+          startQuizSessionUseCase: gh<_i112.StartQuizSessionUseCase>(),
+          submitQuizAnswerUseCase: gh<_i591.SubmitQuizAnswerUseCase>(),
+          getQuizResultsUseCase: gh<_i907.GetQuizResultsUseCase>(),
+          getQuizQuestionsUseCase: gh<_i806.GetQuizQuestionsUseCase>(),
         ));
     gh.factory<_i959.ChallengesRepository>(() => _i285.ChallengesRepositoryImpl(
           remoteDataSource: gh<_i252.ChallengesRemoteDataSource>(),
@@ -465,12 +500,12 @@ extension GetItInjectableX on _i174.GetIt {
           getChallengesUseCase: gh<_i1010.GetChallengesUseCase>(),
           getUserProgressUseCase: gh<_i287.GetUserProgressUseCase>(),
         ));
+    gh.factory<_i582.GetContentsByTopicUseCase>(
+        () => _i582.GetContentsByTopicUseCase(gh<_i19.ContentRepository>()));
     gh.factory<_i677.GetContentByIdUseCase>(
         () => _i677.GetContentByIdUseCase(gh<_i19.ContentRepository>()));
     gh.factory<_i175.GetTopicsUseCase>(
         () => _i175.GetTopicsUseCase(gh<_i19.ContentRepository>()));
-    gh.factory<_i582.GetContentsByTopicUseCase>(
-        () => _i582.GetContentsByTopicUseCase(gh<_i19.ContentRepository>()));
     gh.factory<_i992.LearningCubit>(() =>
         _i992.LearningCubit(getTopicsUseCase: gh<_i175.GetTopicsUseCase>()));
     gh.factory<_i921.ContentCubit>(() => _i921.ContentCubit(

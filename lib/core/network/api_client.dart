@@ -1,4 +1,4 @@
-// lib/core/network/api_client.dart - ACTUALIZADO CON GAMIFICATION SERVICE
+// lib/core/network/api_client.dart - ACTUALIZADO CON QUIZ SERVICE
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 import '../config/api_endpoints.dart';
@@ -12,7 +12,8 @@ class ApiClient {
   late final Dio _authDio;     
   late final Dio _userDio;     
   late final Dio _contentDio;  
-  late final Dio _gamificationDio; // 🆕 NUEVO DIO PARA GAMIFICACIÓN
+  late final Dio _gamificationDio;
+  late final Dio _quizDio; // 🆕 NUEVO DIO PARA QUIZ SERVICE
   final NetworkInfo _networkInfo;
   final CacheService _cacheService;
   final TokenManager _tokenManager;
@@ -25,7 +26,8 @@ class ApiClient {
     _setupAuthDio();
     _setupUserDio();
     _setupContentDio();
-    _setupGamificationDio(); // 🆕
+    _setupGamificationDio();
+    _setupQuizDio(); // 🆕 CONFIGURAR QUIZ DIO
   }
 
   void _setupAuthDio() {
@@ -64,7 +66,6 @@ class ApiClient {
     _setupInterceptors(_contentDio, 'CONTENT');
   }
 
-  // 🆕 CONFIGURAR DIO PARA GAMIFICATION SERVICE
   void _setupGamificationDio() {
     _gamificationDio = Dio(BaseOptions(
       baseUrl: ApiEndpoints.gamificationServiceUrl,
@@ -75,6 +76,19 @@ class ApiClient {
     ));
 
     _setupInterceptors(_gamificationDio, 'GAMIFICATION');
+  }
+
+  // 🆕 CONFIGURAR DIO PARA QUIZ SERVICE
+  void _setupQuizDio() {
+    _quizDio = Dio(BaseOptions(
+      baseUrl: ApiEndpoints.quizServiceUrl,
+      connectTimeout: Duration(milliseconds: ApiEndpoints.connectTimeout),
+      receiveTimeout: Duration(milliseconds: ApiEndpoints.receiveTimeout),
+      sendTimeout: Duration(milliseconds: ApiEndpoints.sendTimeout),
+      headers: ApiEndpoints.quizHeaders,
+    ));
+
+    _setupInterceptors(_quizDio, 'QUIZ');
   }
 
   void _setupInterceptors(Dio dio, String serviceName) {
@@ -206,7 +220,6 @@ class ApiClient {
     }
   }
 
-  // 🆕 MÉTODO PATCH PARA GAMIFICACIÓN
   Future<Response> patch(
     String path, {
     dynamic data,
@@ -229,41 +242,48 @@ class ApiClient {
     }
   }
 
-  // 🔧 ACTUALIZADO PARA INCLUIR GAMIFICACIÓN
+  // 🔧 ACTUALIZADO PARA INCLUIR QUIZ SERVICE
   Dio _getDioForPath(String path, Options? options) {
     final baseUrl = options?.extra?['baseUrl'] as String?;
     
     if (baseUrl != null) {
-      if (baseUrl.contains('gamification-service')) {
+      if (baseUrl.contains('quiz-challenge-service')) {
+        print('🧠 [API CLIENT] Using QUIZ service for: $path');
+        return _quizDio;
+      } else if (baseUrl.contains('gamification-service')) {
         print('🎮 [API CLIENT] Using GAMIFICATION service for: $path');
         return _gamificationDio;
       } else if (baseUrl.contains('content-service')) {
         print('🎯 [API CLIENT] Using CONTENT service for: $path');
         return _contentDio;
       } else if (baseUrl.contains('user-service')) {
-        print('🎯 [API CLIENT] Using USER service for: $path');
+        print('👤 [API CLIENT] Using USER service for: $path');
         return _userDio;
       } else if (baseUrl.contains('auth-service')) {
-        print('🎯 [API CLIENT] Using AUTH service for: $path');
+        print('🔐 [API CLIENT] Using AUTH service for: $path');
         return _authDio;
       }
     }
 
-    if (ApiEndpoints.isGamificationEndpoint(path)) {
+    // Auto-detection basada en el path
+    if (ApiEndpoints.isQuizEndpoint(path)) {
+      print('🧠 [API CLIENT] Auto-detected QUIZ service for: $path');
+      return _quizDio;
+    } else if (ApiEndpoints.isGamificationEndpoint(path)) {
       print('🎮 [API CLIENT] Auto-detected GAMIFICATION service for: $path');
       return _gamificationDio;
     } else if (ApiEndpoints.isContentEndpoint(path)) {
       print('🎯 [API CLIENT] Auto-detected CONTENT service for: $path');
       return _contentDio;
     } else if (ApiEndpoints.isUserEndpoint(path)) {
-      print('🎯 [API CLIENT] Auto-detected USER service for: $path');
+      print('👤 [API CLIENT] Auto-detected USER service for: $path');
       return _userDio;
     } else if (ApiEndpoints.isAuthEndpoint(path)) {
-      print('🎯 [API CLIENT] Auto-detected AUTH service for: $path');
+      print('🔐 [API CLIENT] Auto-detected AUTH service for: $path');
       return _authDio;
     }
 
-    print('🎯 [API CLIENT] Using default AUTH service for: $path');
+    print('🔐 [API CLIENT] Using default AUTH service for: $path');
     return _authDio;
   }
 
@@ -285,10 +305,10 @@ class ApiClient {
       } else {
         print('⚠️ [$serviceName] No access token available for: ${options.path}');
         
-        // Para gamification service, algunos endpoints pueden ser públicos
-        if (serviceName == 'GAMIFICATION' && 
-            (options.path.contains('/available') || options.path.contains('/store'))) {
-          print('ℹ️ [$serviceName] Public gamification endpoint (no token required)');
+        // Para quiz service, algunos endpoints pueden ser públicos
+        if (serviceName == 'QUIZ' && 
+            (options.path.contains('/by-topic/') || options.path.contains('/questions/'))) {
+          print('ℹ️ [$serviceName] Public quiz endpoint (no token required)');
         }
       }
     } else {
@@ -373,7 +393,40 @@ class ApiClient {
     }
   }
 
-  // 🆕 MÉTODOS ESPECÍFICOS PARA GAMIFICACIÓN
+  // 🆕 MÉTODOS ESPECÍFICOS PARA QUIZ SERVICE
+  Future<Response> getQuiz(
+    String endpoint, {
+    Map<String, dynamic>? queryParameters,
+    bool requireAuth = true,
+  }) async {
+    print('🧠 [API CLIENT] Quiz request: $endpoint');
+    
+    return await get(
+      endpoint,
+      queryParameters: queryParameters,
+      options: Options(
+        extra: {'baseUrl': ApiEndpoints.quizServiceUrl},
+        headers: requireAuth ? null : {'Authorization': null},
+      ),
+    );
+  }
+
+  Future<Response> postQuiz(
+    String endpoint, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    print('🧠 [API CLIENT] Quiz post: $endpoint');
+    
+    return await post(
+      endpoint,
+      data: data,
+      queryParameters: queryParameters,
+      options: Options(extra: {'baseUrl': ApiEndpoints.quizServiceUrl}),
+    );
+  }
+
+  // MÉTODOS ESPECÍFICOS PARA GAMIFICACIÓN
   Future<Response> getGamification(
     String endpoint, {
     Map<String, dynamic>? queryParameters,

@@ -1,5 +1,5 @@
 // lib/features/companion/data/repositories/companion_repository_impl.dart
-// 🔥 CONECTADO A NUEVOS ENDPOINTS + MÉTODOS ARREGLADOS
+// 🔥 REPOSITORIO MEJORADO CON API REAL CONECTADA + ACCIONES LOCALES ARREGLADAS
 
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
@@ -22,7 +22,7 @@ class CompanionRepositoryImpl implements CompanionRepository {
   final NetworkInfo networkInfo;
   final TokenManager tokenManager;
 
-  // 🔥 ACTIVAR API REAL Y QUITAR DEFAULT USER ID
+  // 🔥 ACTIVAR API REAL
   static const bool enableApiMode = true;
 
   CompanionRepositoryImpl({
@@ -284,21 +284,8 @@ class CompanionRepositoryImpl implements CompanionRepository {
         } catch (e) {
           debugPrint('❌ [REPO] Error en API de adopción: $e');
 
-          // 🔧 MANEJO DE ERRORES ESPECÍFICOS DE TU API
-          if (e.toString().contains('ya adoptada') ||
-              e.toString().contains('already adopted')) {
-            return Left(ValidationFailure('Ya tienes esta mascota'));
-          } else if (e.toString().contains('insufficient') ||
-              e.toString().contains('insuficientes')) {
-            return Left(ValidationFailure('No tienes suficientes puntos'));
-          } else if (e.toString().contains('not found')) {
-            return Left(ValidationFailure('Mascota no encontrada'));
-          } else if (e.toString().contains('authentication') ||
-              e.toString().contains('unauthorized')) {
-            return Left(AuthFailure('Error de autenticación'));
-          } else {
-            return Left(ServerFailure('Error adoptando mascota: ${e.toString()}'));
-          }
+          // 🔥 LOS ERRORES YA VIENEN FORMATEADOS DEL DATASOURCE
+          return Left(ServerFailure(e.toString()));
         }
       } else {
         debugPrint('📱 [REPO] Sin conexión, usando adopción local');
@@ -310,7 +297,7 @@ class CompanionRepositoryImpl implements CompanionRepository {
     }
   }
 
-  // ==================== 🆕 EVOLUCIÓN VIA API REAL ====================
+  // ==================== 🔥 EVOLUCIÓN VIA API REAL ====================
   @override
   Future<Either<Failure, CompanionEntity>> evolveCompanionViaApi({
     required String userId,
@@ -350,21 +337,9 @@ class CompanionRepositoryImpl implements CompanionRepository {
           return Right(evolvedCompanion);
         } catch (e) {
           debugPrint('❌ [REPO] Error en API de evolución: $e');
-
-          if (e.toString().contains('insufficient') ||
-              e.toString().contains('insuficientes')) {
-            return Left(ValidationFailure('No tienes suficientes puntos para evolucionar'));
-          } else if (e.toString().contains('max level') ||
-              e.toString().contains('maximum')) {
-            return Left(ValidationFailure('Ya está en su máxima evolución'));
-          } else if (e.toString().contains('not found')) {
-            return Left(ValidationFailure('Mascota no encontrada'));
-          } else if (e.toString().contains('experience') ||
-              e.toString().contains('experiencia')) {
-            return Left(ValidationFailure('Tu mascota necesita más experiencia'));
-          } else {
-            return Left(ServerFailure('Error evolucionando mascota: ${e.toString()}'));
-          }
+          
+          // 🔥 LOS ERRORES YA VIENEN FORMATEADOS DEL DATASOURCE
+          return Left(ServerFailure(e.toString()));
         }
       } else {
         debugPrint('📱 [REPO] Sin conexión, usando evolución local');
@@ -376,7 +351,7 @@ class CompanionRepositoryImpl implements CompanionRepository {
     }
   }
 
-  // ==================== 🆕 DESTACAR MASCOTA VIA API REAL ====================
+  // ==================== 🔥 DESTACAR MASCOTA VIA API REAL ====================
   @override
   Future<Either<Failure, CompanionEntity>> featureCompanion({
     required String userId,
@@ -417,13 +392,8 @@ class CompanionRepositoryImpl implements CompanionRepository {
         } catch (e) {
           debugPrint('❌ [REPO] Error en API de destacar: $e');
           
-          if (e.toString().contains('not found')) {
-            return Left(ValidationFailure('Mascota no encontrada'));
-          } else if (e.toString().contains('already featured')) {
-            return Left(ValidationFailure('Esta mascota ya está destacada'));
-          } else {
-            return Left(ServerFailure('Error destacando mascota: ${e.toString()}'));
-          }
+          // 🔥 LOS ERRORES YA VIENEN FORMATEADOS DEL DATASOURCE
+          return Left(ServerFailure(e.toString()));
         }
       } else {
         debugPrint('📱 [REPO] Sin conexión, usando destacar local');
@@ -435,7 +405,33 @@ class CompanionRepositoryImpl implements CompanionRepository {
     }
   }
 
-  // ==================== MÉTODOS LOCALES (MEJORADOS) ====================
+  // ==================== 🔥 ACCIONES LOCALES ARREGLADAS ====================
+
+  @override
+  Future<Either<Failure, CompanionEntity>> feedCompanion(String userId, String companionId) async {
+    try {
+      // 🔥 USAR USER ID REAL INCLUSO EN MÉTODOS LOCALES
+      final realUserId = await _getRealUserId();
+      debugPrint('🍎 [REPO] Alimentación con USER ID REAL: $realUserId');
+      return await _feedCompanionLocal(realUserId, companionId);
+    } catch (e) {
+      debugPrint('❌ [REPO] Error en alimentación: $e');
+      return Left(UnknownFailure('Error en alimentación: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, CompanionEntity>> loveCompanion(String userId, String companionId) async {
+    try {
+      // 🔥 USAR USER ID REAL
+      final realUserId = await _getRealUserId();
+      debugPrint('💖 [REPO] Amor con USER ID REAL: $realUserId');
+      return await _loveCompanionLocal(realUserId, companionId);
+    } catch (e) {
+      debugPrint('❌ [REPO] Error en amor: $e');
+      return Left(UnknownFailure('Error en amor: ${e.toString()}'));
+    }
+  }
 
   @override
   Future<Either<Failure, CompanionEntity>> evolveCompanion(String userId, String companionId) async {
@@ -460,32 +456,6 @@ class CompanionRepositoryImpl implements CompanionRepository {
     } catch (e) {
       debugPrint('❌ [REPO] Error en activación: $e');
       return Left(UnknownFailure('Error en activación: ${e.toString()}'));
-    }
-  }
-
-  @override
-  Future<Either<Failure, CompanionEntity>> feedCompanion(String userId, String companionId) async {
-    try {
-      // 🔥 USAR USER ID REAL
-      final realUserId = await _getRealUserId();
-      debugPrint('🍎 [REPO] Alimentación con USER ID REAL: $realUserId');
-      return await _feedCompanionLocal(realUserId, companionId);
-    } catch (e) {
-      debugPrint('❌ [REPO] Error en alimentación: $e');
-      return Left(UnknownFailure('Error en alimentación: ${e.toString()}'));
-    }
-  }
-
-  @override
-  Future<Either<Failure, CompanionEntity>> loveCompanion(String userId, String companionId) async {
-    try {
-      // 🔥 USAR USER ID REAL
-      final realUserId = await _getRealUserId();
-      debugPrint('💖 [REPO] Amor con USER ID REAL: $realUserId');
-      return await _loveCompanionLocal(realUserId, companionId);
-    } catch (e) {
-      debugPrint('❌ [REPO] Error en amor: $e');
-      return Left(UnknownFailure('Error en amor: ${e.toString()}'));
     }
   }
 
@@ -716,7 +686,7 @@ class CompanionRepositoryImpl implements CompanionRepository {
           hunger: comp.hunger,
           energy: comp.energy,
           isOwned: comp.isOwned,
-          isSelected: comp.id == featuredCompanion.id,
+          isSelected: comp.id == featuredCompanion.id, // 🔥 SOLO UNA ACTIVA
           purchasedAt: comp.purchasedAt,
           lastFeedTime: comp.lastFeedTime,
           lastLoveTime: comp.lastLoveTime,

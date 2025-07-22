@@ -61,6 +61,16 @@ import '../features/news/domain/usecases/get_cached_news_usecase.dart';
 import '../features/news/domain/usecases/refresh_news_usecase.dart';
 import '../features/news/presentation/cubit/news_cubit.dart';
 
+// 🆕 QUIZ IMPORTS - INTEGRACIÓN CON QUIZ API
+import '../features/trivia/data/datasources/quiz_remote_datasource.dart';
+import '../features/trivia/data/repositories/quiz_repository_impl.dart';
+import '../features/trivia/domain/repositories/quiz_repository.dart';
+import '../features/trivia/domain/usecases/start_quiz_session_usecase.dart';
+import '../features/trivia/domain/usecases/submit_quiz_answer_usecase.dart';
+import '../features/trivia/domain/usecases/get_quiz_results_usecase.dart';
+import '../features/trivia/domain/usecases/get_quiz_questions_usecase.dart';
+import '../features/trivia/presentation/cubit/quiz_session_cubit.dart';
+
 final getIt = GetIt.instance;
 
 @InjectableInit(
@@ -69,7 +79,7 @@ final getIt = GetIt.instance;
   asExtension: true,
 )
 Future<void> configureDependencies() async {
-  print('🔧 [INJECTION] === STARTING DEPENDENCY CONFIGURATION WITH ENHANCED API INTEGRATION ===');
+  print('🔧 [INJECTION] === STARTING DEPENDENCY CONFIGURATION WITH QUIZ INTEGRATION ===');
   
   try {
     // 1. PRIMERO: Configurar dependencias básicas con @injectable
@@ -102,12 +112,17 @@ Future<void> configureDependencies() async {
     _registerNewsDependencies();
     print('✅ [INJECTION] Step 6: News dependencies registered');
     
-    // 7. VERIFICACIÓN FINAL
-    print('🔍 [INJECTION] Step 7: Final verification with enhanced features...');
-    _verifyDependencies();
-    print('✅ [INJECTION] Step 7: All dependencies verified including new use cases');
+    // 7. 🆕 SÉPTIMO: Registrar dependencias de QUIZ
+    print('🔧 [INJECTION] Step 7: Registering quiz dependencies...');
+    _registerQuizDependencies();
+    print('✅ [INJECTION] Step 7: Quiz dependencies registered');
     
-    print('🎉 [INJECTION] === DEPENDENCY CONFIGURATION COMPLETED WITH ENHANCED API INTEGRATION ===');
+    // 8. VERIFICACIÓN FINAL
+    print('🔍 [INJECTION] Step 8: Final verification with enhanced features...');
+    _verifyDependencies();
+    print('✅ [INJECTION] Step 8: All dependencies verified including quiz');
+    
+    print('🎉 [INJECTION] === DEPENDENCY CONFIGURATION COMPLETED WITH QUIZ INTEGRATION ===');
     
   } catch (e, stackTrace) {
     print('❌ [INJECTION] CRITICAL ERROR in configureDependencies: $e');
@@ -546,12 +561,88 @@ void _registerNewsDependencies() {
   }
 }
 
+// ==================== 🆕 QUIZ DEPENDENCIES ====================
+
+void _registerQuizDependencies() {
+  try {
+    print('🧠 [INJECTION] === REGISTERING QUIZ DEPENDENCIES ===');
+
+    // 🆕 Data Sources - QUIZ REMOTE
+    if (!getIt.isRegistered<QuizRemoteDataSource>()) {
+      getIt.registerLazySingleton<QuizRemoteDataSource>(
+        () => QuizRemoteDataSourceImpl(getIt<ApiClient>()),
+      );
+      print('✅ [INJECTION] QuizRemoteDataSource registered');
+    }
+
+    // 🆕 Repository - QUIZ REPOSITORY (actualizar referencia)
+    if (!getIt.isRegistered<QuizRepository>()) {
+      getIt.registerLazySingleton<QuizRepository>(
+        () => QuizRepositoryImpl(
+          remoteDataSource: getIt<QuizRemoteDataSource>(),
+          localDataSource: getIt(), // TriviaLocalDataSource desde injection.config.dart
+          networkInfo: getIt(),
+        ),
+      );
+      print('✅ [INJECTION] QuizRepository registered');
+    }
+
+    // 🆕 Use Cases - QUIZ SESSION USE CASES
+    if (!getIt.isRegistered<StartQuizSessionUseCase>()) {
+      getIt.registerLazySingleton<StartQuizSessionUseCase>(
+        () => StartQuizSessionUseCase(getIt<QuizRepository>()),
+      );
+      print('✅ [INJECTION] StartQuizSessionUseCase registered');
+    }
+
+    if (!getIt.isRegistered<SubmitQuizAnswerUseCase>()) {
+      getIt.registerLazySingleton<SubmitQuizAnswerUseCase>(
+        () => SubmitQuizAnswerUseCase(getIt<QuizRepository>()),
+      );
+      print('✅ [INJECTION] SubmitQuizAnswerUseCase registered');
+    }
+
+    if (!getIt.isRegistered<GetQuizResultsUseCase>()) {
+      getIt.registerLazySingleton<GetQuizResultsUseCase>(
+        () => GetQuizResultsUseCase(getIt<QuizRepository>()),
+      );
+      print('✅ [INJECTION] GetQuizResultsUseCase registered');
+    }
+
+    if (!getIt.isRegistered<GetQuizQuestionsUseCase>()) {
+      getIt.registerLazySingleton<GetQuizQuestionsUseCase>(
+        () => GetQuizQuestionsUseCase(getIt<QuizRepository>()),
+      );
+      print('✅ [INJECTION] GetQuizQuestionsUseCase registered');
+    }
+
+    // 🆕 Cubit - QUIZ SESSION CUBIT
+    if (!getIt.isRegistered<QuizSessionCubit>()) {
+      getIt.registerFactory<QuizSessionCubit>(
+        () => QuizSessionCubit(
+          startQuizSessionUseCase: getIt<StartQuizSessionUseCase>(),
+          submitQuizAnswerUseCase: getIt<SubmitQuizAnswerUseCase>(),
+          getQuizResultsUseCase: getIt<GetQuizResultsUseCase>(),
+          getQuizQuestionsUseCase: getIt<GetQuizQuestionsUseCase>(),
+        ),
+      );
+      print('✅ [INJECTION] QuizSessionCubit registered');
+    }
+
+    print('🎉 [INJECTION] === QUIZ DEPENDENCIES REGISTERED SUCCESSFULLY ===');
+  } catch (e, stackTrace) {
+    print('❌ [INJECTION] Error in _registerQuizDependencies: $e');
+    print('❌ [INJECTION] Stack trace: $stackTrace');
+    rethrow;
+  }
+}
+
 // ==================== VERIFICATION ====================
 
 void _verifyDependencies() {
-  print('🔍 [INJECTION] === DEPENDENCY VERIFICATION WITH ENHANCED API INTEGRATION ===');
+  print('🔍 [INJECTION] === DEPENDENCY VERIFICATION WITH QUIZ INTEGRATION ===');
   
-  // Verificar dependencias críticas INCLUYENDO COMPANION API Y NUEVOS USE CASES
+  // Verificar dependencias críticas INCLUYENDO QUIZ
   final criticalDeps = [
     'ApiClient',
     'TokenManager',
@@ -589,6 +680,14 @@ void _verifyDependencies() {
     'GetCachedNewsUseCase',
     'RefreshNewsUseCase',
     'NewsCubit',
+    // 🆕 QUIZ DEPENDENCIES
+    'QuizRemoteDataSource',
+    'QuizRepository',
+    'StartQuizSessionUseCase',
+    'SubmitQuizAnswerUseCase',
+    'GetQuizResultsUseCase',
+    'GetQuizQuestionsUseCase',
+    'QuizSessionCubit',
   ];
   
   for (final dep in criticalDeps) {
@@ -697,6 +796,28 @@ void _verifyDependencies() {
       case 'NewsCubit':
         isRegistered = getIt.isRegistered<NewsCubit>();
         break;
+      // 🆕 QUIZ CASES
+      case 'QuizRemoteDataSource':
+        isRegistered = getIt.isRegistered<QuizRemoteDataSource>();
+        break;
+      case 'QuizRepository':
+        isRegistered = getIt.isRegistered<QuizRepository>();
+        break;
+      case 'StartQuizSessionUseCase':
+        isRegistered = getIt.isRegistered<StartQuizSessionUseCase>();
+        break;
+      case 'SubmitQuizAnswerUseCase':
+        isRegistered = getIt.isRegistered<SubmitQuizAnswerUseCase>();
+        break;
+      case 'GetQuizResultsUseCase':
+        isRegistered = getIt.isRegistered<GetQuizResultsUseCase>();
+        break;
+      case 'GetQuizQuestionsUseCase':
+        isRegistered = getIt.isRegistered<GetQuizQuestionsUseCase>();
+        break;
+      case 'QuizSessionCubit':
+        isRegistered = getIt.isRegistered<QuizSessionCubit>();
+        break;
     }
     
     if (isRegistered) {
@@ -757,6 +878,16 @@ void _verifyDependencies() {
     throw Exception('Cannot resolve NewsCubit: $e');
   }
   
+  // 🆕 Test de resolución para QuizSessionCubit
+  try {
+    final testQuizCubit = getIt<QuizSessionCubit>();
+    print('✅ [INJECTION] QuizSessionCubit can be resolved successfully');
+    testQuizCubit.close();
+  } catch (e) {
+    print('❌ [INJECTION] ERROR resolving QuizSessionCubit: $e');
+    throw Exception('Cannot resolve QuizSessionCubit: $e');
+  }
+  
   // 🆕 Test de resolución para CompanionRemoteDataSource
   try {
     final testCompanionDataSource = getIt<CompanionRemoteDataSource>();
@@ -792,13 +923,22 @@ void _verifyDependencies() {
     throw Exception('Cannot resolve FeatureCompanionUseCase: $e');
   }
   
-  print('🔍 [INJECTION] === VERIFICATION COMPLETED WITH ENHANCED API INTEGRATION ===');
+  // 🆕 Test de resolución para QuizRemoteDataSource
+  try {
+    final testQuizDataSource = getIt<QuizRemoteDataSource>();
+    print('✅ [INJECTION] QuizRemoteDataSource can be resolved successfully');
+  } catch (e) {
+    print('❌ [INJECTION] ERROR resolving QuizRemoteDataSource: $e');
+    throw Exception('Cannot resolve QuizRemoteDataSource: $e');
+  }
+  
+  print('🔍 [INJECTION] === VERIFICATION COMPLETED WITH QUIZ INTEGRATION ===');
 }
 
 // ==================== DEBUG HELPERS ====================
 
 void debugDependencies() {
-  print('🔍 [INJECTION] === DEPENDENCY DEBUG WITH ENHANCED API INTEGRATION ===');
+  print('🔍 [INJECTION] === DEPENDENCY DEBUG WITH QUIZ INTEGRATION ===');
   print('🔍 ApiClient: ${getIt.isRegistered<ApiClient>()}');
   print('🔍 TokenManager: ${getIt.isRegistered<TokenManager>()}');
   print('🔍 MediaRemoteDataSource: ${getIt.isRegistered<MediaRemoteDataSource>()}');
@@ -842,5 +982,13 @@ void debugDependencies() {
   print('🔍 GetCachedNewsUseCase: ${getIt.isRegistered<GetCachedNewsUseCase>()}');
   print('🔍 RefreshNewsUseCase: ${getIt.isRegistered<RefreshNewsUseCase>()}');
   print('🔍 NewsCubit: ${getIt.isRegistered<NewsCubit>()}');
+  // 🆕 QUIZ DEBUG
+  print('🔍 QuizRemoteDataSource: ${getIt.isRegistered<QuizRemoteDataSource>()}');
+  print('🔍 QuizRepository: ${getIt.isRegistered<QuizRepository>()}');
+  print('🔍 StartQuizSessionUseCase: ${getIt.isRegistered<StartQuizSessionUseCase>()}');
+  print('🔍 SubmitQuizAnswerUseCase: ${getIt.isRegistered<SubmitQuizAnswerUseCase>()}');
+  print('🔍 GetQuizResultsUseCase: ${getIt.isRegistered<GetQuizResultsUseCase>()}');
+  print('🔍 GetQuizQuestionsUseCase: ${getIt.isRegistered<GetQuizQuestionsUseCase>()}');
+  print('🔍 QuizSessionCubit: ${getIt.isRegistered<QuizSessionCubit>()}');
   print('🔍 [INJECTION] === DEBUG COMPLETE ===');
 }

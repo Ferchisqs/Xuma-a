@@ -20,6 +20,7 @@ ContentModel _$ContentModelFromJson(Map<String, dynamic> json) => ContentModel(
       thumbnailMediaId: json['thumbnailMediaId'] as String?,
       mediaUrl: json['mediaUrl'] as String?,
       thumbnailUrl: json['thumbnailUrl'] as String?,
+      mediaMetadata: json['mediaMetadata'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$ContentModelToJson(ContentModel instance) =>
@@ -37,4 +38,5 @@ Map<String, dynamic> _$ContentModelToJson(ContentModel instance) =>
       'thumbnailMediaId': instance.thumbnailMediaId,
       'mediaUrl': instance.mediaUrl,
       'thumbnailUrl': instance.thumbnailUrl,
+      'mediaMetadata': instance.mediaMetadata,
     };

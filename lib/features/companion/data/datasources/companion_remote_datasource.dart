@@ -1,3 +1,6 @@
+// lib/features/companion/data/datasources/companion_remote_datasource.dart
+// 🔥 EVOLUCIÓN Y FEATURE CONECTADOS A API REAL + MANEJO DE ERRORES MEJORADO
+
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/network/api_client.dart';
@@ -17,7 +20,7 @@ abstract class CompanionRemoteDataSource {
   Future<CompanionStatsModel> getCompanionStats(String userId);
   Future<int> getUserPoints(String userId);
   
-  // 🆕 NUEVOS MÉTODOS PARA API REAL
+  // 🔥 NUEVOS MÉTODOS PARA API REAL - ACTUALIZADOS
   Future<CompanionModel> evolvePetViaApi(
       {required String userId, required String petId});
   Future<CompanionModel> featurePetViaApi(
@@ -332,9 +335,11 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
           response.statusCode == 201) {
         debugPrint('🎉 [API] Adopción exitosa (código ${response.statusCode})');
 
-        final adoptedCompanion = _createAdoptedCompanionFromPetId(
+        // 🔥 CREAR COMPANION CON NOMBRE REAL DE LA RESPUESTA
+        final adoptedCompanion = _createAdoptedCompanionFromResponse(
           petId,
           nickname ?? 'Mi compañero',
+          response.data, // 🔥 PASAR LA RESPUESTA PARA EXTRAER EL NOMBRE REAL
         );
 
         debugPrint('✅ [API] Companion creado: ${adoptedCompanion.displayName}');
@@ -346,44 +351,48 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     } catch (e) {
       debugPrint('❌ [API] Error en adopción: $e');
 
-      // 🔥 MANEJO MEJORADO DE ERRORES ESPECÍFICOS
+      // 🔥 MANEJO MEJORADO DE ERRORES ESPECÍFICOS CON MENSAJES CLAROS
       final errorMessage = e.toString().toLowerCase();
 
       if (errorMessage.contains('already') ||
           errorMessage.contains('adoptada') ||
           errorMessage.contains('ya tienes') ||
-          errorMessage.contains('duplicate')) {
-        throw ServerException('Esta mascota ya fue adquirida');
+          errorMessage.contains('duplicate') ||
+          errorMessage.contains('409')) {
+        throw ServerException('⚠️ Esta mascota ya fue adquirida');
       } else if (errorMessage.contains('insufficient') ||
           errorMessage.contains('puntos') ||
-          errorMessage.contains('not enough')) {
-        throw ServerException('No tienes suficientes puntos para esta adopción');
+          errorMessage.contains('not enough') ||
+          errorMessage.contains('400')) {
+        throw ServerException('💰 No tienes suficientes puntos para esta adopción');
       } else if (errorMessage.contains('not found') ||
           errorMessage.contains('encontrada') ||
-          errorMessage.contains('no existe')) {
-        throw ServerException('Esta mascota no está disponible');
+          errorMessage.contains('no existe') ||
+          errorMessage.contains('404')) {
+        throw ServerException('🔍 Esta mascota no está disponible');
       } else if (errorMessage.contains('401') ||
           errorMessage.contains('unauthorized') ||
           errorMessage.contains('authentication')) {
-        throw ServerException('Error de autenticación. Por favor, reinicia sesión');
+        throw ServerException('🔐 Error de autenticación. Por favor, reinicia sesión');
       } else if (errorMessage.contains('stage') ||
           errorMessage.contains('etapa') ||
-          errorMessage.contains('evolution')) {
-        throw ServerException('Debes tener la etapa anterior antes de adoptar esta');
+          errorMessage.contains('evolution') ||
+          errorMessage.contains('previous')) {
+        throw ServerException('📈 Debes tener la etapa anterior antes de adoptar esta');
       } else {
-        throw ServerException('Error durante la adopción. Intenta de nuevo');
+        throw ServerException('❌ Error durante la adopción. Intenta de nuevo');
       }
     }
   }
 
-  // ==================== 🆕 EVOLUCIÓN VIA API REAL ====================
+  // ==================== 🔥 EVOLUCIÓN VIA API REAL - MEJORADA ====================
   @override
   Future<CompanionModel> evolvePetViaApi({
     required String userId, 
     required String petId
   }) async {
     try {
-      debugPrint('🦋 [API] === INICIANDO EVOLUCIÓN VIA API ===');
+      debugPrint('🦋 [API] === INICIANDO EVOLUCIÓN VIA API REAL ===');
       debugPrint('👤 [API] User ID: $userId');
       debugPrint('🆔 [API] Pet ID: $petId');
 
@@ -406,7 +415,7 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
           response.statusCode == 204) {
         debugPrint('🎉 [API] Evolución exitosa');
         
-        // Crear companion evolucionado basado en la respuesta
+        // 🔥 CREAR COMPANION EVOLUCIONADO CON DATOS REALES DE LA RESPUESTA
         final evolvedCompanion = _createEvolvedCompanionFromResponse(petId, response.data);
         debugPrint('✅ [API] Companion evolucionado: ${evolvedCompanion.displayName}');
         return evolvedCompanion;
@@ -417,42 +426,51 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     } catch (e) {
       debugPrint('❌ [API] Error en evolución: $e');
       
-      // 🔥 MANEJO ESPECÍFICO DE ERRORES DE EVOLUCIÓN
+      // 🔥 MANEJO ESPECÍFICO DE ERRORES DE EVOLUCIÓN CON MENSAJES CLAROS
       final errorMessage = e.toString().toLowerCase();
 
       if (errorMessage.contains('insufficient') ||
           errorMessage.contains('puntos') ||
-          errorMessage.contains('not enough')) {
-        throw ServerException('No tienes suficientes puntos para evolucionar');
+          errorMessage.contains('not enough') ||
+          errorMessage.contains('400')) {
+        throw ServerException('💰 No tienes suficientes puntos para evolucionar');
       } else if (errorMessage.contains('max level') ||
           errorMessage.contains('maximum') ||
           errorMessage.contains('máximo') ||
-          errorMessage.contains('adulto')) {
-        throw ServerException('Esta mascota ya está en su máxima evolución');
+          errorMessage.contains('adulto') ||
+          errorMessage.contains('already')) {
+        throw ServerException('🏆 Esta mascota ya está en su máxima evolución');
       } else if (errorMessage.contains('not found') ||
-          errorMessage.contains('no encontrada')) {
-        throw ServerException('Mascota no encontrada en tu colección');
+          errorMessage.contains('no encontrada') ||
+          errorMessage.contains('404')) {
+        throw ServerException('🔍 Mascota no encontrada en tu colección');
       } else if (errorMessage.contains('experience') ||
           errorMessage.contains('experiencia') ||
-          errorMessage.contains('nivel')) {
-        throw ServerException('Tu mascota necesita más experiencia para evolucionar');
+          errorMessage.contains('nivel') ||
+          errorMessage.contains('requirements')) {
+        throw ServerException('📊 Tu mascota necesita más experiencia para evolucionar');
       } else if (errorMessage.contains('stage') ||
-          errorMessage.contains('etapa')) {
-        throw ServerException('No se puede evolucionar desde esta etapa');
+          errorMessage.contains('etapa') ||
+          errorMessage.contains('previous') ||
+          errorMessage.contains('order')) {
+        throw ServerException('📈 No se puede evolucionar desde esta etapa. Debes tener la etapa anterior');
+      } else if (errorMessage.contains('401') ||
+          errorMessage.contains('unauthorized')) {
+        throw ServerException('🔐 Error de autenticación. Reinicia sesión');
       } else {
-        throw ServerException('Error evolucionando mascota: ${e.toString()}');
+        throw ServerException('❌ Error evolucionando mascota. Intenta de nuevo');
       }
     }
   }
 
-  // ==================== 🆕 DESTACAR MASCOTA VIA API REAL ====================
+  // ==================== 🔥 DESTACAR MASCOTA VIA API REAL - MEJORADA ====================
   @override
   Future<CompanionModel> featurePetViaApi({
     required String userId, 
     required String petId
   }) async {
     try {
-      debugPrint('⭐ [API] === DESTACANDO MASCOTA VIA API ===');
+      debugPrint('⭐ [API] === DESTACANDO MASCOTA VIA API REAL ===');
       debugPrint('👤 [API] User ID: $userId');
       debugPrint('🆔 [API] Pet ID: $petId');
 
@@ -475,6 +493,7 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
           response.statusCode == 204) {
         debugPrint('🎉 [API] Feature exitoso');
         
+        // 🔥 CREAR COMPANION DESTACADO
         final featuredCompanion = _createFeaturedCompanionFromResponse(petId, response.data);
         debugPrint('✅ [API] Companion destacado: ${featuredCompanion.displayName}');
         return featuredCompanion;
@@ -485,17 +504,23 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     } catch (e) {
       debugPrint('❌ [API] Error al destacar mascota: $e');
       
-      // 🔥 MANEJO ESPECÍFICO DE ERRORES DE FEATURE
+      // 🔥 MANEJO ESPECÍFICO DE ERRORES DE FEATURE CON MENSAJES CLAROS
       final errorMessage = e.toString().toLowerCase();
 
       if (errorMessage.contains('not found') ||
-          errorMessage.contains('no encontrada')) {
-        throw ServerException('Mascota no encontrada en tu colección');
+          errorMessage.contains('no encontrada') ||
+          errorMessage.contains('404')) {
+        throw ServerException('🔍 Mascota no encontrada en tu colección');
       } else if (errorMessage.contains('already featured') ||
-          errorMessage.contains('ya destacada')) {
-        throw ServerException('Esta mascota ya está destacada');
+          errorMessage.contains('ya destacada') ||
+          errorMessage.contains('already selected') ||
+          errorMessage.contains('409')) {
+        throw ServerException('⭐ Esta mascota ya está destacada');
+      } else if (errorMessage.contains('401') ||
+          errorMessage.contains('unauthorized')) {
+        throw ServerException('🔐 Error de autenticación. Reinicia sesión');
       } else {
-        throw ServerException('Error destacando mascota: ${e.toString()}');
+        throw ServerException('❌ Error destacando mascota. Intenta de nuevo');
       }
     }
   }
@@ -538,7 +563,24 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       }
     } catch (e) {
       debugPrint('❌ [API] Error en evolución owned: $e');
-      throw ServerException('Error evolucionando mascota poseída: ${e.toString()}');
+      
+      // 🔥 MISMO MANEJO DE ERRORES QUE EVOLUCIÓN NORMAL
+      final errorMessage = e.toString().toLowerCase();
+
+      if (errorMessage.contains('insufficient') ||
+          errorMessage.contains('puntos') ||
+          errorMessage.contains('not enough')) {
+        throw ServerException('💰 No tienes suficientes puntos para evolucionar');
+      } else if (errorMessage.contains('max level') ||
+          errorMessage.contains('maximum') ||
+          errorMessage.contains('adulto')) {
+        throw ServerException('🏆 Esta mascota ya está en su máxima evolución');
+      } else if (errorMessage.contains('not found') ||
+          errorMessage.contains('404')) {
+        throw ServerException('🔍 Mascota no encontrada en tu colección');
+      } else {
+        throw ServerException('❌ Error evolucionando mascota poseída');
+      }
     }
   }
 
@@ -586,10 +628,14 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       
       final errorMessage = e.toString().toLowerCase();
       if (errorMessage.contains('not unlocked') ||
-          errorMessage.contains('no desbloqueada')) {
-        throw ServerException('Esta etapa no está desbloqueada aún');
+          errorMessage.contains('no desbloqueada') ||
+          errorMessage.contains('403')) {
+        throw ServerException('🔒 Esta etapa no está desbloqueada aún');
+      } else if (errorMessage.contains('not found') ||
+          errorMessage.contains('404')) {
+        throw ServerException('🔍 Mascota no encontrada');
       } else {
-        throw ServerException('Error seleccionando etapa: ${e.toString()}');
+        throw ServerException('❌ Error seleccionando etapa');
       }
     }
   }
@@ -650,6 +696,60 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
 
   // ==================== 🔧 MÉTODOS HELPER MEJORADOS ====================
 
+  /// 🔥 CREAR COMPANION ADOPTADO CON NOMBRE REAL DE LA RESPUESTA
+  CompanionModel _createAdoptedCompanionFromResponse(
+    String petId, 
+    String fallbackNickname, 
+    dynamic responseData
+  ) {
+    debugPrint('🐾 [ADOPTION] Creando companion adoptado para petId: $petId');
+    debugPrint('📄 [ADOPTION] Response data: $responseData');
+
+    // 🔥 EXTRAER NOMBRE REAL DE LA RESPUESTA DE LA API
+    String realName = fallbackNickname;
+    
+    if (responseData is Map<String, dynamic>) {
+      // Intentar extraer el nombre real de diferentes campos posibles
+      realName = responseData['name'] as String? ??
+                 responseData['pet_name'] as String? ??
+                 responseData['nickname'] as String? ??
+                 responseData['display_name'] as String? ??
+                 fallbackNickname;
+                 
+      debugPrint('✅ [ADOPTION] Nombre extraído de respuesta: $realName');
+    } else {
+      debugPrint('⚠️ [ADOPTION] Respuesta no es Map, usando fallback: $fallbackNickname');
+    }
+
+    final companionType = _mapPetIdToCompanionType(petId);
+    final companionStage = _mapPetIdToCompanionStage(petId);
+
+    final localId = '${companionType.name}_${companionStage.name}';
+    debugPrint('🆔 [ADOPTION] Local ID generado: $localId, Pet ID preservado: $petId');
+
+    return CompanionModelWithPetId(
+      id: localId,
+      type: companionType,
+      stage: companionStage,
+      name: realName, // 🔥 USAR NOMBRE REAL
+      description: _generateDescription(companionType, companionStage),
+      level: 1,
+      experience: 0,
+      happiness: 100,
+      hunger: 100,
+      energy: 100,
+      isOwned: true,
+      isSelected: false,
+      purchasedAt: DateTime.now(),
+      currentMood: CompanionMood.happy,
+      purchasePrice: _getDefaultPrice(companionType, companionStage),
+      evolutionPrice: _getEvolutionPrice(companionStage),
+      unlockedAnimations: ['idle', 'blink', 'happy'],
+      createdAt: DateTime.now(),
+      petId: petId, // Preservar Pet ID original
+    );
+  }
+
   CompanionModel _createEvolvedCompanionFromResponse(String petId, dynamic responseData) {
     debugPrint('🦋 [EVOLUTION] Creando companion evolucionado para petId: $petId');
     debugPrint('📄 [EVOLUTION] Response data: $responseData');
@@ -657,17 +757,43 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     final companionType = _mapPetIdToCompanionType(petId);
     var companionStage = _mapPetIdToCompanionStage(petId);
 
-    // Evolucionar a la siguiente etapa
-    switch (companionStage) {
-      case CompanionStage.baby:
-        companionStage = CompanionStage.young;
-        break;
-      case CompanionStage.young:
-        companionStage = CompanionStage.adult;
-        break;
-      case CompanionStage.adult:
-        // Ya está al máximo
-        break;
+    // 🔥 EXTRAER INFORMACIÓN DE EVOLUCIÓN DE LA RESPUESTA
+    String realName = _getDisplayName(companionType);
+    int newLevel = 2;
+    
+    if (responseData is Map<String, dynamic>) {
+      realName = responseData['name'] as String? ??
+                 responseData['pet_name'] as String? ??
+                 responseData['nickname'] as String? ??
+                 realName;
+                 
+      newLevel = responseData['level'] as int? ??
+                 responseData['new_level'] as int? ??
+                 newLevel;
+                 
+      // Intentar extraer nueva etapa de la respuesta
+      final newStageStr = responseData['stage'] as String? ??
+                         responseData['new_stage'] as String? ??
+                         responseData['evolution_stage'] as String?;
+                         
+      if (newStageStr != null) {
+        companionStage = _mapStringToCompanionStage(newStageStr);
+      } else {
+        // Evolucionar a la siguiente etapa manualmente
+        switch (companionStage) {
+          case CompanionStage.baby:
+            companionStage = CompanionStage.young;
+            break;
+          case CompanionStage.young:
+            companionStage = CompanionStage.adult;
+            break;
+          case CompanionStage.adult:
+            // Ya está al máximo
+            break;
+        }
+      }
+      
+      debugPrint('✅ [EVOLUTION] Datos extraídos - Nombre: $realName, Nivel: $newLevel, Etapa: ${companionStage.name}');
     }
 
     final localId = '${companionType.name}_${companionStage.name}';
@@ -677,9 +803,9 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       id: localId,
       type: companionType,
       stage: companionStage,
-      name: _getDisplayName(companionType),
+      name: realName, // 🔥 USAR NOMBRE REAL
       description: _generateDescription(companionType, companionStage),
-      level: 2, // Subir nivel
+      level: newLevel, // 🔥 USAR NIVEL REAL
       experience: 0, // Resetear experiencia
       happiness: 100,
       hunger: 100,
@@ -703,6 +829,17 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     final companionType = _mapPetIdToCompanionType(petId);
     final companionStage = _mapPetIdToCompanionStage(petId);
 
+    // 🔥 EXTRAER NOMBRE REAL DE LA RESPUESTA
+    String realName = _getDisplayName(companionType);
+    
+    if (responseData is Map<String, dynamic>) {
+      realName = responseData['name'] as String? ??
+                 responseData['pet_name'] as String? ??
+                 responseData['nickname'] as String? ??
+                 realName;
+      debugPrint('✅ [FEATURE] Nombre extraído: $realName');
+    }
+
     final localId = '${companionType.name}_${companionStage.name}';
     debugPrint('🆔 [FEATURE] Local ID: $localId, preserving petId: $petId');
 
@@ -710,7 +847,7 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       id: localId,
       type: companionType,
       stage: companionStage,
-      name: _getDisplayName(companionType),
+      name: realName, // 🔥 USAR NOMBRE REAL
       description: _generateDescription(companionType, companionStage),
       level: 1,
       experience: 0,
@@ -736,6 +873,16 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     final companionType = _mapPetIdToCompanionType(petId);
     final companionStage = _mapIntToCompanionStage(stage);
 
+    // 🔥 EXTRAER NOMBRE REAL
+    String realName = _getDisplayName(companionType);
+    
+    if (responseData is Map<String, dynamic>) {
+      realName = responseData['name'] as String? ??
+                 responseData['pet_name'] as String? ??
+                 responseData['nickname'] as String? ??
+                 realName;
+    }
+
     final localId = '${companionType.name}_${companionStage.name}';
     debugPrint('🆔 [STAGE] Local ID: $localId, stage: ${companionStage.name}');
 
@@ -743,7 +890,7 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       id: localId,
       type: companionType,
       stage: companionStage,
-      name: _getDisplayName(companionType),
+      name: realName, // 🔥 USAR NOMBRE REAL
       description: _generateDescription(companionType, companionStage),
       level: _getLevelForStage(companionStage),
       experience: 0,
@@ -803,6 +950,28 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     }
 
     debugPrint('⚠️ [MAPPING] Stage no reconocido en petId: $petId, usando baby por defecto');
+    return CompanionStage.baby;
+  }
+
+  /// 🔥 MAPEAR STRING A COMPANION STAGE (PARA RESPUESTAS DE LA API)
+  CompanionStage _mapStringToCompanionStage(String stageStr) {
+    final stageLower = stageStr.toLowerCase();
+    
+    if (stageLower.contains('baby') || 
+        stageLower.contains('peque') ||
+        stageLower == '1') {
+      return CompanionStage.baby;
+    } else if (stageLower.contains('young') || 
+               stageLower.contains('joven') ||
+               stageLower == '2') {
+      return CompanionStage.young;
+    } else if (stageLower.contains('adult') || 
+               stageLower.contains('adulto') ||
+               stageLower == '3') {
+      return CompanionStage.adult;
+    }
+    
+    debugPrint('⚠️ [MAPPING] Stage string no reconocido: $stageStr, usando baby');
     return CompanionStage.baby;
   }
 
@@ -915,33 +1084,6 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     // Fallback: Mapear por species_type si el nombre no coincide
     debugPrint('⚠️ [NAME_MAPPING] Nombre no reconocido, usando fallback');
     return CompanionType.dexter; // Por defecto
-  }
-
-  /// Crear companion adoptado desde petId
-  CompanionModel _createAdoptedCompanionFromPetId(String petId, String nickname) {
-    final companionType = _mapPetIdToCompanionType(petId);
-    final companionStage = _mapPetIdToCompanionStage(petId);
-
-    return CompanionModel(
-      id: '${companionType.name}_${companionStage.name}',
-      type: companionType,
-      stage: companionStage,
-      name: nickname,
-      description: _generateDescription(companionType, companionStage),
-      level: 1,
-      experience: 0,
-      happiness: 100,
-      hunger: 100,
-      energy: 100,
-      isOwned: true,
-      isSelected: false,
-      purchasedAt: DateTime.now(),
-      currentMood: CompanionMood.happy,
-      purchasePrice: _getDefaultPrice(companionType, companionStage),
-      evolutionPrice: _getEvolutionPrice(companionStage),
-      unlockedAnimations: ['idle', 'blink', 'happy'],
-      createdAt: DateTime.now(),
-    );
   }
 
   /// Crear Dexter joven para la tienda

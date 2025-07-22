@@ -1,4 +1,4 @@
-// lib/core/config/api_endpoints.dart - COMPLETO CON COMPAÑEROS Y MÁS FUNCIONALIDADES
+// lib/core/config/api_endpoints.dart - COMPLETO CON QUIZ SERVICE
 class ApiEndpoints {
   // ==================== SERVICIOS BASE ====================
   
@@ -16,6 +16,9 @@ class ApiEndpoints {
 
   // 🌐 SOCIAL SERVICE - Para compañeros y funciones sociales
   static const String socialServiceUrl = 'https://social-service-production.up.railway.app';
+
+  // 🆕 🧠 QUIZ SERVICE - Para quiz challenge system
+  static const String quizServiceUrl = 'https://quiz-challenge-service-production.up.railway.app';
 
   // ==================== AUTENTICACIÓN ====================
   static const String register = '/api/auth/register';
@@ -147,6 +150,29 @@ class ApiEndpoints {
   static const String joinStudyGroup = '/api/social/groups/{groupId}/join';
   static const String leaveStudyGroup = '/api/social/groups/{groupId}/leave';
   static const String studyGroupMembers = '/api/social/groups/{groupId}/members';
+  
+  // ==================== 🆕 🧠 QUIZ SERVICE ENDPOINTS ====================
+  
+  // Obtener quizzes por tema
+  static const String quizzesByTopic = '/by-topic/{topicId}';
+  
+  // Obtener quiz específico por ID
+  static const String quizById = '/{id}';
+  
+  // Iniciar nueva sesión de quiz
+  static const String startQuizSession = '/start';
+  
+  // Enviar respuesta de pregunta
+  static const String submitQuizAnswer = '/submit-answer';
+  
+  // Obtener resultados de sesión
+  static const String quizSessionResults = '/results/{sessionId}';
+  
+  // Obtener preguntas de un quiz
+  static const String quizQuestions = '/questions/quiz/{quizId}';
+  
+  // Progreso del usuario en quizzes
+  static const String userQuizProgress = '/user-progress/{userId}';
   
   // ==================== NOTIFICACIONES ====================
   static const String notifications = '/api/notifications/{userId}';
@@ -308,6 +334,28 @@ class ApiEndpoints {
     return studyGroupMembers.replaceAll('{groupId}', groupId);
   }
   
+  // ==================== 🆕 🧠 MÉTODOS HELPER PARA QUIZ SERVICE ====================
+  
+  static String getQuizzesByTopic(String topicId) {
+    return quizzesByTopic.replaceAll('{topicId}', topicId);
+  }
+  
+  static String getQuizById(String quizId) {
+    return quizById.replaceAll('{id}', quizId);
+  }
+  
+  static String getQuizSessionResults(String sessionId) {
+    return quizSessionResults.replaceAll('{sessionId}', sessionId);
+  }
+  
+  static String getQuizQuestions(String quizId) {
+    return quizQuestions.replaceAll('{quizId}', quizId);
+  }
+  
+  static String getUserQuizProgress(String userId) {
+    return userQuizProgress.replaceAll('{userId}', userId);
+  }
+  
   // ==================== 🆕 MÉTODOS HELPER PARA NOTIFICACIONES ====================
   
   static String getNotifications(String userId) {
@@ -400,7 +448,7 @@ class ApiEndpoints {
     return '$courses/$id';
   }
   
-  static String getQuizById(String id) {
+  static String getQuizByIdContent(String id) {
     return '$quizzes/$id';
   }
   
@@ -437,6 +485,8 @@ class ApiEndpoints {
         return '$gamificationServiceUrl$endpoint';
       case 'social':
         return '$socialServiceUrl$endpoint';
+      case 'quiz':
+        return '$quizServiceUrl$endpoint';
       default:
         // Por defecto usar auth service para compatibilidad
         return '$authServiceUrl$endpoint';
@@ -449,6 +499,7 @@ class ApiEndpoints {
   static String getContentUrl(String endpoint) => '$contentServiceUrl$endpoint';
   static String getGamificationUrl(String endpoint) => '$gamificationServiceUrl$endpoint';
   static String getSocialUrl(String endpoint) => '$socialServiceUrl$endpoint';
+  static String getQuizUrl(String endpoint) => '$quizServiceUrl$endpoint';
   
   // ==================== VALIDACIONES ====================
   
@@ -513,6 +564,22 @@ class ApiEndpoints {
            endpoint.startsWith('/api/notifications/');
   }
   
+  // 🆕 🧠 Validar si un endpoint pertenece a quiz service
+  static bool isQuizEndpoint(String endpoint) {
+    return endpoint.contains('/by-topic/') ||
+           endpoint.contains('/start') ||
+           endpoint.contains('/submit-answer') ||
+           endpoint.contains('/results/') ||
+           endpoint.contains('/questions/quiz/') ||
+           endpoint.contains('/user-progress/') ||
+           endpoint == startQuizSession ||
+           endpoint == submitQuizAnswer ||
+           endpoint.startsWith('/by-topic/') ||
+           endpoint.startsWith('/questions/quiz/') ||
+           endpoint.startsWith('/results/') ||
+           endpoint.startsWith('/user-progress/');
+  }
+  
   // ==================== CONFIGURACIÓN ====================
   static const int connectTimeout = 30000;
   static const int receiveTimeout = 30000;
@@ -544,6 +611,14 @@ class ApiEndpoints {
     'Accept': 'application/json',
     'X-API-Version': '1.0',
     'X-Service': 'social',
+  };
+  
+  // 🆕 🧠 Headers para quiz service
+  static const Map<String, String> quizHeaders = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-API-Version': '1.0',
+    'X-Service': 'quiz',
   };
   
   // ==================== PARÁMETROS DE CONSULTA ====================
@@ -634,6 +709,9 @@ class ApiEndpoints {
     } else if (isSocialEndpoint(endpoint)) {
       service = 'social';
       baseUrl = socialServiceUrl;
+    } else if (isQuizEndpoint(endpoint)) {
+      service = 'quiz';
+      baseUrl = quizServiceUrl;
     }
     
     return {
@@ -663,6 +741,8 @@ class ApiEndpoints {
       return gamificationHeaders;
     } else if (isContentEndpoint(endpoint)) {
       return contentHeaders;
+    } else if (isQuizEndpoint(endpoint)) {
+      return quizHeaders;
     } else {
       return defaultHeaders;
     }

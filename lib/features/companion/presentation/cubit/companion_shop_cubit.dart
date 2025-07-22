@@ -1,5 +1,5 @@
 // lib/features/companion/presentation/cubit/companion_shop_cubit.dart
-// 🔥 LÓGICA DE ETAPAS + MENSAJES CORREGIDOS + VALIDACIONES MEJORADAS
+// 🔥 ADOPCIÓN CON ERRORES ESPECÍFICOS + MENSAJES DINÁMICOS + VALIDACIONES MEJORADAS
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -77,7 +77,7 @@ class CompanionShopError extends CompanionShopState {
   List<Object> get props => [message];
 }
 
-// ==================== CUBIT MEJORADO CON LÓGICA DE ETAPAS ====================
+// ==================== CUBIT MEJORADO CON ERRORES ESPECÍFICOS ====================
 @injectable
 class CompanionShopCubit extends Cubit<CompanionShopState> {
   final GetCompanionShopUseCase getCompanionShopUseCase;
@@ -102,7 +102,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
 
       final userId = await tokenManager.getUserId();
       if (userId == null || userId.isEmpty) {
-        emit(CompanionShopError(message: 'Usuario no autenticado'));
+        emit(CompanionShopError(message: '🔐 Usuario no autenticado'));
         return;
       }
 
@@ -269,7 +269,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     return validCompanions;
   }
 
-  // 🔥 ADOPCIÓN CON VALIDACIONES MEJORADAS
+  // 🔥 ADOPCIÓN CON VALIDACIONES MEJORADAS Y ERRORES ESPECÍFICOS
   Future<void> purchaseCompanion(CompanionEntity companion) async {
     debugPrint('🛒 [SHOP_CUBIT] === INICIANDO ADOPCIÓN CON VALIDACIONES ===');
     debugPrint('🐾 [SHOP_CUBIT] Companion: ${companion.displayName} ${companion.stage.name}');
@@ -277,7 +277,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
 
     if (state is! CompanionShopLoaded) {
       debugPrint('❌ [SHOP_CUBIT] Estado incorrecto para adopción');
-      emit(CompanionShopError(message: 'Error: Estado de tienda no válido'));
+      emit(CompanionShopError(message: '❌ Error: Estado de tienda no válido'));
       return;
     }
 
@@ -288,7 +288,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
       final faltantes = companion.purchasePrice - currentState.userStats.availablePoints;
       debugPrint('❌ [SHOP_CUBIT] Puntos insuficientes: faltan $faltantes');
       emit(CompanionShopError(
-        message: 'No tienes suficientes puntos. Necesitas $faltantes puntos más para adoptar a ${companion.displayName}.',
+        message: '💰 No tienes suficientes puntos. Necesitas $faltantes puntos más para adoptar a ${companion.displayName}.',
       ));
       return;
     }
@@ -308,7 +308,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     if (alreadyOwned) {
       debugPrint('❌ [SHOP_CUBIT] Ya adoptado: ${companion.displayName} ${companion.stage.name}');
       emit(CompanionShopError(
-        message: 'Ya tienes a ${companion.displayName} en etapa ${companion.stage.name}.',
+        message: '⚠️ Ya tienes a ${companion.displayName} en etapa ${companion.stage.name}.',
       ));
       return;
     }
@@ -321,7 +321,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
       if (userId == null || userId.isEmpty) {
         debugPrint('❌ [SHOP_CUBIT] Sin usuario autenticado');
         emit(CompanionShopError(
-            message: 'Debes estar autenticado para adoptar mascotas'));
+            message: '🔐 Debes estar autenticado para adoptar mascotas'));
         return;
       }
 
@@ -334,7 +334,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
       if (apiPetId == null || apiPetId.isEmpty) {
         debugPrint('❌ [SHOP_CUBIT] No se encontró Pet ID para: ${companion.id}');
         emit(CompanionShopError(
-            message: 'Error: No se pudo obtener información de ${companion.displayName} desde la API'));
+            message: '❌ Error: No se pudo obtener información de ${companion.displayName} desde la API'));
         return;
       }
 
@@ -351,9 +351,8 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
         (failure) {
           debugPrint('❌ [SHOP_CUBIT] Error en adopción API: ${failure.message}');
 
-          // 🔥 MANEJO MEJORADO DE ERRORES ESPECÍFICOS
-          String userMessage = _parseApiError(failure.message, companion);
-          emit(CompanionShopError(message: userMessage));
+          // 🔥 LOS MENSAJES YA VIENEN FORMATEADOS DEL DATASOURCE CON EMOJIS
+          emit(CompanionShopError(message: failure.message));
         },
         (adoptedCompanion) {
           debugPrint('🎉 [SHOP_CUBIT] === ADOPCIÓN EXITOSA ===');
@@ -374,7 +373,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     } catch (e) {
       debugPrint('❌ [SHOP_CUBIT] Excepción durante adopción: $e');
       emit(CompanionShopError(
-          message: 'Error inesperado adoptando a ${companion.displayName}: ${e.toString()}'));
+          message: '❌ Error inesperado adoptando a ${companion.displayName}: ${e.toString()}'));
     }
   }
 
@@ -401,7 +400,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
       if (companion.stage == CompanionStage.adult) {
         return StageValidationResult(
           false, 
-          'No puedes adoptar directamente a ${companion.displayName} adulto. Primero debes tener la etapa anterior.'
+          '📈 No puedes adoptar directamente a ${companion.displayName} adulto. Primero debes tener la etapa anterior.'
         );
       }
       return StageValidationResult(true, '');
@@ -423,12 +422,12 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
       if (companion.stage.index < expectedNextStage) {
         return StageValidationResult(
           false,
-          'Ya tienes a ${companion.displayName} en una etapa superior a ${companion.stage.name}.'
+          '⚠️ Ya tienes a ${companion.displayName} en una etapa superior a ${companion.stage.name}.'
         );
       } else {
         return StageValidationResult(
           false,
-          'Para adoptar a ${companion.displayName} ${companion.stage.name}, primero debes tener la etapa $expectedStageName.'
+          '📈 Para adoptar a ${companion.displayName} ${companion.stage.name}, primero debes tener la etapa $expectedStageName.'
         );
       }
     }
@@ -436,50 +435,25 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     return StageValidationResult(true, '');
   }
 
-  // 🔥 PARSEAR ERRORES DE API CON MENSAJES ESPECÍFICOS
-  String _parseApiError(String apiErrorMessage, CompanionEntity companion) {
-    final errorLower = apiErrorMessage.toLowerCase();
-    
-    if (errorLower.contains('already') ||
-        errorLower.contains('adoptada') ||
-        errorLower.contains('ya tienes') ||
-        errorLower.contains('duplicate')) {
-      return 'Ya has adoptado a ${companion.displayName} anteriormente';
-    } else if (errorLower.contains('insufficient') ||
-               errorLower.contains('puntos') ||
-               errorLower.contains('not enough')) {
-      return 'No tienes suficientes puntos para adoptar a ${companion.displayName}';
-    } else if (errorLower.contains('not found') ||
-               errorLower.contains('encontrada') ||
-               errorLower.contains('no existe')) {
-      return '${companion.displayName} no está disponible en este momento';
-    } else if (errorLower.contains('stage') ||
-               errorLower.contains('etapa') ||
-               errorLower.contains('evolution')) {
-      return 'Debes tener la etapa anterior de ${companion.displayName} antes de adoptar esta';
-    } else if (errorLower.contains('authentication') ||
-               errorLower.contains('unauthorized') ||
-               errorLower.contains('401')) {
-      return 'Error de autenticación. Por favor, reinicia sesión';
-    } else {
-      return 'Error adoptando a ${companion.displayName}. Intenta de nuevo';
-    }
-  }
-
-  // 🔥 CREAR MENSAJE DE ÉXITO PERSONALIZADO
+  // 🔥 CREAR MENSAJE DE ÉXITO PERSONALIZADO CON NOMBRE REAL
   String _createSuccessMessage(CompanionEntity requestedCompanion, CompanionEntity adoptedCompanion) {
-    // Usar el nombre real de la mascota adoptada, no el genérico
+    // 🔥 USAR EL NOMBRE REAL DE LA MASCOTA ADOPTADA (viene de la API)
     final realName = adoptedCompanion.displayName.isNotEmpty 
         ? adoptedCompanion.displayName 
         : requestedCompanion.displayName;
     
-    final stageName = requestedCompanion.stage.name;
+    final stageName = requestedCompanion.stageDisplayName;
     final typeDescription = requestedCompanion.typeDescription;
     
+    debugPrint('🎉 [SUCCESS_MESSAGE] === CREANDO MENSAJE PERSONALIZADO ===');
+    debugPrint('🔤 [SUCCESS_MESSAGE] Nombre solicitado: ${requestedCompanion.displayName}');
+    debugPrint('🔤 [SUCCESS_MESSAGE] Nombre real adoptado: ${adoptedCompanion.displayName}');
+    debugPrint('🔤 [SUCCESS_MESSAGE] Nombre final: $realName');
+    
     if (requestedCompanion.purchasePrice == 0) {
-      return '¡Felicidades! ${realName} se ha unido a tu equipo como tu primer compañero 🎉';
+      return '🎉 ¡Felicidades! $realName se ha unido a tu equipo como tu primer compañero';
     } else {
-      return '¡Felicidades! Has adoptado a ${realName} ${stageName} (${typeDescription}) 🎉';
+      return '🎉 ¡Felicidades! Has adoptado a $realName $stageName ($typeDescription)';
     }
   }
 
