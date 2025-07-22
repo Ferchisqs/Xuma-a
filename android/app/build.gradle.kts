@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    id("com.google.gms.google-services") // ✅ SIN versión aquí
+    id("com.google.gms.google-services")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -13,7 +13,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        isCoreLibraryDesugaringEnabled = true // ✅ habilita desugaring
+        isCoreLibraryDesugaringEnabled = true  // ✅ ESTO ES LO QUE FALTABA
     }
 
     kotlinOptions {
@@ -40,18 +40,11 @@ flutter {
 }
 
 dependencies {
-    // Firebase BOM - controla versiones de Firebase libs
+    // Firebase BOM
     implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
-
-    // Firebase Analytics
     implementation("com.google.firebase:firebase-analytics")
-
-    // Firebase Cloud Messaging
     implementation("com.google.firebase:firebase-messaging")
-
-    // WorkManager
-    implementation("androidx.work:work-runtime:2.9.0")
-
-    // ✅ Desugaring de librerías core para compatibilidad con Java 8+
+    
+    // ✅ DESUGARING - ESTO ES LO QUE NECESITAS AGREGAR
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

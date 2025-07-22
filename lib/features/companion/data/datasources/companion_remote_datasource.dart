@@ -16,6 +16,18 @@ abstract class CompanionRemoteDataSource {
       {required String userId, required String petId, String? nickname});
   Future<CompanionStatsModel> getCompanionStats(String userId);
   Future<int> getUserPoints(String userId);
+  
+  // 🆕 NUEVOS MÉTODOS PARA API REAL
+  Future<CompanionModel> evolvePetViaApi(
+      {required String userId, required String petId});
+  Future<CompanionModel> featurePetViaApi(
+      {required String userId, required String petId});
+  Future<CompanionModel> evolveOwnedPetViaApi(
+      {required String userId, required String petId});
+  Future<CompanionModel> selectPetStageViaApi(
+      {required String userId, required String petId, required int stage});
+  
+  // MÉTODOS LOCALES EXISTENTES (mantener para compatibilidad)
   Future<CompanionModel> evolvePet(
       {required String userId, required String petId});
   Future<CompanionModel> featurePet(
@@ -40,8 +52,7 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         requireAuth: false,
       );
 
-      debugPrint(
-          '✅ [API] Mascotas disponibles obtenidas: ${response.statusCode}');
+      debugPrint('✅ [API] Mascotas disponibles obtenidas: ${response.statusCode}');
 
       if (response.data == null || response.data is! List) {
         debugPrint('⚠️ [API] Respuesta vacía o inválida');
@@ -69,107 +80,96 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
   }
 
   // ==================== 🆕 MASCOTAS ADQUIRIDAS POR EL USUARIO ====================
- @override
-Future<List<CompanionModel>> getUserCompanions(String userId) async {
-  try {
-    debugPrint('👤 [API] === OBTENIENDO MASCOTAS DEL USUARIO ===');
-    debugPrint('👤 [API] Usuario ID: $userId');
+  @override
+  Future<List<CompanionModel>> getUserCompanions(String userId) async {
+    try {
+      debugPrint('👤 [API] === OBTENIENDO MASCOTAS DEL USUARIO ===');
+      debugPrint('👤 [API] Usuario ID: $userId');
 
-    // 🔥 USAR TU ENDPOINT CORRECTO
-    final response = await apiClient.getGamification(
-      '/api/gamification/pets/$userId',
-      requireAuth: true,
-    );
-
-    debugPrint('✅ [API] Respuesta mascotas usuario: ${response.statusCode}');
-    debugPrint('📄 [API] Raw data type: ${response.data.runtimeType}');
-    debugPrint('📄 [API] Raw data: ${response.data}');
-
-    if (response.data == null) {
-      debugPrint('ℹ️ [API] Usuario sin mascotas adoptadas');
-      return [];
-    }
-
-    List<CompanionModel> adoptedCompanions = [];
-
-    // 🔧 MANEJAR DIFERENTES FORMATOS DE RESPUESTA
-    dynamic petsData;
-
-    if (response.data is List) {
-      petsData = response.data as List;
-    } else if (response.data is Map<String, dynamic>) {
-      final dataMap = response.data as Map<String, dynamic>;
-      // Buscar en diferentes campos posibles
-      petsData = dataMap['pets'] ??
-          dataMap['data'] ??
-          dataMap['owned_pets'] ??
-          dataMap['companions'] ??
-          [];
-
-      debugPrint('🔍 [API] Buscando en campos: ${dataMap.keys.toList()}');
-    } else {
-      debugPrint(
-          '⚠️ [API] Formato de respuesta inesperado: ${response.data.runtimeType}');
-      return [];
-    }
-
-    if (petsData is! List) {
-      debugPrint('⚠️ [API] Los datos de mascotas no son una lista');
-      return [];
-    }
-
-    debugPrint('📝 [API] Procesando ${petsData.length} mascotas adoptadas');
-
-    for (int i = 0; i < petsData.length; i++) {
-      try {
-        final petData = petsData[i];
-        debugPrint('🐾 [API] Procesando mascota $i: $petData');
-
-        if (petData is Map<String, dynamic>) {
-          // Mapear mascota adoptada del backend a nuestro modelo
-          final companion = _mapAdoptedPetToCompanion(petData);
-          adoptedCompanions.add(companion);
-
-          debugPrint(
-              '✅ [API] Mascota mapeada: ${companion.displayName} (${companion.id})');
-        } else {
-          debugPrint(
-              '⚠️ [API] Dato de mascota no es un mapa: ${petData.runtimeType}');
-        }
-      } catch (e) {
-        debugPrint('❌ [API] Error mapeando mascota $i: $e');
-      }
-    }
-
-    debugPrint('✅ [API] === MASCOTAS USUARIO PROCESADAS ===');
-    debugPrint(
-        '🏠 [API] Total mascotas del usuario: ${adoptedCompanions.length}');
-
-    // 🔧 MARCAR TODAS LAS MASCOTAS DE LA API COMO POSEÍDAS
-    for (int i = 0; i < adoptedCompanions.length; i++) {
-      adoptedCompanions[i] = adoptedCompanions[i].copyWith(
-        isOwned: true,  // 🔥 CRÍTICO: Marcar como poseída
-        isSelected: i == 0, // Primera activa
+      final response = await apiClient.getGamification(
+        '/api/gamification/pets/$userId',
+        requireAuth: true,
       );
-      debugPrint('✅ [REPO] Mascota ${i}: ${adoptedCompanions[i].displayName} - owned: ${adoptedCompanions[i].isOwned}');
+
+      debugPrint('✅ [API] Respuesta mascotas usuario: ${response.statusCode}');
+      debugPrint('📄 [API] Raw data type: ${response.data.runtimeType}');
+      debugPrint('📄 [API] Raw data: ${response.data}');
+
+      if (response.data == null) {
+        debugPrint('ℹ️ [API] Usuario sin mascotas adoptadas');
+        return [];
+      }
+
+      List<CompanionModel> adoptedCompanions = [];
+
+      // Manejar diferentes formatos de respuesta
+      dynamic petsData;
+
+      if (response.data is List) {
+        petsData = response.data as List;
+      } else if (response.data is Map<String, dynamic>) {
+        final dataMap = response.data as Map<String, dynamic>;
+        petsData = dataMap['pets'] ??
+            dataMap['data'] ??
+            dataMap['owned_pets'] ??
+            dataMap['companions'] ??
+            [];
+        debugPrint('🔍 [API] Buscando en campos: ${dataMap.keys.toList()}');
+      } else {
+        debugPrint('⚠️ [API] Formato de respuesta inesperado: ${response.data.runtimeType}');
+        return [];
+      }
+
+      if (petsData is! List) {
+        debugPrint('⚠️ [API] Los datos de mascotas no son una lista');
+        return [];
+      }
+
+      debugPrint('📝 [API] Procesando ${petsData.length} mascotas adoptadas');
+
+      for (int i = 0; i < petsData.length; i++) {
+        try {
+          final petData = petsData[i];
+          debugPrint('🐾 [API] Procesando mascota $i: $petData');
+
+          if (petData is Map<String, dynamic>) {
+            final companion = _mapAdoptedPetToCompanion(petData);
+            adoptedCompanions.add(companion);
+            debugPrint('✅ [API] Mascota mapeada: ${companion.displayName} (${companion.id})');
+          } else {
+            debugPrint('⚠️ [API] Dato de mascota no es un mapa: ${petData.runtimeType}');
+          }
+        } catch (e) {
+          debugPrint('❌ [API] Error mapeando mascota $i: $e');
+        }
+      }
+
+      debugPrint('✅ [API] === MASCOTAS USUARIO PROCESADAS ===');
+      debugPrint('🏠 [API] Total mascotas del usuario: ${adoptedCompanions.length}');
+
+      // Marcar todas las mascotas de la API como poseídas
+      for (int i = 0; i < adoptedCompanions.length; i++) {
+        adoptedCompanions[i] = adoptedCompanions[i].copyWith(
+          isOwned: true,
+          isSelected: i == 0,
+        );
+        debugPrint('✅ [REPO] Mascota ${i}: ${adoptedCompanions[i].displayName} - owned: ${adoptedCompanions[i].isOwned}');
+      }
+
+      // Validación adicional: Si hay mascotas pero ninguna está seleccionada
+      if (adoptedCompanions.isNotEmpty && 
+          !adoptedCompanions.any((c) => c.isSelected)) {
+        adoptedCompanions[0] = adoptedCompanions[0].copyWith(isSelected: true);
+        debugPrint('⭐ [REPO] Activando primera mascota: ${adoptedCompanions[0].displayName}');
+      }
+
+      return adoptedCompanions;
+    } catch (e) {
+      debugPrint('❌ [API] Error obteniendo mascotas usuario: $e');
+      debugPrint('🔧 [API] Retornando lista vacía por error');
+      return [];
     }
-
-    // 🔥 VALIDACIÓN ADICIONAL: Si hay mascotas pero ninguna está seleccionada
-    if (adoptedCompanions.isNotEmpty && 
-        !adoptedCompanions.any((c) => c.isSelected)) {
-      adoptedCompanions[0] = adoptedCompanions[0].copyWith(isSelected: true);
-      debugPrint('⭐ [REPO] Activando primera mascota: ${adoptedCompanions[0].displayName}');
-    }
-
-    return adoptedCompanions;
-  } catch (e) {
-    debugPrint('❌ [API] Error obteniendo mascotas usuario: $e');
-
-    // 🔧 SI HAY ERROR, RETORNAR LISTA VACÍA EN LUGAR DE FALLAR
-    debugPrint('🔧 [API] Retornando lista vacía por error');
-    return [];
   }
-}
 
   // ==================== 🆕 PUNTOS REALES DEL USUARIO ====================
   @override
@@ -177,7 +177,6 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
     try {
       debugPrint('💰 [API] Obteniendo puntos del usuario: $userId');
 
-      // 🔥 USAR EL ENDPOINT CORRECTO DE TU API
       final response = await apiClient.getGamification(
         '/api/gamification/quiz-points/$userId',
         requireAuth: true,
@@ -193,16 +192,10 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
 
       int points = 0;
 
-      // 🔧 MAPEAR SEGÚN TU ESTRUCTURA DE API
       if (response.data is Map<String, dynamic>) {
         final data = response.data as Map<String, dynamic>;
-
-        // 🚨 CORRECCIÓN: Tu API devuelve available_quiz_points como campo principal
         points = (data['available_quiz_points'] ?? 0).toInt();
-
-        debugPrint('🔍 [API] Todos los campos: ${data.keys.toList()}');
-        debugPrint(
-            '💰 [API] available_quiz_points: ${data['available_quiz_points']}');
+        debugPrint('💰 [API] available_quiz_points: ${data['available_quiz_points']}');
         debugPrint('💰 [API] total_quiz_points: ${data['total_quiz_points']}');
         debugPrint('💰 [API] spent_quiz_points: ${data['spent_quiz_points']}');
       } else if (response.data is int) {
@@ -210,8 +203,7 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
       } else if (response.data is String) {
         points = int.tryParse(response.data as String) ?? 0;
       } else {
-        debugPrint(
-            '⚠️ [API] Tipo de respuesta inesperado: ${response.data.runtimeType}');
+        debugPrint('⚠️ [API] Tipo de respuesta inesperado: ${response.data.runtimeType}');
         debugPrint('📄 [API] Valor: ${response.data}');
       }
 
@@ -220,15 +212,12 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
     } catch (e, stackTrace) {
       debugPrint('❌ [API] Error obteniendo puntos: $e');
       debugPrint('📍 [API] StackTrace: $stackTrace');
-
-      // 🔧 EN LUGAR DE RETORNAR 0, USAR VALOR DE PRUEBA
       debugPrint('🔧 [API] Usando puntos de prueba: 9400');
-      return 9400; // Usar el valor real de tu API para testing
+      return 9400;
     }
   }
 
   // ==================== TIENDA (MASCOTAS DISPONIBLES - NO ADOPTADAS) ====================
- // ==================== TIENDA (MASCOTAS DISPONIBLES - NO ADOPTADAS) - CORREGIDO ====================
   @override
   Future<List<CompanionModel>> getStoreCompanions({required String userId}) async {
     try {
@@ -240,38 +229,31 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
         throw Exception('User ID requerido para obtener tienda');
       }
 
-      // 🔥 OBTENER TODAS LAS MASCOTAS DISPONIBLES DESDE TU API
       debugPrint('📡 [API] Obteniendo mascotas disponibles...');
       final allCompanions = await getAvailableCompanions();
       debugPrint('✅ [API] Mascotas disponibles: ${allCompanions.length}');
 
-      // 🔥 OBTENER MASCOTAS YA ADOPTADAS POR EL USUARIO
       debugPrint('📡 [API] Obteniendo mascotas del usuario...');
       final userCompanions = await getUserCompanions(userId);
       debugPrint('✅ [API] Mascotas del usuario: ${userCompanions.length}');
 
-      // 🔧 CREAR SET DE IDs ADOPTADOS PARA FILTRAR
+      // Crear set de IDs adoptados para filtrar
       final adoptedIds = <String>{};
       
-      // Agregar IDs locales de mascotas adoptadas
       for (final companion in userCompanions) {
         adoptedIds.add(companion.id);
-        
-        // También agregar por tipo y etapa para compatibilidad
         final localId = '${companion.type.name}_${companion.stage.name}';
         adoptedIds.add(localId);
-        
         debugPrint('🔍 [API] Mascota adoptada: ${companion.id} (${companion.displayName})');
       }
       
       debugPrint('🔍 [API] Total IDs adoptados: $adoptedIds');
 
-      // 🔧 FILTRAR MASCOTAS NO ADOPTADAS PARA LA TIENDA
+      // Filtrar mascotas no adoptadas para la tienda
       final storeCompanions = <CompanionModel>[];
       
       for (final companion in allCompanions) {
         final isNotAdopted = !adoptedIds.contains(companion.id);
-        
         debugPrint('🔍 [API] ${companion.id}: ${isNotAdopted ? "EN TIENDA" : "YA ADOPTADO"}');
         
         if (isNotAdopted) {
@@ -279,26 +261,24 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
         }
       }
 
-      // 🔧 AGREGAR DEXTER JOVEN GRATIS SI NO LO TIENE
+      // Agregar Dexter joven gratis si no lo tiene
       final hasDexterYoung = userCompanions.any((c) =>
           c.type == CompanionType.dexter && c.stage == CompanionStage.young);
 
       if (!hasDexterYoung) {
         debugPrint('🎁 [API] Usuario no tiene Dexter joven, agregándolo gratis a la tienda');
         
-        // Buscar si ya existe en la tienda
         final existingDexterYoung = storeCompanions.firstWhere(
           (c) => c.type == CompanionType.dexter && c.stage == CompanionStage.young,
           orElse: () => _createDexterYoungForStore(),
         );
         
-        // Si no existe, agregarlo
         if (!storeCompanions.any((c) => c.type == CompanionType.dexter && c.stage == CompanionStage.young)) {
           storeCompanions.insert(0, existingDexterYoung);
         }
       }
 
-      // 🔧 ORDENAR POR PRECIO (MÁS BARATOS PRIMERO)
+      // Ordenar por precio (más baratos primero)
       storeCompanions.sort((a, b) => a.purchasePrice.compareTo(b.purchasePrice));
 
       debugPrint('🛍️ [API] === TIENDA FINAL ===');
@@ -316,31 +296,7 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
     }
   }
 
-  // 🔧 CREAR DEXTER JOVEN PARA LA TIENDA
-  CompanionModel _createDexterYoungForStore() {
-    return CompanionModel(
-      id: 'dexter_young',
-      type: CompanionType.dexter,
-      stage: CompanionStage.young,
-      name: 'Dexter',
-      description: 'Tu primer compañero gratuito',
-      level: 1,
-      experience: 0,
-      happiness: 100,
-      hunger: 100,
-      energy: 100,
-      isOwned: false,
-      isSelected: false,
-      purchasedAt: null,
-      currentMood: CompanionMood.happy,
-      purchasePrice: 0, // GRATIS
-      evolutionPrice: 50,
-      unlockedAnimations: ['idle', 'blink', 'happy'],
-      createdAt: DateTime.now(),
-    );
-  }
-
-  // ==================== 🔥 ADOPCIÓN CON MANEJO CORRECTO DE 204 ====================
+  // ==================== 🔥 ADOPCIÓN CON MANEJO MEJORADO DE ERRORES ====================
   @override
   Future<CompanionModel> adoptCompanion({
     required String userId,
@@ -355,7 +311,7 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
 
       final endpoint = '/api/gamification/pets/$userId/adopt';
       final requestBody = {
-        'petId': petId, // 🔥 USAR EL PET ID QUE VIENE DE LA TIENDA
+        'petId': petId,
         'nickname': nickname ?? 'Mi compañero',
       };
 
@@ -370,13 +326,12 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
       debugPrint('✅ [API] Adopción response: ${response.statusCode}');
       debugPrint('📄 [API] Response data: ${response.data}');
 
-      // 🔥 MANEJAR CORRECTAMENTE LOS CÓDIGOS DE ÉXITO
+      // Manejar correctamente los códigos de éxito
       if (response.statusCode == 204 ||
           response.statusCode == 200 ||
           response.statusCode == 201) {
         debugPrint('🎉 [API] Adopción exitosa (código ${response.statusCode})');
 
-        // 🔧 CREAR COMPANION ADOPTADO BASADO EN EL PET ID
         final adoptedCompanion = _createAdoptedCompanionFromPetId(
           petId,
           nickname ?? 'Mi compañero',
@@ -391,23 +346,250 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
     } catch (e) {
       debugPrint('❌ [API] Error en adopción: $e');
 
-      // 🔧 MANEJO ESPECÍFICO DE ERRORES SEGÚN TU API
+      // 🔥 MANEJO MEJORADO DE ERRORES ESPECÍFICOS
       final errorMessage = e.toString().toLowerCase();
 
       if (errorMessage.contains('already') ||
-          errorMessage.contains('adoptada')) {
-        throw ServerException('Ya tienes esta mascota');
+          errorMessage.contains('adoptada') ||
+          errorMessage.contains('ya tienes') ||
+          errorMessage.contains('duplicate')) {
+        throw ServerException('Esta mascota ya fue adquirida');
       } else if (errorMessage.contains('insufficient') ||
-          errorMessage.contains('puntos')) {
-        throw ServerException('No tienes suficientes puntos');
+          errorMessage.contains('puntos') ||
+          errorMessage.contains('not enough')) {
+        throw ServerException('No tienes suficientes puntos para esta adopción');
       } else if (errorMessage.contains('not found') ||
-          errorMessage.contains('encontrada')) {
-        throw ServerException('Mascota no encontrada');
+          errorMessage.contains('encontrada') ||
+          errorMessage.contains('no existe')) {
+        throw ServerException('Esta mascota no está disponible');
       } else if (errorMessage.contains('401') ||
-          errorMessage.contains('unauthorized')) {
-        throw ServerException('Error de autenticación');
+          errorMessage.contains('unauthorized') ||
+          errorMessage.contains('authentication')) {
+        throw ServerException('Error de autenticación. Por favor, reinicia sesión');
+      } else if (errorMessage.contains('stage') ||
+          errorMessage.contains('etapa') ||
+          errorMessage.contains('evolution')) {
+        throw ServerException('Debes tener la etapa anterior antes de adoptar esta');
       } else {
-        throw ServerException('Error en adopción: ${e.toString()}');
+        throw ServerException('Error durante la adopción. Intenta de nuevo');
+      }
+    }
+  }
+
+  // ==================== 🆕 EVOLUCIÓN VIA API REAL ====================
+  @override
+  Future<CompanionModel> evolvePetViaApi({
+    required String userId, 
+    required String petId
+  }) async {
+    try {
+      debugPrint('🦋 [API] === INICIANDO EVOLUCIÓN VIA API ===');
+      debugPrint('👤 [API] User ID: $userId');
+      debugPrint('🆔 [API] Pet ID: $petId');
+
+      final endpoint = '/api/gamification/pets/$userId/evolve';
+      final requestBody = {'petId': petId};
+
+      debugPrint('📦 [API] Request body: $requestBody');
+      debugPrint('🌐 [API] Endpoint: $endpoint');
+
+      final response = await apiClient.postGamification(
+        endpoint,
+        data: requestBody,
+      );
+
+      debugPrint('✅ [API] Evolución response: ${response.statusCode}');
+      debugPrint('📄 [API] Response data: ${response.data}');
+
+      if (response.statusCode == 200 || 
+          response.statusCode == 201 || 
+          response.statusCode == 204) {
+        debugPrint('🎉 [API] Evolución exitosa');
+        
+        // Crear companion evolucionado basado en la respuesta
+        final evolvedCompanion = _createEvolvedCompanionFromResponse(petId, response.data);
+        debugPrint('✅ [API] Companion evolucionado: ${evolvedCompanion.displayName}');
+        return evolvedCompanion;
+      } else {
+        throw ServerException(
+            'Error en evolución: código ${response.statusCode}, data: ${response.data}');
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Error en evolución: $e');
+      
+      // 🔥 MANEJO ESPECÍFICO DE ERRORES DE EVOLUCIÓN
+      final errorMessage = e.toString().toLowerCase();
+
+      if (errorMessage.contains('insufficient') ||
+          errorMessage.contains('puntos') ||
+          errorMessage.contains('not enough')) {
+        throw ServerException('No tienes suficientes puntos para evolucionar');
+      } else if (errorMessage.contains('max level') ||
+          errorMessage.contains('maximum') ||
+          errorMessage.contains('máximo') ||
+          errorMessage.contains('adulto')) {
+        throw ServerException('Esta mascota ya está en su máxima evolución');
+      } else if (errorMessage.contains('not found') ||
+          errorMessage.contains('no encontrada')) {
+        throw ServerException('Mascota no encontrada en tu colección');
+      } else if (errorMessage.contains('experience') ||
+          errorMessage.contains('experiencia') ||
+          errorMessage.contains('nivel')) {
+        throw ServerException('Tu mascota necesita más experiencia para evolucionar');
+      } else if (errorMessage.contains('stage') ||
+          errorMessage.contains('etapa')) {
+        throw ServerException('No se puede evolucionar desde esta etapa');
+      } else {
+        throw ServerException('Error evolucionando mascota: ${e.toString()}');
+      }
+    }
+  }
+
+  // ==================== 🆕 DESTACAR MASCOTA VIA API REAL ====================
+  @override
+  Future<CompanionModel> featurePetViaApi({
+    required String userId, 
+    required String petId
+  }) async {
+    try {
+      debugPrint('⭐ [API] === DESTACANDO MASCOTA VIA API ===');
+      debugPrint('👤 [API] User ID: $userId');
+      debugPrint('🆔 [API] Pet ID: $petId');
+
+      final endpoint = '/api/gamification/pets/$userId/feature';
+      final requestBody = {'petId': petId};
+
+      debugPrint('📦 [API] Request body: $requestBody');
+      debugPrint('🌐 [API] Endpoint: $endpoint');
+
+      final response = await apiClient.postGamification(
+        endpoint,
+        data: requestBody,
+      );
+
+      debugPrint('✅ [API] Feature response: ${response.statusCode}');
+      debugPrint('📄 [API] Response data: ${response.data}');
+
+      if (response.statusCode == 200 || 
+          response.statusCode == 201 || 
+          response.statusCode == 204) {
+        debugPrint('🎉 [API] Feature exitoso');
+        
+        final featuredCompanion = _createFeaturedCompanionFromResponse(petId, response.data);
+        debugPrint('✅ [API] Companion destacado: ${featuredCompanion.displayName}');
+        return featuredCompanion;
+      } else {
+        throw ServerException(
+            'Error al destacar mascota: código ${response.statusCode}, data: ${response.data}');
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Error al destacar mascota: $e');
+      
+      // 🔥 MANEJO ESPECÍFICO DE ERRORES DE FEATURE
+      final errorMessage = e.toString().toLowerCase();
+
+      if (errorMessage.contains('not found') ||
+          errorMessage.contains('no encontrada')) {
+        throw ServerException('Mascota no encontrada en tu colección');
+      } else if (errorMessage.contains('already featured') ||
+          errorMessage.contains('ya destacada')) {
+        throw ServerException('Esta mascota ya está destacada');
+      } else {
+        throw ServerException('Error destacando mascota: ${e.toString()}');
+      }
+    }
+  }
+
+  // ==================== 🆕 EVOLUCIÓN DE MASCOTA POSEÍDA ====================
+  @override
+  Future<CompanionModel> evolveOwnedPetViaApi({
+    required String userId, 
+    required String petId
+  }) async {
+    try {
+      debugPrint('🦋 [API] === EVOLUCIONANDO MASCOTA POSEÍDA ===');
+      debugPrint('👤 [API] User ID: $userId');
+      debugPrint('🆔 [API] Pet ID: $petId');
+
+      final endpoint = '/api/gamification/pets/owned/$userId/$petId/evolve';
+      final requestBody = <String, dynamic>{};
+
+      debugPrint('🌐 [API] Endpoint: $endpoint');
+
+      final response = await apiClient.postGamification(
+        endpoint,
+        data: requestBody,
+      );
+
+      debugPrint('✅ [API] Evolución owned response: ${response.statusCode}');
+      debugPrint('📄 [API] Response data: ${response.data}');
+
+      if (response.statusCode == 200 || 
+          response.statusCode == 201 || 
+          response.statusCode == 204) {
+        debugPrint('🎉 [API] Evolución owned exitosa');
+        
+        final evolvedCompanion = _createEvolvedCompanionFromResponse(petId, response.data);
+        debugPrint('✅ [API] Owned companion evolucionado: ${evolvedCompanion.displayName}');
+        return evolvedCompanion;
+      } else {
+        throw ServerException(
+            'Error en evolución owned: código ${response.statusCode}, data: ${response.data}');
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Error en evolución owned: $e');
+      throw ServerException('Error evolucionando mascota poseída: ${e.toString()}');
+    }
+  }
+
+  // ==================== 🆕 SELECCIONAR ETAPA VISUALIZADA ====================
+  @override
+  Future<CompanionModel> selectPetStageViaApi({
+    required String userId, 
+    required String petId, 
+    required int stage
+  }) async {
+    try {
+      debugPrint('🎭 [API] === SELECCIONANDO ETAPA VISUALIZADA ===');
+      debugPrint('👤 [API] User ID: $userId');
+      debugPrint('🆔 [API] Pet ID: $petId');
+      debugPrint('🎯 [API] Stage: $stage');
+
+      final endpoint = '/api/gamification/pets/owned/$userId/$petId/selected-stage';
+      final requestBody = {'stage': stage};
+
+      debugPrint('📦 [API] Request body: $requestBody');
+      debugPrint('🌐 [API] Endpoint: $endpoint');
+
+      final response = await apiClient.patchGamification(
+        endpoint,
+        data: requestBody,
+      );
+
+      debugPrint('✅ [API] Select stage response: ${response.statusCode}');
+      debugPrint('📄 [API] Response data: ${response.data}');
+
+      if (response.statusCode == 200 || 
+          response.statusCode == 201 || 
+          response.statusCode == 204) {
+        debugPrint('🎉 [API] Selección de etapa exitosa');
+        
+        final updatedCompanion = _createCompanionWithSelectedStage(petId, stage, response.data);
+        debugPrint('✅ [API] Companion con etapa seleccionada: ${updatedCompanion.displayName}');
+        return updatedCompanion;
+      } else {
+        throw ServerException(
+            'Error seleccionando etapa: código ${response.statusCode}, data: ${response.data}');
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Error seleccionando etapa: $e');
+      
+      final errorMessage = e.toString().toLowerCase();
+      if (errorMessage.contains('not unlocked') ||
+          errorMessage.contains('no desbloqueada')) {
+        throw ServerException('Esta etapa no está desbloqueada aún');
+      } else {
+        throw ServerException('Error seleccionando etapa: ${e.toString()}');
       }
     }
   }
@@ -418,7 +600,6 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
     try {
       debugPrint('📊 [API] Calculando estadísticas...');
 
-      // Obtener datos reales del usuario
       final userCompanions = await getUserCompanions(userId);
       final userPoints = await getUserPoints(userId);
       final allCompanions = await getAvailableCompanions();
@@ -428,7 +609,6 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
       final activeCompanionId =
           userCompanions.isNotEmpty ? userCompanions.first.id : '';
 
-      // Calcular puntos gastados (estimado)
       int spentPoints = 0;
       for (final companion in userCompanions) {
         spentPoints += companion.purchasePrice;
@@ -438,17 +618,16 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
         userId: userId,
         totalCompanions: totalCount,
         ownedCompanions: ownedCount,
-        totalPoints: userPoints + spentPoints, // Total estimado
+        totalPoints: userPoints + spentPoints,
         spentPoints: spentPoints,
         activeCompanionId: activeCompanionId,
-        totalFeedCount: 0, // No disponible en API actual
-        totalLoveCount: 0, // No disponible en API actual
-        totalEvolutions: 0, // No disponible en API actual
+        totalFeedCount: 0,
+        totalLoveCount: 0,
+        totalEvolutions: 0,
         lastActivity: DateTime.now(),
       );
 
-      debugPrint(
-          '📊 [API] Stats: ${stats.ownedCompanions}/${stats.totalCompanions}, ${stats.availablePoints}★');
+      debugPrint('📊 [API] Stats: ${stats.ownedCompanions}/${stats.totalCompanions}, ${stats.availablePoints}★');
       return stats;
     } catch (e) {
       debugPrint('❌ [API] Error calculando stats: $e');
@@ -456,127 +635,194 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
     }
   }
 
+  // ==================== MÉTODOS LEGACY (mantener compatibilidad) ====================
   @override
-  Future<CompanionModel> evolvePet(
-      {required String userId, required String petId}) async {
-    try {
-      debugPrint(
-          '🚀 [API] Iniciando evolución para petId: $petId, userId: $userId');
-      final endpoint = '/api/gamification/pets/$userId/evolve';
-      final requestBody = {'petId': petId};
-
-      final response = await apiClient.postGamification(
-        endpoint,
-        data: requestBody,
-      );
-
-      debugPrint('✅ [API] Evolución response: ${response.statusCode}');
-      debugPrint('📄 [API] Response data: ${response.data}');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('🎉 [API] Evolución exitosa');
-        return _createEvolvedCompanionFromPetId(petId);
-      } else {
-        throw ServerException(
-            'Error en evolución: código ${response.statusCode}, data: ${response.data}');
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Error en evolución: $e');
-      throw ServerException('Error al evolucionar mascota: ${e.toString()}');
-    }
+  Future<CompanionModel> evolvePet({required String userId, required String petId}) async {
+    // Redirigir al método de API real
+    return evolvePetViaApi(userId: userId, petId: petId);
   }
 
   @override
-  Future<CompanionModel> featurePet(
-      {required String userId, required String petId}) async {
-    try {
-      debugPrint(
-          '⭐ [API] Iniciando feature para petId: $petId, userId: $userId');
-      final endpoint = '/api/gamification/pets/$userId/feature';
-      final requestBody = {'petId': petId};
+  Future<CompanionModel> featurePet({required String userId, required String petId}) async {
+    // Redirigir al método de API real
+    return featurePetViaApi(userId: userId, petId: petId);
+  }
 
-      final response = await apiClient.postGamification(
-        endpoint,
-        data: requestBody,
-      );
+  // ==================== 🔧 MÉTODOS HELPER MEJORADOS ====================
 
-      debugPrint('✅ [API] Feature response: ${response.statusCode}');
-      debugPrint('📄 [API] Response data: ${response.data}');
+  CompanionModel _createEvolvedCompanionFromResponse(String petId, dynamic responseData) {
+    debugPrint('🦋 [EVOLUTION] Creando companion evolucionado para petId: $petId');
+    debugPrint('📄 [EVOLUTION] Response data: $responseData');
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('🎉 [API] Feature exitoso');
-        return _createFeaturedCompanionFromPetId(petId);
-      } else {
-        throw ServerException(
-            'Error al destacar mascota: código ${response.statusCode}, data: ${response.data}');
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Error al destacar mascota: $e');
-      throw ServerException('Error al destacar mascota: ${e.toString()}');
+    final companionType = _mapPetIdToCompanionType(petId);
+    var companionStage = _mapPetIdToCompanionStage(petId);
+
+    // Evolucionar a la siguiente etapa
+    switch (companionStage) {
+      case CompanionStage.baby:
+        companionStage = CompanionStage.young;
+        break;
+      case CompanionStage.young:
+        companionStage = CompanionStage.adult;
+        break;
+      case CompanionStage.adult:
+        // Ya está al máximo
+        break;
+    }
+
+    final localId = '${companionType.name}_${companionStage.name}';
+    debugPrint('🆔 [EVOLUTION] New local ID: $localId, preserving petId: $petId');
+
+    return CompanionModelWithPetId(
+      id: localId,
+      type: companionType,
+      stage: companionStage,
+      name: _getDisplayName(companionType),
+      description: _generateDescription(companionType, companionStage),
+      level: 2, // Subir nivel
+      experience: 0, // Resetear experiencia
+      happiness: 100,
+      hunger: 100,
+      energy: 100,
+      isOwned: true,
+      isSelected: true,
+      purchasedAt: DateTime.now(),
+      currentMood: CompanionMood.excited,
+      purchasePrice: _getDefaultPrice(companionType, companionStage),
+      evolutionPrice: _getEvolutionPrice(companionStage),
+      unlockedAnimations: ['idle', 'blink', 'happy', 'excited'],
+      createdAt: DateTime.now(),
+      petId: petId, // Preservar Pet ID original
+    );
+  }
+
+  CompanionModel _createFeaturedCompanionFromResponse(String petId, dynamic responseData) {
+    debugPrint('⭐ [FEATURE] Creando companion destacado para petId: $petId');
+    debugPrint('📄 [FEATURE] Response data: $responseData');
+
+    final companionType = _mapPetIdToCompanionType(petId);
+    final companionStage = _mapPetIdToCompanionStage(petId);
+
+    final localId = '${companionType.name}_${companionStage.name}';
+    debugPrint('🆔 [FEATURE] Local ID: $localId, preserving petId: $petId');
+
+    return CompanionModelWithPetId(
+      id: localId,
+      type: companionType,
+      stage: companionStage,
+      name: _getDisplayName(companionType),
+      description: _generateDescription(companionType, companionStage),
+      level: 1,
+      experience: 0,
+      happiness: 100,
+      hunger: 100,
+      energy: 100,
+      isOwned: true,
+      isSelected: true, // Destacado/Activo
+      purchasedAt: DateTime.now(),
+      currentMood: CompanionMood.happy,
+      purchasePrice: _getDefaultPrice(companionType, companionStage),
+      evolutionPrice: _getEvolutionPrice(companionStage),
+      unlockedAnimations: ['idle', 'blink', 'happy'],
+      createdAt: DateTime.now(),
+      petId: petId, // Preservar Pet ID original
+    );
+  }
+
+  CompanionModel _createCompanionWithSelectedStage(String petId, int stage, dynamic responseData) {
+    debugPrint('🎭 [STAGE] Creando companion con etapa seleccionada: $stage');
+    debugPrint('📄 [STAGE] Response data: $responseData');
+
+    final companionType = _mapPetIdToCompanionType(petId);
+    final companionStage = _mapIntToCompanionStage(stage);
+
+    final localId = '${companionType.name}_${companionStage.name}';
+    debugPrint('🆔 [STAGE] Local ID: $localId, stage: ${companionStage.name}');
+
+    return CompanionModelWithPetId(
+      id: localId,
+      type: companionType,
+      stage: companionStage,
+      name: _getDisplayName(companionType),
+      description: _generateDescription(companionType, companionStage),
+      level: _getLevelForStage(companionStage),
+      experience: 0,
+      happiness: 100,
+      hunger: 100,
+      energy: 100,
+      isOwned: true,
+      isSelected: true,
+      purchasedAt: DateTime.now(),
+      currentMood: CompanionMood.happy,
+      purchasePrice: _getDefaultPrice(companionType, companionStage),
+      evolutionPrice: _getEvolutionPrice(companionStage),
+      unlockedAnimations: _getAnimationsForStage(companionStage),
+      createdAt: DateTime.now(),
+      petId: petId,
+    );
+  }
+
+  /// Mapear Pet ID a CompanionType
+  CompanionType _mapPetIdToCompanionType(String petId) {
+    final petIdLower = petId.toLowerCase();
+
+    if (petIdLower.contains('dexter') ||
+        petIdLower.contains('dog') ||
+        petIdLower.contains('chihuahua')) {
+      return CompanionType.dexter;
+    } else if (petIdLower.contains('elly') || petIdLower.contains('panda')) {
+      return CompanionType.elly;
+    } else if (petIdLower.contains('paxolotl') ||
+        petIdLower.contains('axolotl') ||
+        petIdLower.contains('ajolote')) {
+      return CompanionType.paxolotl;
+    } else if (petIdLower.contains('yami') || petIdLower.contains('jaguar')) {
+      return CompanionType.yami;
+    }
+
+    debugPrint('⚠️ [MAPPING] Pet ID no reconocido: $petId, usando dexter por defecto');
+    return CompanionType.dexter;
+  }
+
+  /// Mapear Pet ID a CompanionStage
+  CompanionStage _mapPetIdToCompanionStage(String petId) {
+    final petIdLower = petId.toLowerCase();
+
+    if (petIdLower.contains('baby') || 
+        petIdLower.contains('1') || 
+        petIdLower.contains('peque')) {
+      return CompanionStage.baby;
+    } else if (petIdLower.contains('young') || 
+               petIdLower.contains('2') || 
+               petIdLower.contains('joven')) {
+      return CompanionStage.young;
+    } else if (petIdLower.contains('adult') || 
+               petIdLower.contains('3') || 
+               petIdLower.contains('adulto')) {
+      return CompanionStage.adult;
+    }
+
+    debugPrint('⚠️ [MAPPING] Stage no reconocido en petId: $petId, usando baby por defecto');
+    return CompanionStage.baby;
+  }
+
+  /// Mapear int a CompanionStage
+  CompanionStage _mapIntToCompanionStage(int stage) {
+    switch (stage) {
+      case 1:
+        return CompanionStage.baby;
+      case 2:
+        return CompanionStage.young;
+      case 3:
+        return CompanionStage.adult;
+      default:
+        debugPrint('⚠️ [MAPPING] Stage int desconocido: $stage, usando baby');
+        return CompanionStage.baby;
     }
   }
 
-  // ==================== 🔧 MÉTODOS HELPER MEJORADOS PARA PET ID MAPPING ====================
-
-  /// Extraer Pet ID real desde companion adoptado
-  String _extractRealPetIdFromCompanion(CompanionModel companion) {
-    debugPrint('🔍 [PET_ID] === EXTRAYENDO PET ID REAL ===');
-    debugPrint('🐾 [PET_ID] Companion ID: ${companion.id}');
-    debugPrint('🐾 [PET_ID] Companion Type: ${companion.type.name}');
-    debugPrint('🐾 [PET_ID] Companion Stage: ${companion.stage.name}');
-
-    // 1. Si es CompanionModelWithPetId, usar el petId directo
-    if (companion is CompanionModelWithPetId) {
-      debugPrint(
-          '✅ [PET_ID] Found petId in CompanionModelWithPetId: ${companion.petId}');
-      return companion.petId;
-    }
-
-    // 2. Verificar en JSON si tiene petId
-    try {
-      final json = companion.toJson();
-      if (json.containsKey('petId') && json['petId'] != null) {
-        final petId = json['petId'] as String;
-        debugPrint('✅ [PET_ID] Found petId in JSON: $petId');
-        return petId;
-      }
-    } catch (e) {
-      debugPrint('⚠️ [PET_ID] Error checking JSON: $e');
-    }
-
-    // 3. Mapeo basado en tipo y etapa (fallback)
-    final mappedPetId = _mapCompanionToDefaultPetId(companion);
-    debugPrint('🔧 [PET_ID] Using mapped petId: $mappedPetId');
-    return mappedPetId;
-  }
-
-  /// Mapeo de companion local a Pet ID por defecto
-  String _mapCompanionToDefaultPetId(CompanionModel companion) {
-    // Generar Pet ID basado en patrón conocido
-    final typeMap = {
-      'dexter': 'chihuahua',
-      'elly': 'panda',
-      'paxolotl': 'axolotl',
-      'yami': 'jaguar',
-    };
-
-    final stageMap = {
-      'baby': '1',
-      'young': '2',
-      'adult': '3',
-    };
-
-    final typeName = typeMap[companion.type.name] ?? companion.type.name;
-    final stageNumber = stageMap[companion.stage.name] ?? '1';
-
-    // Formato: tipo_etapa (ej: chihuahua_2, panda_1)
-    final petId = '${typeName}_$stageNumber';
-    debugPrint('🗺️ [PET_ID] Generated default petId: $petId');
-    return petId;
-  }
-
-  /// Actualizar método _mapAdoptedPetToCompanion para preservar petId
-    CompanionModel _mapAdoptedPetToCompanion(Map<String, dynamic> adoptedPet) {
+  /// Actualizar método para mapear mascota adoptada preservando Pet ID
+  CompanionModel _mapAdoptedPetToCompanion(Map<String, dynamic> adoptedPet) {
     debugPrint('🔄 [MAPPING] === MAPEANDO MASCOTA ADOPTADA CORREGIDO ===');
     debugPrint('📄 [MAPPING] Raw pet data: $adoptedPet');
 
@@ -603,17 +849,17 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
         adoptedPet['created_at'] as String? ??
         adoptedPet['createdAt'] as String?;
 
-    // 🔧 MAPEO CORRECTO POR NOMBRE DE LA MASCOTA
+    // Mapeo correcto por nombre de la mascota
     debugPrint('🔍 [MAPPING] Name from API: $name');
     debugPrint('🔍 [MAPPING] Species: $speciesType');
     
     final companionType = _mapNameToCompanionType(name);
-    final companionStage = CompanionStage.young; // Por defecto young, ya que no tenemos stage en la API
+    final companionStage = CompanionStage.young; // Por defecto young
     
     // Crear ID local consistente
     final localId = '${companionType.name}_${companionStage.name}';
     
-    // 🔧 SI ES PAXOLOTH, CORREGIR A PAXOLOTL
+    // Si es Paxoloth, corregir a Paxolotl
     final correctedName = name == 'Paxoloth' ? 'Paxolotl' : name;
 
     debugPrint('✅ [MAPPING] MAPEO CORREGIDO:');
@@ -622,7 +868,7 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
     debugPrint('🔍 [MAPPING] ID local generado: $localId');
     debugPrint('🆔 [MAPPING] Pet ID preservado: $realPetId');
 
-    // 🔥 USAR CompanionModelWithPetId PARA PRESERVAR EL PET ID REAL
+    // Usar CompanionModelWithPetId para preservar el Pet ID real
     return CompanionModelWithPetId(
       id: localId,
       type: companionType,
@@ -642,11 +888,11 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
       evolutionPrice: _getEvolutionPrice(companionStage),
       unlockedAnimations: ['idle', 'blink', 'happy'],
       createdAt: DateTime.now(),
-      petId: realPetId, // 🔥 PRESERVAR EL PET ID REAL DE LA API
+      petId: realPetId, // Preservar el Pet ID real de la API
     );
   }
   
-  // 🔧 MAPEO CORRECTO POR NOMBRE DE LA MASCOTA
+  /// Mapeo correcto por nombre de la mascota
   CompanionType _mapNameToCompanionType(String name) {
     final nameLower = name.toLowerCase();
     
@@ -666,95 +912,13 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
       return CompanionType.yami;
     }
     
-    // 🔧 FALLBACK: Mapear por species_type si el nombre no coincide
+    // Fallback: Mapear por species_type si el nombre no coincide
     debugPrint('⚠️ [NAME_MAPPING] Nombre no reconocido, usando fallback');
     return CompanionType.dexter; // Por defecto
   }
 
-  /// Actualizar métodos de evolución y feature para usar Pet ID real
-  CompanionModel _createEvolvedCompanionFromPetId(String petId) {
-    debugPrint('🦋 [EVOLUTION] Creating evolved companion for petId: $petId');
-
-    final companionType = _mapPetIdToCompanionType(petId);
-    var companionStage = _mapPetIdToCompanionStage(petId);
-
-    // Evolucionar a la siguiente etapa
-    switch (companionStage) {
-      case CompanionStage.baby:
-        companionStage = CompanionStage.young;
-        break;
-      case CompanionStage.young:
-        companionStage = CompanionStage.adult;
-        break;
-      case CompanionStage.adult:
-        // Ya está al máximo
-        break;
-    }
-
-    final localId = '${companionType.name}_${companionStage.name}';
-    debugPrint(
-        '🆔 [EVOLUTION] New local ID: $localId, preserving petId: $petId');
-
-    return CompanionModelWithPetId(
-      id: localId,
-      type: companionType,
-      stage: companionStage,
-      name: _getDisplayName(companionType),
-      description: _generateDescription(companionType, companionStage),
-      level: 2, // Subir nivel
-      experience: 0, // Resetear experiencia
-      happiness: 100,
-      hunger: 100,
-      energy: 100,
-      isOwned: true,
-      isSelected: true,
-      purchasedAt: DateTime.now(),
-      currentMood: CompanionMood.excited,
-      purchasePrice: _getDefaultPrice(companionType, companionStage),
-      evolutionPrice: _getEvolutionPrice(companionStage),
-      unlockedAnimations: ['idle', 'blink', 'happy', 'excited'],
-      createdAt: DateTime.now(),
-      petId: petId, // 🔥 PRESERVAR PET ID ORIGINAL
-    );
-  }
-
-  CompanionModel _createFeaturedCompanionFromPetId(String petId) {
-    debugPrint('⭐ [FEATURE] Creating featured companion for petId: $petId');
-
-    final companionType = _mapPetIdToCompanionType(petId);
-    final companionStage = _mapPetIdToCompanionStage(petId);
-
-    final localId = '${companionType.name}_${companionStage.name}';
-    debugPrint('🆔 [FEATURE] Local ID: $localId, preserving petId: $petId');
-
-    return CompanionModelWithPetId(
-      id: localId,
-      type: companionType,
-      stage: companionStage,
-      name: _getDisplayName(companionType),
-      description: _generateDescription(companionType, companionStage),
-      level: 1,
-      experience: 0,
-      happiness: 100,
-      hunger: 100,
-      energy: 100,
-      isOwned: true,
-      isSelected: true, // 🔥 DESTACADO/ACTIVO
-      purchasedAt: DateTime.now(),
-      currentMood: CompanionMood.happy,
-      purchasePrice: _getDefaultPrice(companionType, companionStage),
-      evolutionPrice: _getEvolutionPrice(companionStage),
-      unlockedAnimations: ['idle', 'blink', 'happy'],
-      createdAt: DateTime.now(),
-      petId: petId, // 🔥 PRESERVAR PET ID ORIGINAL
-    );
-  }
-
-  // ==================== 🔧 MÉTODOS HELPER PARA MAPEO ====================
-
   /// Crear companion adoptado desde petId
-  CompanionModel _createAdoptedCompanionFromPetId(
-      String petId, String nickname) {
+  CompanionModel _createAdoptedCompanionFromPetId(String petId, String nickname) {
     final companionType = _mapPetIdToCompanionType(petId);
     final companionStage = _mapPetIdToCompanionStage(petId);
 
@@ -780,81 +944,28 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
     );
   }
 
-  // Mapeos de tipos
-  CompanionType _mapSpeciesTypeToCompanionType(String speciesType) {
-    switch (speciesType.toLowerCase()) {
-      case 'dog':
-      case 'chihuahua':
-        return CompanionType.dexter;
-      case 'panda':
-        return CompanionType.elly;
-      case 'axolotl':
-      case 'ajolote':
-        return CompanionType.paxolotl;
-      case 'jaguar':
-        return CompanionType.yami;
-      default:
-        return CompanionType.dexter;
-    }
-  }
-
-  CompanionType _mapPetIdToCompanionType(String petId) {
-    final petIdLower = petId.toLowerCase();
-
-    if (petIdLower.contains('dexter') ||
-        petIdLower.contains('dog') ||
-        petIdLower.contains('chihuahua')) {
-      return CompanionType.dexter;
-    } else if (petIdLower.contains('elly') || petIdLower.contains('panda')) {
-      return CompanionType.elly;
-    } else if (petIdLower.contains('paxolotl') ||
-        petIdLower.contains('axolotl')) {
-      return CompanionType.paxolotl;
-    } else if (petIdLower.contains('yami') || petIdLower.contains('jaguar')) {
-      return CompanionType.yami;
-    }
-
-    return CompanionType.dexter; // Por defecto
-  }
-
-  CompanionStage _mapPetIdToCompanionStage(String petId) {
-    final petIdLower = petId.toLowerCase();
-
-    if (petIdLower.contains('baby') || petIdLower.contains('peque')) {
-      return CompanionStage.baby;
-    } else if (petIdLower.contains('young') || petIdLower.contains('joven')) {
-      return CompanionStage.young;
-    } else if (petIdLower.contains('adult') || petIdLower.contains('adulto')) {
-      return CompanionStage.adult;
-    }
-
-    return CompanionStage.baby; // Por defecto
-  }
-
-  CompanionStage _mapStageStringToCompanionStage(String stage) {
-    final stageLower = stage.toLowerCase().trim();
-
-    if (stageLower.contains('baby') ||
-        stageLower.contains('1') ||
-        stageLower == 'peque') {
-      return CompanionStage.baby;
-    } else if (stageLower.contains('young') ||
-        stageLower.contains('2') ||
-        stageLower == 'joven') {
-      return CompanionStage.young;
-    } else if (stageLower.contains('adult') ||
-        stageLower.contains('3') ||
-        stageLower == 'adulto') {
-      return CompanionStage.adult;
-    }
-
-    debugPrint(
-        '⚠️ [MAPPING] Stage desconocido: $stage, usando young por defecto');
-    return CompanionStage.young; // Por defecto
-  }
-
-  CompanionStage _inferStageFromPetId(String petId) {
-    return _mapPetIdToCompanionStage(petId);
+  /// Crear Dexter joven para la tienda
+  CompanionModel _createDexterYoungForStore() {
+    return CompanionModel(
+      id: 'dexter_young',
+      type: CompanionType.dexter,
+      stage: CompanionStage.young,
+      name: 'Dexter',
+      description: 'Tu primer compañero gratuito',
+      level: 1,
+      experience: 0,
+      happiness: 100,
+      hunger: 100,
+      energy: 100,
+      isOwned: false,
+      isSelected: false,
+      purchasedAt: null,
+      currentMood: CompanionMood.happy,
+      purchasePrice: 0, // GRATIS
+      evolutionPrice: 50,
+      unlockedAnimations: ['idle', 'blink', 'happy'],
+      createdAt: DateTime.now(),
+    );
   }
 
   // Métodos helper para precios y descripciones
@@ -919,6 +1030,28 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
         return 100;
       case CompanionStage.adult:
         return 0;
+    }
+  }
+
+  int _getLevelForStage(CompanionStage stage) {
+    switch (stage) {
+      case CompanionStage.baby:
+        return 1;
+      case CompanionStage.young:
+        return 2;
+      case CompanionStage.adult:
+        return 3;
+    }
+  }
+
+  List<String> _getAnimationsForStage(CompanionStage stage) {
+    switch (stage) {
+      case CompanionStage.baby:
+        return ['idle', 'blink', 'happy'];
+      case CompanionStage.young:
+        return ['idle', 'blink', 'happy', 'eating'];
+      case CompanionStage.adult:
+        return ['idle', 'blink', 'happy', 'eating', 'loving', 'excited'];
     }
   }
 
