@@ -265,8 +265,9 @@ class ApiClient {
       }
     }
 
-    // Auto-detection basada en el path
-    if (ApiEndpoints.isQuizEndpoint(path)) {
+     if (ApiEndpoints.isQuizEndpoint(path) || 
+        path.startsWith('/api/quiz/') || 
+        path.contains('/api/quiz/')) {
       print('🧠 [API CLIENT] Auto-detected QUIZ service for: $path');
       return _quizDio;
     } else if (ApiEndpoints.isGamificationEndpoint(path)) {

@@ -1,102 +1,63 @@
-// lib/core/utils/quiz_endpoint_tester.dart - NUEVO ARCHIVO
+// lib/core/utils/quiz_endpoint_tester.dart - ACTUALIZADO CON RUTAS CORRECTAS
 import '../../di/injection.dart';
 import '../network/api_client.dart';
 import '../config/api_endpoints.dart';
 
-class QuizEndpointTester {
+class QuizEndpointTesterUpdated {
   
-  /// Probar todos los endpoints posibles para encontrar cuáles realmente existen
-  static Future<void> testAllPossibleEndpoints() async {
-    print('🔍 [ENDPOINT TEST] ===============================================');
-    print('🔍 [ENDPOINT TEST] TESTING ALL POSSIBLE QUIZ ENDPOINTS');
-    print('🔍 [ENDPOINT TEST] Base URL: ${ApiEndpoints.quizServiceUrl}');
-    print('🔍 [ENDPOINT TEST] ===============================================');
+  /// Probar todos los endpoints corregidos del quiz
+  static Future<void> testCorrectedEndpoints() async {
+    print('🔧 [QUIZ TEST] ===============================================');
+    print('🔧 [QUIZ TEST] TESTING CORRECTED QUIZ ENDPOINTS');
+    print('🔧 [QUIZ TEST] Base URL: ${ApiEndpoints.quizServiceUrl}');
+    print('🔧 [QUIZ TEST] ===============================================');
     
     final apiClient = getIt<ApiClient>();
-    final testTopicId = 'a90d3ede-42ae-4b81-a185-9336ea6e195b'; // El que falla
+    final testTopicId = 'a90d3ede-42ae-4b81-a185-9336ea6e195b';
     
-    // Lista de todos los posibles endpoints según la documentación
+    // Lista de endpoints corregidos para probar
     final endpointsToTest = [
-      // Endpoints de la documentación
       {
-        'name': 'Get Quizzes by Topic (Doc)',
-        'endpoint': '/by-topic/$testTopicId',
-        'method': 'GET',
+        'name': '1. Content Topics (FUNCIONA)',
+        'endpoint': '/api/content/topics',
+        'method': 'content', // Usar content service
+        'expected': 'Lista de topics'
+      },
+      {
+        'name': '2. Quizzes by Topic (CORREGIDO)',
+        'endpoint': '/api/quiz/by-topic/$testTopicId',
+        'method': 'quiz',
         'expected': 'Lista de quizzes para el topic'
       },
       {
-        'name': 'Get Quiz by ID (Doc)',
-        'endpoint': '/00836d1c-dc92-4fb4-a21b-c04af5ef1569', // ID del JSON
-        'method': 'GET',
+        'name': '3. Quiz by ID (CORREGIDO)',
+        'endpoint': '/api/quiz/00836d1c-dc92-4fb4-a21b-c04af5ef1569',
+        'method': 'quiz',
         'expected': 'Datos del quiz específico'
       },
       {
-        'name': 'Get Questions for Quiz (Doc)',
-        'endpoint': '/questions/quiz/00836d1c-dc92-4fb4-a21b-c04af5ef1569',
-        'method': 'GET',
+        'name': '4. Quiz Questions (CORREGIDO)',
+        'endpoint': '/api/quiz/questions/quiz/00836d1c-dc92-4fb4-a21b-c04af5ef1569',
+        'method': 'quiz',
         'expected': 'Lista de preguntas del quiz'
       },
       {
-        'name': 'Get Question by ID (Doc)',
-        'endpoint': '/questions/ef325182-70d8-4c18-abd0-bf037762c652',
-        'method': 'GET',
+        'name': '5. Question by ID (NUEVO)',
+        'endpoint': '/api/quiz/questions/ef325182-70d8-4c18-abd0-bf037762c652',
+        'method': 'quiz',
         'expected': 'Datos de la pregunta específica'
       },
       {
-        'name': 'Get User Progress (Doc)',
-        'endpoint': '/user-progress/test-user-id',
-        'method': 'GET',
+        'name': '6. Quiz Results (CORREGIDO)',
+        'endpoint': '/api/quiz/results/session_example_001',
+        'method': 'quiz',
+        'expected': 'Resultados de la sesión'
+      },
+      {
+        'name': '7. User Progress (CORREGIDO)',
+        'endpoint': '/api/quiz/user-progress/test_user_123',
+        'method': 'quiz',
         'expected': 'Progreso del usuario'
-      },
-      
-      // Posibles variaciones de endpoints
-      {
-        'name': 'Topic Quizzes (Variation 1)',
-        'endpoint': '/topic/$testTopicId/quizzes',
-        'method': 'GET',
-        'expected': 'Quizzes del topic'
-      },
-      {
-        'name': 'Topic Quizzes (Variation 2)',  
-        'endpoint': '/topics/$testTopicId/quizzes',
-        'method': 'GET',
-        'expected': 'Quizzes del topic'
-      },
-      {
-        'name': 'Quizzes Root',
-        'endpoint': '/quizzes',
-        'method': 'GET',
-        'expected': 'Todos los quizzes'
-      },
-      {
-        'name': 'Quizzes by Topic Query',
-        'endpoint': '/quizzes?topicId=$testTopicId',
-        'method': 'GET',
-        'expected': 'Quizzes filtrados por topic'
-      },
-      {
-        'name': 'Health Check',
-        'endpoint': '/health',
-        'method': 'GET',
-        'expected': 'Estado del servicio'
-      },
-      {
-        'name': 'Root Path',
-        'endpoint': '/',
-        'method': 'GET',
-        'expected': 'Información del servicio'
-      },
-      {
-        'name': 'API Root',
-        'endpoint': '/api',
-        'method': 'GET',
-        'expected': 'API info'
-      },
-      {
-        'name': 'Quiz API Root',
-        'endpoint': '/api/quiz',
-        'method': 'GET',
-        'expected': 'Quiz API info'
       },
     ];
     
@@ -104,10 +65,10 @@ class QuizEndpointTester {
     
     for (int i = 0; i < endpointsToTest.length; i++) {
       final test = endpointsToTest[i];
-      print('\n🔍 [ENDPOINT TEST] Testing ${i + 1}/${endpointsToTest.length}: ${test['name']}');
-      print('🔍 [ENDPOINT TEST] ${test['method']} ${test['endpoint']}');
+      print('\n🔧 [QUIZ TEST] Testing ${test['name']}');
+      print('🔧 [QUIZ TEST] GET ${test['endpoint']}');
       
-      final result = await _testSingleEndpoint(
+      final result = await _testSingleCorrectedEndpoint(
         apiClient,
         test['endpoint'] as String,
         test['method'] as String,
@@ -115,21 +76,19 @@ class QuizEndpointTester {
       
       results[test['endpoint'] as String] = {
         'name': test['name'],
-        'method': test['method'],
         'expected': test['expected'],
         ...result,
       };
       
-      // Pequeña pausa para no saturar el servidor
+      // Pausa entre requests
       await Future.delayed(const Duration(milliseconds: 500));
     }
     
-    // Mostrar resumen de resultados
-    _showTestResults(results);
-    _generateRecommendations(results);
+    // Mostrar resumen
+    _showCorrectedTestResults(results);
   }
   
-  static Future<Map<String, dynamic>> _testSingleEndpoint(
+  static Future<Map<String, dynamic>> _testSingleCorrectedEndpoint(
     ApiClient apiClient,
     String endpoint,
     String method,
@@ -138,10 +97,13 @@ class QuizEndpointTester {
       final stopwatch = Stopwatch()..start();
       
       late dynamic response;
-      if (method == 'GET') {
+      
+      if (method == 'content') {
+        // Para el endpoint de topics, usar content service
+        response = await apiClient.getContent(endpoint);
+      } else if (method == 'quiz') {
+        // Para endpoints de quiz, usar quiz service
         response = await apiClient.getQuiz(endpoint);
-      } else if (method == 'POST') {
-        response = await apiClient.postQuiz(endpoint, data: {});
       }
       
       stopwatch.stop();
@@ -201,169 +163,67 @@ class QuizEndpointTester {
     return data.runtimeType.toString();
   }
   
-  static void _showTestResults(Map<String, Map<String, dynamic>> results) {
-    print('\n📊 [ENDPOINT TEST] ===============================================');
-    print('📊 [ENDPOINT TEST] TEST RESULTS SUMMARY');
-    print('📊 [ENDPOINT TEST] ===============================================');
+  static void _showCorrectedTestResults(Map<String, Map<String, dynamic>> results) {
+    print('\n📊 [QUIZ TEST] ===============================================');
+    print('📊 [QUIZ TEST] CORRECTED ENDPOINTS TEST RESULTS');
+    print('📊 [QUIZ TEST] ===============================================');
     
     final successful = <String>[];
     final failed = <String>[];
-    final notFound = <String>[];
     
     results.forEach((endpoint, result) {
       final status = result['status'] as String;
       final name = result['name'] as String;
       
       if (status == 'SUCCESS') {
-        successful.add('✅ $name: $endpoint (${result['statusCode']})');
-      } else if (result['errorType'] == 'NOT_FOUND') {
-        notFound.add('❌ $name: $endpoint (404 - Not Found)');
+        successful.add('✅ $name');
+        print('   ✅ $name: $endpoint (${result['statusCode']})');
       } else {
-        failed.add('⚠️ $name: $endpoint (${result['errorType']})');
+        failed.add('❌ $name');
+        print('   ❌ $name: $endpoint (${result['errorType']})');
       }
     });
     
-    print('\n🟢 SUCCESSFUL ENDPOINTS (${successful.length}):');
-    for (final success in successful) {
-      print('   $success');
-    }
+    print('\n📊 [QUIZ TEST] SUMMARY:');
+    print('📊 [QUIZ TEST] ✅ Success: ${successful.length}/${results.length}');
+    print('📊 [QUIZ TEST] ❌ Failed: ${failed.length}/${results.length}');
     
-    print('\n🔴 NOT FOUND ENDPOINTS (${notFound.length}):');
-    for (final notFound404 in notFound) {
-      print('   $notFound404');
-    }
-    
-    print('\n⚠️ OTHER ERRORS (${failed.length}):');
-    for (final fail in failed) {
-      print('   $fail');
-    }
-    
-    print('\n📊 [ENDPOINT TEST] ===============================================');
-  }
-  
-  static void _generateRecommendations(Map<String, Map<String, dynamic>> results) {
-    print('\n💡 [RECOMMENDATIONS] ===============================================');
-    print('💡 [RECOMMENDATIONS] WHAT TO DO NEXT');
-    print('💡 [RECOMMENDATIONS] ===============================================');
-    
-    final successful = results.values.where((r) => r['status'] == 'SUCCESS').toList();
-    final notFound = results.values.where((r) => r['errorType'] == 'NOT_FOUND').toList();
-    
-    if (successful.isEmpty) {
-      print('💡 [RECOMMENDATIONS] ❌ NO ENDPOINTS ARE WORKING!');
-      print('💡 [RECOMMENDATIONS]');
-      print('💡 [RECOMMENDATIONS] 1. CHECK SERVER STATUS:');
-      print('💡 [RECOMMENDATIONS]    - Is ${ApiEndpoints.quizServiceUrl} running?');
-      print('💡 [RECOMMENDATIONS]    - Try accessing it directly in a browser');
-      print('💡 [RECOMMENDATIONS]');
-      print('💡 [RECOMMENDATIONS] 2. VERIFY URL:');
-      print('💡 [RECOMMENDATIONS]    - Current: ${ApiEndpoints.quizServiceUrl}');
-      print('💡 [RECOMMENDATIONS]    - Is this the correct production URL?');
-      print('💡 [RECOMMENDATIONS]');
-      print('💡 [RECOMMENDATIONS] 3. CHECK RAILWAY DEPLOYMENT:');
-      print('💡 [RECOMMENDATIONS]    - Is the quiz-challenge-service deployed?');
-      print('💡 [RECOMMENDATIONS]    - Check Railway dashboard for errors');
-      
+    if (successful.length == results.length) {
+      print('🎉 [QUIZ TEST] ¡TODOS LOS ENDPOINTS FUNCIONAN!');
+    } else if (successful.length > 0) {
+      print('⚠️ [QUIZ TEST] Algunos endpoints funcionan, revisar los que fallan');
     } else {
-      print('💡 [RECOMMENDATIONS] ✅ ${successful.length} endpoints are working!');
-      print('💡 [RECOMMENDATIONS]');
-      print('💡 [RECOMMENDATIONS] WORKING ENDPOINTS:');
-      for (final working in successful) {
-        print('💡 [RECOMMENDATIONS]    - ${working['name']}');
-      }
-      
-      if (notFound.isNotEmpty) {
-        print('💡 [RECOMMENDATIONS]');
-        print('💡 [RECOMMENDATIONS] ❌ MISSING ENDPOINTS:');
-        for (final missing in notFound) {
-          print('💡 [RECOMMENDATIONS]    - ${missing['name']}');
-        }
-        print('💡 [RECOMMENDATIONS]');
-        print('💡 [RECOMMENDATIONS] ACTION NEEDED:');
-        print('💡 [RECOMMENDATIONS]    - Update your server to implement missing endpoints');
-        print('💡 [RECOMMENDATIONS]    - OR use alternative endpoints that work');
-      }
+      print('💥 [QUIZ TEST] NINGÚN ENDPOINT FUNCIONA - Revisar configuración');
     }
     
-    print('💡 [RECOMMENDATIONS] ===============================================');
+    print('📊 [QUIZ TEST] ===============================================');
   }
   
-  /// Test específico para endpoints que según la documentación deberían existir
-  static Future<void> testDocumentedEndpoints() async {
-    print('📋 [DOC TEST] Testing endpoints from API documentation...');
+  /// Test rápido solo para verificar la corrección
+  static Future<void> quickCorrectionTest() async {
+    print('⚡ [QUICK TEST] Verificando correcciones...');
     
     final apiClient = getIt<ApiClient>();
     
-    // Test con datos reales de la documentación
-    final documentedTests = [
-      {
-        'name': 'Get Quiz by ID (from doc)',
-        'endpoint': '/00836d1c-dc92-4fb4-a21b-c04af5ef1569',
-        'description': 'Should return quiz data'
-      },
-      {
-        'name': 'Get Questions for Quiz (from doc)',
-        'endpoint': '/questions/quiz/00836d1c-dc92-4fb4-a21b-c04af5ef1569',
-        'description': 'Should return array of questions'
-      },
-      {
-        'name': 'Get Question by ID (from doc)',
-        'endpoint': '/questions/ef325182-70d8-4c18-abd0-bf037762c652',
-        'description': 'Should return specific question data'
-      },
+    final tests = [
+      '/api/content/topics', // Este debe funcionar
+      '/api/quiz/by-topic/test_topic', // Este debería dar 404 pero llegar al servidor
     ];
     
-    for (final test in documentedTests) {
-      print('\n📋 [DOC TEST] Testing: ${test['name']}');
-      print('📋 [DOC TEST] Endpoint: ${test['endpoint']}');
-      print('📋 [DOC TEST] Expected: ${test['description']}');
-      
+    for (final endpoint in tests) {
       try {
-        final response = await apiClient.getQuiz(test['endpoint'] as String);
-        print('✅ [DOC TEST] SUCCESS - Status: ${response.statusCode}');
-        print('✅ [DOC TEST] Data type: ${response.data.runtimeType}');
-        
-        if (response.data is List) {
-          print('✅ [DOC TEST] Array with ${(response.data as List).length} items');
-        } else if (response.data is Map) {
-          final keys = (response.data as Map).keys.take(3).join(', ');
-          print('✅ [DOC TEST] Object with keys: $keys...');
+        dynamic response;
+        if (endpoint.contains('/api/content/')) {
+          response = await apiClient.getContent(endpoint);
+        } else {
+          response = await apiClient.getQuiz(endpoint);
         }
-        
+        print('✅ [QUICK TEST] $endpoint - FUNCIONA (${response.statusCode})');
       } catch (e) {
         if (e.toString().contains('404')) {
-          print('❌ [DOC TEST] NOT FOUND - Endpoint does not exist on server');
+          print('⚠️ [QUICK TEST] $endpoint - 404 (Endpoint existe pero recurso no encontrado)');
         } else {
-          print('❌ [DOC TEST] ERROR - $e');
-        }
-      }
-    }
-  }
-  
-  /// Comando rápido para probar solo los endpoints más importantes
-  static Future<void> quickTest() async {
-    print('⚡ [QUICK TEST] Testing most important endpoints...');
-    
-    final apiClient = getIt<ApiClient>();
-    final testTopicId = 'a90d3ede-42ae-4b81-a185-9336ea6e195b';
-    
-    final quickTests = [
-      '/by-topic/$testTopicId',
-      '/00836d1c-dc92-4fb4-a21b-c04af5ef1569',
-      '/questions/quiz/00836d1c-dc92-4fb4-a21b-c04af5ef1569',
-      '/quizzes',
-      '/',
-    ];
-    
-    for (final endpoint in quickTests) {
-      try {
-        final response = await apiClient.getQuiz(endpoint);
-        print('✅ [QUICK TEST] $endpoint - Works! (${response.statusCode})');
-      } catch (e) {
-        if (e.toString().contains('404')) {
-          print('❌ [QUICK TEST] $endpoint - Not Found (404)');
-        } else {
-          print('⚠️ [QUICK TEST] $endpoint - Error: ${e.toString().substring(0, 50)}...');
+          print('❌ [QUICK TEST] $endpoint - ERROR: ${e.toString().substring(0, 50)}...');
         }
       }
     }

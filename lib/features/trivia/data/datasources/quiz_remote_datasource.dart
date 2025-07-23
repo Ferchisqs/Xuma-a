@@ -1,7 +1,6 @@
 // lib/features/trivia/data/datasources/quiz_remote_datasource.dart - SOLO API
 import 'package:injectable/injectable.dart';
-import 'package:xuma_a/features/trivia/domain/entities/trivia_category_entity.dart';
-import 'package:xuma_a/features/trivia/domain/entities/trivia_question_entity.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../models/trivia_question_model.dart';
@@ -93,9 +92,9 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     try {
       print('🎯 [QUIZ API] === FETCHING QUIZZES BY TOPIC ===');
       print('🎯 [QUIZ API] Topic ID: $topicId');
-      print('🎯 [QUIZ API] Endpoint: /by-topic/$topicId');
+      print('🎯 [QUIZ API] Endpoint: /api/quiz/by-topic/$topicId');
       
-      final response = await apiClient.getQuiz('/by-topic/$topicId');
+      final response = await apiClient.getQuiz('/api/quiz/by-topic/$topicId');
       print('🎯 [QUIZ API] Response Status: ${response.statusCode}');
       print('🎯 [QUIZ API] Response Data: ${response.data}');
       
@@ -144,7 +143,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       print('🎯 [QUIZ API] Quiz ID: $quizId');
       print('🎯 [QUIZ API] Endpoint: /$quizId');
       
-      final response = await apiClient.getQuiz('/$quizId');
+      final response = await apiClient.getQuiz('/api/quiz/$quizId');
       print('🎯 [QUIZ API] Response Status: ${response.statusCode}');
       print('🎯 [QUIZ API] Response Data: ${response.data}');
       
@@ -171,7 +170,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       print('🎯 [QUIZ API] Quiz ID: $quizId');
       print('🎯 [QUIZ API] Endpoint: /questions/quiz/$quizId');
       
-      final response = await apiClient.getQuiz('/questions/quiz/$quizId');
+      final response = await apiClient.getQuiz('/api/quiz/$quizId');
       print('🎯 [QUIZ API] Response Status: ${response.statusCode}');
       print('🎯 [QUIZ API] Response Data Type: ${response.data.runtimeType}');
       
@@ -229,7 +228,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       print('🎯 [QUIZ API] Endpoint: /start');
       
       final response = await apiClient.postQuiz(
-        '/start',
+        '/api/quiz/start',
         data: {
           'quizId': quizId,
           'userId': userId,
@@ -267,7 +266,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       print('🎯 [QUIZ API] Endpoint: /submit-answer');
       
       await apiClient.postQuiz(
-        '/submit-answer',
+        '/api/quiz/submit-answer',
         data: {
           'sessionId': sessionId,
           'questionId': questionId,
@@ -297,7 +296,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       print('🎯 [QUIZ API] Endpoint: /results/$sessionId');
       
       final response = await apiClient.getQuiz(
-        '/results/$sessionId',
+        '/api/quiz/results/$sessionId',
         queryParameters: {
           'userId': userId,
         },
@@ -324,7 +323,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       print('🎯 [QUIZ API] User ID: $userId');
       print('🎯 [QUIZ API] Endpoint: /user-progress/$userId');
       
-      final response = await apiClient.getQuiz('/user-progress/$userId');
+      final response = await apiClient.getQuiz('/api/quiz/user-progress/$userId');
       
       print('🎯 [QUIZ API] Response Status: ${response.statusCode}');
       print('🎯 [QUIZ API] Response Data: ${response.data}');

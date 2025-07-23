@@ -18,7 +18,7 @@ class ApiEndpoints {
   static const String socialServiceUrl = 'https://social-service-production.up.railway.app';
 
   // 🆕 🧠 QUIZ SERVICE - Para quiz challenge system
-  static const String quizServiceUrl = 'https://quiz-challenge-service-production.up.railway.app';
+  static const String quizServiceUrl = 'https://quiz-challenge-service-production.up.railway.app/';
 
   // ==================== AUTENTICACIÓN ====================
   static const String register = '/api/auth/register';
@@ -154,25 +154,28 @@ class ApiEndpoints {
   // ==================== 🆕 🧠 QUIZ SERVICE ENDPOINTS ====================
   
   // Obtener quizzes por tema
-  static const String quizzesByTopic = '/by-topic/{topicId}';
+  static const String quizzesByTopic = '/api/quiz/by-topic/{topicId}';
   
   // Obtener quiz específico por ID
-  static const String quizById = '/{id}';
+  static const String quizById = '/api/quiz/{id}';
   
   // Iniciar nueva sesión de quiz
-  static const String startQuizSession = '/start';
+  static const String startQuizSession = '/api/quiz/start';
   
   // Enviar respuesta de pregunta
-  static const String submitQuizAnswer = '/submit-answer';
+  static const String submitQuizAnswer = '/api/quiz/submit-answer';
   
   // Obtener resultados de sesión
-  static const String quizSessionResults = '/results/{sessionId}';
+  static const String quizSessionResults = '/api/quiz/results/{sessionId}';
   
   // Obtener preguntas de un quiz
-  static const String quizQuestions = '/questions/quiz/{quizId}';
+  static const String quizQuestions = '/api/quiz/questions/quiz/{quizId}';
+
+    static const String questionById = '/api/quiz/questions/{questionId}';
+
   
   // Progreso del usuario en quizzes
-  static const String userQuizProgress = '/user-progress/{userId}';
+  static const String userQuizProgress = '/api/quiz/user-progress/{userId}';
   
   // ==================== NOTIFICACIONES ====================
   static const String notifications = '/api/notifications/{userId}';
@@ -352,10 +355,15 @@ class ApiEndpoints {
     return quizQuestions.replaceAll('{quizId}', quizId);
   }
   
+  // 🆕 NUEVO MÉTODO PARA PREGUNTA POR ID
+  static String getQuestionById(String questionId) {
+    return questionById.replaceAll('{questionId}', questionId);
+  }
+  
   static String getUserQuizProgress(String userId) {
     return userQuizProgress.replaceAll('{userId}', userId);
   }
-  
+
   // ==================== 🆕 MÉTODOS HELPER PARA NOTIFICACIONES ====================
   
   static String getNotifications(String userId) {
@@ -565,19 +573,21 @@ class ApiEndpoints {
   }
   
   // 🆕 🧠 Validar si un endpoint pertenece a quiz service
-  static bool isQuizEndpoint(String endpoint) {
-    return endpoint.contains('/by-topic/') ||
-           endpoint.contains('/start') ||
-           endpoint.contains('/submit-answer') ||
-           endpoint.contains('/results/') ||
-           endpoint.contains('/questions/quiz/') ||
-           endpoint.contains('/user-progress/') ||
+   static bool isQuizEndpoint(String endpoint) {
+    return endpoint.contains('/api/quiz/by-topic/') ||
+           endpoint.contains('/api/quiz/start') ||
+           endpoint.contains('/api/quiz/submit-answer') ||
+           endpoint.contains('/api/quiz/results/') ||
+           endpoint.contains('/api/quiz/questions/quiz/') ||
+           endpoint.contains('/api/quiz/questions/') ||
+           endpoint.contains('/api/quiz/user-progress/') ||
+           endpoint.startsWith('/api/quiz/by-topic/') ||
+           endpoint.startsWith('/api/quiz/questions/quiz/') ||
+           endpoint.startsWith('/api/quiz/questions/') ||
+           endpoint.startsWith('/api/quiz/results/') ||
+           endpoint.startsWith('/api/quiz/user-progress/') ||
            endpoint == startQuizSession ||
-           endpoint == submitQuizAnswer ||
-           endpoint.startsWith('/by-topic/') ||
-           endpoint.startsWith('/questions/quiz/') ||
-           endpoint.startsWith('/results/') ||
-           endpoint.startsWith('/user-progress/');
+           endpoint == submitQuizAnswer;
   }
   
   // ==================== CONFIGURACIÓN ====================
