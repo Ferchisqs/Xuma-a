@@ -177,6 +177,8 @@ import '../features/trivia/domain/usecases/get_quiz_questions_usecase.dart'
     as _i806;
 import '../features/trivia/domain/usecases/get_quiz_results_usecase.dart'
     as _i907;
+import '../features/trivia/domain/usecases/get_quizzes_by_topic_usecase.dart'
+    as _i865;
 import '../features/trivia/domain/usecases/get_trivia_categories_usecase.dart'
     as _i828;
 import '../features/trivia/domain/usecases/get_trivia_questions_usecase.dart'
@@ -334,8 +336,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i65.GetUserProfileUseCase(gh<_i386.ProfileRepository>()));
     gh.lazySingleton<_i186.UpdateUserAvatarUseCase>(
         () => _i186.UpdateUserAvatarUseCase(gh<_i386.ProfileRepository>()));
-    gh.factory<_i993.TriviaCubit>(() => _i993.TriviaCubit(
-        getTriviaCategoriesUseCase: gh<_i828.GetTriviaCategoriesUseCase>()));
     gh.factory<_i807.MediaRemoteDataSource>(
         () => _i807.MediaRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i252.ChallengesRemoteDataSource>(
@@ -381,6 +381,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i112.StartQuizSessionUseCase(gh<_i992.QuizRepository>()));
     gh.factory<_i591.SubmitQuizAnswerUseCase>(
         () => _i591.SubmitQuizAnswerUseCase(gh<_i992.QuizRepository>()));
+    gh.factory<_i865.GetQuizzesByTopicUseCase>(
+        () => _i865.GetQuizzesByTopicUseCase(gh<_i992.QuizRepository>()));
     gh.factory<_i22.GetRandomTipUseCase>(
         () => _i22.GetRandomTipUseCase(gh<_i406.TipsRepository>()));
     gh.factory<_i22.GetRandomTipWithoutParamsUseCase>(() =>
@@ -438,6 +440,10 @@ extension GetItInjectableX on _i174.GetIt {
           registerUseCase: gh<_i819.RegisterUseCase>(),
           authService: gh<_i88.AuthService>(),
           profileService: gh<_i92.ProfileService>(),
+        ));
+    gh.factory<_i993.TriviaCubit>(() => _i993.TriviaCubit(
+          getTriviaCategoriesUseCase: gh<_i828.GetTriviaCategoriesUseCase>(),
+          getQuizzesByTopicUseCase: gh<_i865.GetQuizzesByTopicUseCase>(),
         ));
     gh.factory<_i522.CompleteChallengeUseCase>(
         () => _i522.CompleteChallengeUseCase(gh<_i959.ChallengesRepository>()));
