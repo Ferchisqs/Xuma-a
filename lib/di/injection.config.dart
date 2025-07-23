@@ -173,6 +173,10 @@ import '../features/trivia/data/repositories/trivia_repository_impl.dart'
     as _i121;
 import '../features/trivia/domain/repositories/quiz_repository.dart' as _i992;
 import '../features/trivia/domain/repositories/trivia_repository.dart' as _i416;
+import '../features/trivia/domain/usecases/get_question_by_id_usecase.dart'
+    as _i852;
+import '../features/trivia/domain/usecases/get_quiz_by_id_usecase.dart'
+    as _i714;
 import '../features/trivia/domain/usecases/get_quiz_questions_usecase.dart'
     as _i806;
 import '../features/trivia/domain/usecases/get_quiz_results_usecase.dart'
@@ -183,6 +187,8 @@ import '../features/trivia/domain/usecases/get_trivia_categories_usecase.dart'
     as _i828;
 import '../features/trivia/domain/usecases/get_trivia_questions_usecase.dart'
     as _i9;
+import '../features/trivia/domain/usecases/get_user_quiz_progress_usecase.dart'
+    as _i462;
 import '../features/trivia/domain/usecases/get_user_trivia_history_usecase.dart'
     as _i919;
 import '../features/trivia/domain/usecases/start_quiz_session_usecase.dart'
@@ -383,6 +389,12 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i591.SubmitQuizAnswerUseCase(gh<_i992.QuizRepository>()));
     gh.factory<_i865.GetQuizzesByTopicUseCase>(
         () => _i865.GetQuizzesByTopicUseCase(gh<_i992.QuizRepository>()));
+    gh.factory<_i852.GetQuestionByIdUseCase>(
+        () => _i852.GetQuestionByIdUseCase(gh<_i992.QuizRepository>()));
+    gh.factory<_i714.GetQuizByIdUseCase>(
+        () => _i714.GetQuizByIdUseCase(gh<_i992.QuizRepository>()));
+    gh.factory<_i462.GetUserQuizProgressUseCase>(
+        () => _i462.GetUserQuizProgressUseCase(gh<_i992.QuizRepository>()));
     gh.factory<_i22.GetRandomTipUseCase>(
         () => _i22.GetRandomTipUseCase(gh<_i406.TipsRepository>()));
     gh.factory<_i22.GetRandomTipWithoutParamsUseCase>(() =>
@@ -435,15 +447,17 @@ extension GetItInjectableX on _i174.GetIt {
           localDataSource: gh<_i422.ChallengesLocalDataSource>(),
           networkInfo: gh<_i6.NetworkInfo>(),
         ));
+    gh.factory<_i993.TriviaCubit>(() => _i993.TriviaCubit(
+          getTriviaCategoriesUseCase: gh<_i828.GetTriviaCategoriesUseCase>(),
+          getQuizzesByTopicUseCase: gh<_i865.GetQuizzesByTopicUseCase>(),
+          getQuizByIdUseCase: gh<_i714.GetQuizByIdUseCase>(),
+          getQuizQuestionsUseCase: gh<_i806.GetQuizQuestionsUseCase>(),
+        ));
     gh.factory<_i70.AuthCubit>(() => _i70.AuthCubit(
           loginUseCase: gh<_i406.LoginUseCase>(),
           registerUseCase: gh<_i819.RegisterUseCase>(),
           authService: gh<_i88.AuthService>(),
           profileService: gh<_i92.ProfileService>(),
-        ));
-    gh.factory<_i993.TriviaCubit>(() => _i993.TriviaCubit(
-          getTriviaCategoriesUseCase: gh<_i828.GetTriviaCategoriesUseCase>(),
-          getQuizzesByTopicUseCase: gh<_i865.GetQuizzesByTopicUseCase>(),
         ));
     gh.factory<_i522.CompleteChallengeUseCase>(
         () => _i522.CompleteChallengeUseCase(gh<_i959.ChallengesRepository>()));

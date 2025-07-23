@@ -1,4 +1,4 @@
-// lib/features/trivia/data/datasources/quiz_remote_datasource.dart - SOLO API
+// lib/features/trivia/data/datasources/quiz_remote_datasource.dart - FLUJO COMPLETO CORREGIDO
 import 'package:injectable/injectable.dart';
 
 import '../../../../core/network/api_client.dart';
@@ -8,14 +8,32 @@ import '../models/quiz_session_model.dart';
 import '../../../learning/data/models/topic_model.dart';
 
 abstract class QuizRemoteDataSource {
+  // FLUJO COMPLETO DEL QUIZ:
+  // 1. /api/content/topics → 2. /api/quiz/by-topic/{topicId} → 3. /api/quiz/{id} → 4. /api/quiz/questions/quiz/{quizId}
+  
+  // 1. Obtener topics (este ya funciona)
   Future<List<TopicModel>> getTopics();
+  
+  // 2. Obtener quizzes por topic (NUEVO - CORREGIDO)
   Future<List<Map<String, dynamic>>> getQuizzesByTopic(String topicId);
+  
+  // 3. Obtener quiz específico por ID (NUEVO - CORREGIDO) 
   Future<Map<String, dynamic>> getQuizById(String quizId);
+  
+  // 4. Obtener preguntas de un quiz (CORREGIDO)
   Future<List<TriviaQuestionModel>> getQuizQuestions(String quizId);
+  
+  // 5. Obtener pregunta específica por ID (NUEVO)
+  Future<Map<String, dynamic>> getQuestionById(String questionId);
+  
+  // FUNCIONALIDADES DE SESIÓN:
+  // 6. Iniciar sesión de quiz (YA EXISTÍA)
   Future<QuizSessionModel> startQuizSession({
     required String quizId,
     required String userId,
   });
+  
+  // 7. Enviar respuesta (YA EXISTÍA)
   Future<void> submitAnswer({
     required String sessionId,
     required String questionId,
@@ -24,10 +42,14 @@ abstract class QuizRemoteDataSource {
     required int timeTakenSeconds,
     required int answerConfidence,
   });
+  
+  // 8. Obtener resultados (YA EXISTÍA)
   Future<Map<String, dynamic>> getQuizResults({
     required String sessionId,
     required String userId,
   });
+  
+  // 9. Obtener progreso del usuario (NUEVO)
   Future<Map<String, dynamic>> getUserProgress(String userId);
 }
 
@@ -37,10 +59,11 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
 
   QuizRemoteDataSourceImpl(this.apiClient);
 
+  // ==================== 1. TOPICS (YA FUNCIONA) ====================
   @override
   Future<List<TopicModel>> getTopics() async {
     try {
-      print('🎯 [QUIZ API] === FETCHING TOPICS ===');
+      print('🎯 [QUIZ API] === STEP 1: FETCHING TOPICS ===');
       print('🎯 [QUIZ API] Endpoint: /api/content/topics');
       
       final response = await apiClient.getContent('/api/content/topics');
@@ -65,11 +88,10 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
           
           final topic = TopicModel.fromJson(rawTopic);
           topics.add(topic);
-          print('✅ [QUIZ API] Parsed topic ${i + 1}: "${topic.title}"');
+          print('✅ [QUIZ API] Parsed topic ${i + 1}: "${topic.title}" (ID: ${topic.id})');
           
         } catch (e) {
           print('❌ [QUIZ API] Failed to parse topic $i: $e');
-          // Skip invalid topics instead of creating fallbacks
           continue;
         }
       }
@@ -78,7 +100,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
         throw ServerException('No valid topics could be parsed from API response');
       }
       
-      print('🎉 [QUIZ API] Successfully processed: ${topics.length} topics');
+      print('🎉 [QUIZ API] STEP 1 COMPLETED: ${topics.length} topics');
       return topics;
       
     } catch (e) {
@@ -87,16 +109,17 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
+  // ==================== 2. QUIZZES BY TOPIC (NUEVO - CORREGIDO) ====================
   @override
   Future<List<Map<String, dynamic>>> getQuizzesByTopic(String topicId) async {
     try {
-      print('🎯 [QUIZ API] === FETCHING QUIZZES BY TOPIC ===');
+      print('🎯 [QUIZ API] === STEP 2: FETCHING QUIZZES BY TOPIC ===');
       print('🎯 [QUIZ API] Topic ID: $topicId');
       print('🎯 [QUIZ API] Endpoint: /api/quiz/by-topic/$topicId');
       
       final response = await apiClient.getQuiz('/api/quiz/by-topic/$topicId');
       print('🎯 [QUIZ API] Response Status: ${response.statusCode}');
-      print('🎯 [QUIZ API] Response Data: ${response.data}');
+      print('🎯 [QUIZ API] Response Data Type: ${response.data.runtimeType}');
       
       List<dynamic> quizzesJson = _extractListFromResponse(response.data, 'quizzes');
       print('🔍 [QUIZ API] Found ${quizzesJson.length} quizzes in response');
@@ -113,7 +136,8 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
           if (rawQuiz is Map<String, dynamic>) {
             quizzes.add(rawQuiz);
             final title = rawQuiz['title'] ?? rawQuiz['name'] ?? 'Quiz ${i + 1}';
-            print('✅ [QUIZ API] Processed quiz ${i + 1}: "$title" (ID: ${rawQuiz['id']})');
+            final id = rawQuiz['id'] ?? 'quiz_${topicId}_$i';
+            print('✅ [QUIZ API] Processed quiz ${i + 1}: "$title" (ID: $id)');
           } else {
             print('⚠️ [QUIZ API] Quiz $i is not a Map: ${rawQuiz.runtimeType}');
           }
@@ -127,7 +151,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
         throw ServerException('No valid quizzes could be processed for topic: $topicId');
       }
       
-      print('🎉 [QUIZ API] Successfully processed: ${quizzes.length} quizzes');
+      print('🎉 [QUIZ API] STEP 2 COMPLETED: ${quizzes.length} quizzes for topic $topicId');
       return quizzes;
       
     } catch (e) {
@@ -136,16 +160,17 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
+  // ==================== 3. QUIZ BY ID (NUEVO - CORREGIDO) ====================
   @override
   Future<Map<String, dynamic>> getQuizById(String quizId) async {
     try {
-      print('🎯 [QUIZ API] === FETCHING QUIZ BY ID ===');
+      print('🎯 [QUIZ API] === STEP 3: FETCHING QUIZ BY ID ===');
       print('🎯 [QUIZ API] Quiz ID: $quizId');
-      print('🎯 [QUIZ API] Endpoint: /$quizId');
+      print('🎯 [QUIZ API] Endpoint: /api/quiz/$quizId');
       
-      final response = await apiClient.getQuiz('/api/quiz/$quizId');
+      final response = await apiClient.getQuiz('/$quizId');
       print('🎯 [QUIZ API] Response Status: ${response.statusCode}');
-      print('🎯 [QUIZ API] Response Data: ${response.data}');
+      print('🎯 [QUIZ API] Response Data Type: ${response.data.runtimeType}');
       
       Map<String, dynamic> quizData = _extractMapFromResponse(response.data);
       
@@ -154,7 +179,8 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
         quizData['id'] = quizId;
       }
       
-      print('✅ [QUIZ API] Successfully fetched quiz: ${quizData['title'] ?? quizData['name'] ?? quizId}');
+      final title = quizData['title'] ?? quizData['name'] ?? 'Quiz';
+      print('✅ [QUIZ API] STEP 3 COMPLETED: Quiz "$title" (ID: $quizId)');
       return quizData;
       
     } catch (e) {
@@ -163,14 +189,15 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
+  // ==================== 4. QUIZ QUESTIONS (CORREGIDO) ====================
   @override
   Future<List<TriviaQuestionModel>> getQuizQuestions(String quizId) async {
     try {
-      print('🎯 [QUIZ API] === FETCHING QUIZ QUESTIONS ===');
+      print('🎯 [QUIZ API] === STEP 4: FETCHING QUIZ QUESTIONS ===');
       print('🎯 [QUIZ API] Quiz ID: $quizId');
-      print('🎯 [QUIZ API] Endpoint: /questions/quiz/$quizId');
+      print('🎯 [QUIZ API] Endpoint: /api/quiz/questions/quiz/$quizId');
       
-      final response = await apiClient.getQuiz('/api/quiz/$quizId');
+      final response = await apiClient.getQuiz('/questions/quiz/$quizId');
       print('🎯 [QUIZ API] Response Status: ${response.statusCode}');
       print('🎯 [QUIZ API] Response Data Type: ${response.data.runtimeType}');
       
@@ -208,7 +235,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
         throw ServerException('No valid questions could be parsed for quiz: $quizId');
       }
       
-      print('🎉 [QUIZ API] Successfully processed: ${questions.length} questions');
+      print('🎉 [QUIZ API] STEP 4 COMPLETED: ${questions.length} questions for quiz $quizId');
       return questions;
       
     } catch (e) {
@@ -217,6 +244,33 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
+  // ==================== 5. QUESTION BY ID (NUEVO) ====================
+  @override
+  Future<Map<String, dynamic>> getQuestionById(String questionId) async {
+    try {
+      print('🎯 [QUIZ API] === FETCHING QUESTION BY ID ===');
+      print('🎯 [QUIZ API] Question ID: $questionId');
+      print('🎯 [QUIZ API] Endpoint: /api/quiz/questions/$questionId');
+      
+      final response = await apiClient.getQuiz('/questions/$questionId');
+      print('🎯 [QUIZ API] Response Status: ${response.statusCode}');
+      
+      Map<String, dynamic> questionData = _extractMapFromResponse(response.data);
+      
+      if (!questionData.containsKey('id')) {
+        questionData['id'] = questionId;
+      }
+      
+      print('✅ [QUIZ API] Question by ID fetched successfully');
+      return questionData;
+      
+    } catch (e) {
+      print('❌ [QUIZ API] Error fetching question by ID: $e');
+      throw ServerException('Failed to fetch question $questionId: ${e.toString()}');
+    }
+  }
+
+  // ==================== 6. START QUIZ SESSION (YA EXISTÍA - VERIFICADO) ====================
   @override
   Future<QuizSessionModel> startQuizSession({
     required String quizId,
@@ -225,7 +279,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     try {
       print('🎯 [QUIZ API] === STARTING QUIZ SESSION ===');
       print('🎯 [QUIZ API] Quiz ID: $quizId, User ID: $userId');
-      print('🎯 [QUIZ API] Endpoint: /start');
+      print('🎯 [QUIZ API] Endpoint: /api/quiz/start');
       
       final response = await apiClient.postQuiz(
         '/api/quiz/start',
@@ -250,6 +304,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
+  // ==================== 7. SUBMIT ANSWER (YA EXISTÍA - VERIFICADO) ====================
   @override
   Future<void> submitAnswer({
     required String sessionId,
@@ -263,7 +318,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       print('🎯 [QUIZ API] === SUBMITTING ANSWER ===');
       print('🎯 [QUIZ API] Session: $sessionId, Question: $questionId');
       print('🎯 [QUIZ API] Selected Option: $selectedOptionId');
-      print('🎯 [QUIZ API] Endpoint: /submit-answer');
+      print('🎯 [QUIZ API] Endpoint: /api/quiz/submit-answer');
       
       await apiClient.postQuiz(
         '/api/quiz/submit-answer',
@@ -285,6 +340,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
+  // ==================== 8. GET QUIZ RESULTS (YA EXISTÍA - VERIFICADO) ====================
   @override
   Future<Map<String, dynamic>> getQuizResults({
     required String sessionId,
@@ -293,7 +349,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     try {
       print('🎯 [QUIZ API] === FETCHING QUIZ RESULTS ===');
       print('🎯 [QUIZ API] Session ID: $sessionId, User ID: $userId');
-      print('🎯 [QUIZ API] Endpoint: /results/$sessionId');
+      print('🎯 [QUIZ API] Endpoint: /api/quiz/results/$sessionId');
       
       final response = await apiClient.getQuiz(
         '/api/quiz/results/$sessionId',
@@ -316,12 +372,13 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
+  // ==================== 9. GET USER PROGRESS (NUEVO) ====================
   @override
   Future<Map<String, dynamic>> getUserProgress(String userId) async {
     try {
       print('🎯 [QUIZ API] === FETCHING USER PROGRESS ===');
       print('🎯 [QUIZ API] User ID: $userId');
-      print('🎯 [QUIZ API] Endpoint: /user-progress/$userId');
+      print('🎯 [QUIZ API] Endpoint: /api/quiz/user-progress/$userId');
       
       final response = await apiClient.getQuiz('/api/quiz/user-progress/$userId');
       
@@ -339,7 +396,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
-  // ==================== HELPER METHODS - ONLY FOR DATA EXTRACTION ====================
+  // ==================== HELPER METHODS ====================
 
   List<dynamic> _extractListFromResponse(dynamic responseData, String preferredKey) {
     if (responseData is List) {
@@ -407,7 +464,8 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       for (int i = 0; i < options.length; i++) {
         if (options[i] is Map<String, dynamic>) {
           final option = options[i] as Map<String, dynamic>;
-          final optionText = option['optionText']?.toString() ?? 'Option ${i + 1}';
+          final optionText = option['optionText']?.toString() ?? 
+                           option['text']?.toString() ?? 'Option ${i + 1}';
           optionTexts.add(optionText);
           
           if (option['isCorrect'] == true) {

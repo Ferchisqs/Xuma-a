@@ -1,4 +1,4 @@
-// lib/features/trivia/presentation/pages/trivia_quiz_selection_page.dart
+// lib/features/trivia/presentation/pages/trivia_quiz_selection_page.dart - ACTUALIZADA
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -6,7 +6,7 @@ import '../../../../core/constants/app_text_styles.dart' as core_styles;
 import '../../../../di/injection.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
-import '../cubit/quiz_session_cubit.dart';
+import '../cubit/trivia_cubit.dart';
 import 'trivia_quiz_game_page.dart';
 
 class TriviaQuizSelectionPage extends StatelessWidget {
@@ -22,7 +22,7 @@ class TriviaQuizSelectionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => getIt<QuizSessionCubit>(),
+      create: (_) => getIt<TriviaCubit>()..loadQuizzesByTopic(topicId),
       child: _TriviaQuizSelectionContent(
         topicId: topicId,
         categoryTitle: categoryTitle,
@@ -49,8 +49,7 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
   @override
   void initState() {
     super.initState();
-    // TODO: Aquí llamarías al método para obtener quizzes por topic
-    // context.read<QuizSessionCubit>().getQuizzesByTopic(widget.topicId);
+    print('🎯 [QUIZ SELECTION] Initializing for topic: ${widget.topicId}');
   }
 
   @override
@@ -72,10 +71,21 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () {
+              context.read<TriviaCubit>().debugCurrentState();
+              context.read<TriviaCubit>().printFlowStatus();
+            },
+            icon: const Icon(Icons.info_outline, color: Colors.white),
+          ),
+        ],
       ),
-      body: BlocBuilder<QuizSessionCubit, QuizSessionState>(
+      body: BlocBuilder<TriviaCubit, TriviaState>(
         builder: (context, state) {
-          if (state is QuizSessionLoading) {
+          print('🔍 [QUIZ SELECTION] Current state: ${state.runtimeType}');
+          
+          if (state is TriviaQuizzesLoading) {
             return const Center(
               child: EcoLoadingWidget(
                 message: 'Cargando quizzes...',
@@ -83,27 +93,60 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
             );
           }
           
-          if (state is QuizSessionError) {
+          if (state is TriviaError) {
             return Center(
               child: EcoErrorWidget(
                 message: state.message,
                 onRetry: () {
-                  // TODO: Retry obtener quizzes
+                  print('🔄 [QUIZ SELECTION] Retrying load quizzes for topic: ${widget.topicId}');
+                  context.read<TriviaCubit>().loadQuizzesByTopic(widget.topicId);
                 },
               ),
             );
           }
           
-          // Por ahora mostrar quizzes de ejemplo
-          return _buildQuizzesList(context);
+          if (state is TriviaQuizzesLoaded) {
+            return _buildQuizzesList(context, state.quizzes);
+          }
+          
+          // Estado inicial o desconocido
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.quiz_rounded,
+                  size: 64,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Preparando quizzes...',
+                  style: core_styles.AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    context.read<TriviaCubit>().loadQuizzesByTopic(widget.topicId);
+                  },
+                  child: const Text('Cargar Quizzes'),
+                ),
+              ],
+            ),
+          );
         },
       ),
     );
   }
 
-  Widget _buildQuizzesList(BuildContext context) {
-    // Quizzes de ejemplo basados en el topicId
-    final exampleQuizzes = _getExampleQuizzes();
+  Widget _buildQuizzesList(BuildContext context, List<Map<String, dynamic>> quizzes) {
+    print('🎯 [QUIZ SELECTION] Building list with ${quizzes.length} quizzes');
+    
+    if (quizzes.isEmpty) {
+      return _buildEmptyState(context);
+    }
     
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -111,48 +154,12 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header informativo
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.quiz_rounded,
-                  color: Colors.white,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '¡Desafía tus conocimientos!',
-                        style: core_styles.AppTextStyles.bodyMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Selecciona un quiz para comenzar',
-                        style: core_styles.AppTextStyles.bodySmall.copyWith(
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildInfoHeader(),
           
           const SizedBox(height: 24),
           
           Text(
-            'Quizzes Disponibles',
+            'Quizzes Disponibles (${quizzes.length})',
             style: core_styles.AppTextStyles.h4.copyWith(
               color: AppColors.primary,
               fontWeight: FontWeight.bold,
@@ -164,9 +171,9 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
           // Lista de quizzes
           Expanded(
             child: ListView.builder(
-              itemCount: exampleQuizzes.length,
+              itemCount: quizzes.length,
               itemBuilder: (context, index) {
-                final quiz = exampleQuizzes[index];
+                final quiz = quizzes[index];
                 return _buildQuizCard(context, quiz, index);
               },
             ),
@@ -176,7 +183,67 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
     );
   }
 
+  Widget _buildInfoHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.quiz_rounded,
+            color: Colors.white,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '¡Desafía tus conocimientos!',
+                  style: core_styles.AppTextStyles.bodyMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Topic: ${widget.categoryTitle}',
+                  style: core_styles.AppTextStyles.bodySmall.copyWith(
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildQuizCard(BuildContext context, Map<String, dynamic> quiz, int index) {
+    // Extraer datos del quiz con fallbacks
+    final quizId = quiz['id']?.toString() ?? 'quiz_${widget.topicId}_$index';
+    final title = quiz['title']?.toString() ?? 
+                  quiz['name']?.toString() ?? 
+                  'Quiz ${index + 1}';
+    final description = quiz['description']?.toString() ?? 
+                       'Pon a prueba tus conocimientos sobre ${widget.categoryTitle}';
+    final questionsCount = _extractInt(quiz['questionsCount']) ?? 
+                          _extractInt(quiz['questions']) ?? 
+                          _extractInt(quiz['totalQuestions']) ?? 
+                          10;
+    final duration = _extractInt(quiz['duration']) ?? 
+                    _extractInt(quiz['estimatedTime']) ?? 
+                    5;
+    final points = _extractInt(quiz['points']) ?? 
+                  _extractInt(quiz['totalPoints']) ?? 
+                  questionsCount * 5;
+
+    print('🔍 [QUIZ SELECTION] Quiz $index: ID=$quizId, Title=$title, Questions=$questionsCount');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -210,35 +277,45 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
           ),
         ),
         title: Text(
-          quiz['title'],
+          title,
           style: core_styles.AppTextStyles.bodyLarge.copyWith(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
           ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
             Text(
-              quiz['description'],
+              description,
               style: core_styles.AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 8),
             Row(
               children: [
                 _buildInfoChip(
-                  '${quiz['questions']} preguntas',
+                  '$questionsCount preguntas',
                   Icons.quiz,
                   AppColors.info,
                 ),
                 const SizedBox(width: 8),
                 _buildInfoChip(
-                  '${quiz['duration']} min',
+                  '${duration} min',
                   Icons.timer,
                   AppColors.warning,
+                ),
+                const SizedBox(width: 8),
+                _buildInfoChip(
+                  '+$points pts',
+                  Icons.eco,
+                  AppColors.success,
                 ),
               ],
             ),
@@ -259,11 +336,12 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
           ),
         ),
         onTap: () {
+          print('🎯 [QUIZ SELECTION] Starting quiz: $quizId');
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => TriviaQuizGamePage(
-                quizId: quiz['id'],
+                quizId: quizId,
                 topicId: widget.topicId,
               ),
             ),
@@ -301,53 +379,58 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
     );
   }
 
-  List<Map<String, dynamic>> _getExampleQuizzes() {
-    // Generar quizzes de ejemplo basados en el topicId
-    switch (widget.topicId) {
-      case 'trivia_cat_1': // Composta
-        return [
-          {
-            'id': 'quiz_composta_basico',
-            'title': 'Composta Básica',
-            'description': 'Aprende los fundamentos del compostaje casero',
-            'questions': 10,
-            'duration': 5,
-          },
-          {
-            'id': 'quiz_composta_avanzado',
-            'title': 'Composta Avanzada',
-            'description': 'Técnicas avanzadas y solución de problemas',
-            'questions': 15,
-            'duration': 8,
-          },
-        ];
-      case 'trivia_cat_2': // Reciclaje
-        return [
-          {
-            'id': 'quiz_reciclaje_basico',
-            'title': 'Reciclaje Básico',
-            'description': 'Clasificación y separación de residuos',
-            'questions': 12,
-            'duration': 6,
-          },
-          {
-            'id': 'quiz_reciclaje_materiales',
-            'title': 'Materiales Reciclables',
-            'description': 'Identifica qué se puede reciclar',
-            'questions': 8,
-            'duration': 4,
-          },
-        ];
-      default:
-        return [
-          {
-            'id': 'quiz_${widget.topicId}_general',
-            'title': 'Quiz de ${widget.categoryTitle}',
-            'description': 'Pon a prueba tus conocimientos',
-            'questions': 10,
-            'duration': 5,
-          },
-        ];
-    }
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.quiz_outlined,
+              size: 80,
+              color: AppColors.textHint,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No hay quizzes disponibles',
+              style: core_styles.AppTextStyles.h4.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'No se encontraron quizzes para este tema. Intenta más tarde o selecciona otro tema.',
+              style: core_styles.AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textHint,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                context.read<TriviaCubit>().loadQuizzesByTopic(widget.topicId);
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper para extraer integers de forma segura
+  int? _extractInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
   }
 }
