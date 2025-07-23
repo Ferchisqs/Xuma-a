@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:xuma_a/features/trivia/presentation/pages/trivia_quiz_selection_page.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../di/injection.dart';
@@ -273,129 +274,132 @@ class _CategoryDetailContent extends StatelessWidget {
   }
 
   Widget _buildTriviaCard(BuildContext context, Map<String, dynamic> trivia, int index) {
-    return GestureDetector(
-      onTap: () {
-        // Navegar al juego de trivia
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TriviaGamePage(category: category),
+  return GestureDetector(
+    onTap: () {
+      // 🆕 CAMBIO: Navegar a selección de quizzes usando topicId del backend
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TriviaQuizSelectionPage(
+            topicId: category.id, // Este será el topicId del backend
+            categoryTitle: category.title,
           ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header con imagen
-            Expanded(
-              flex: 3,
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
-                  gradient: _getCategoryGradient(),
-                ),
-                child: Stack(
-                  children: [
-                    // Overlay
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(16),
-                          topRight: Radius.circular(16),
-                        ),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withOpacity(0.1),
-                            Colors.black.withOpacity(0.3),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // Ícono de compost
-                    const Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Icon(
-                        Icons.compost,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                    // Título centrado
-                    Center(
-                      child: Text(
-                        trivia['title'],
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
-            // Información
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${trivia['questions']} preguntas',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const Spacer(),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.eco,
-                          color: AppColors.primary,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${trivia['points']} pts',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+      );
+    },
+    child: Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-    );
-  }
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header con imagen
+          Expanded(
+            flex: 3,
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+                gradient: _getCategoryGradient(),
+              ),
+              child: Stack(
+                children: [
+                  // Overlay
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.1),
+                          Colors.black.withOpacity(0.3),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Ícono de quiz
+                  const Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Icon(
+                      Icons.quiz_rounded, // 🔧 CAMBIO: Icono más apropiado para quiz
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  // Título centrado
+                  Center(
+                    child: Text(
+                      trivia['title'],
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Información
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${trivia['questions']} preguntas',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.eco,
+                        color: AppColors.primary,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${trivia['points']} pts',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
   List<Map<String, dynamic>> _generateTrivias() {
     switch (category.id) {
