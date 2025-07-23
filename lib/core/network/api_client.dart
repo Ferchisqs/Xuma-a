@@ -394,21 +394,34 @@ class ApiClient {
   }
 
   // 🆕 MÉTODOS ESPECÍFICOS PARA QUIZ SERVICE
+  // 🆕 MÉTODOS ESPECÍFICOS PARA QUIZ SERVICE - CORREGIDOS
   Future<Response> getQuiz(
     String endpoint, {
     Map<String, dynamic>? queryParameters,
     bool requireAuth = true,
   }) async {
-    print('🧠 [API CLIENT] Quiz request: $endpoint');
+    print('🧠 [API CLIENT] Quiz GET request: $endpoint');
+    print('🧠 [API CLIENT] Full URL: ${ApiEndpoints.quizServiceUrl}$endpoint');
     
-    return await get(
-      endpoint,
-      queryParameters: queryParameters,
-      options: Options(
-        extra: {'baseUrl': ApiEndpoints.quizServiceUrl},
-        headers: requireAuth ? null : {'Authorization': null},
-      ),
-    );
+    try {
+      final response = await get(
+        endpoint,
+        queryParameters: queryParameters,
+        options: Options(
+          extra: {'baseUrl': ApiEndpoints.quizServiceUrl},
+          headers: requireAuth ? ApiEndpoints.quizHeaders : {
+            ...ApiEndpoints.quizHeaders,
+            'Authorization': null,
+          },
+        ),
+      );
+      
+      print('✅ [API CLIENT] Quiz GET successful: ${response.statusCode}');
+      return response;
+    } catch (e) {
+      print('❌ [API CLIENT] Quiz GET error: $e');
+      rethrow;
+    }
   }
 
   Future<Response> postQuiz(
@@ -416,14 +429,27 @@ class ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
   }) async {
-    print('🧠 [API CLIENT] Quiz post: $endpoint');
+    print('🧠 [API CLIENT] Quiz POST request: $endpoint');
+    print('🧠 [API CLIENT] Full URL: ${ApiEndpoints.quizServiceUrl}$endpoint');
+    print('🧠 [API CLIENT] Data: $data');
     
-    return await post(
-      endpoint,
-      data: data,
-      queryParameters: queryParameters,
-      options: Options(extra: {'baseUrl': ApiEndpoints.quizServiceUrl}),
-    );
+    try {
+      final response = await post(
+        endpoint,
+        data: data,
+        queryParameters: queryParameters,
+        options: Options(
+          extra: {'baseUrl': ApiEndpoints.quizServiceUrl},
+          headers: ApiEndpoints.quizHeaders,
+        ),
+      );
+      
+      print('✅ [API CLIENT] Quiz POST successful: ${response.statusCode}');
+      return response;
+    } catch (e) {
+      print('❌ [API CLIENT] Quiz POST error: $e');
+      rethrow;
+    }
   }
 
   // MÉTODOS ESPECÍFICOS PARA GAMIFICACIÓN
