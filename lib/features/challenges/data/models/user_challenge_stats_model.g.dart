@@ -21,7 +21,9 @@ UserChallengeStatsModel _$UserChallengeStatsModelFromJson(
           .map((e) => e as String)
           .toList(),
       categoryProgress: Map<String, int>.from(json['categoryProgress'] as Map),
-      lastActivityDate: DateTime.parse(json['lastActivityDate'] as String),
+      lastActivityDate: json['lastActivityDate'] == null
+          ? null
+          : DateTime.parse(json['lastActivityDate'] as String),
     );
 
 Map<String, dynamic> _$UserChallengeStatsModelToJson(
@@ -36,5 +38,5 @@ Map<String, dynamic> _$UserChallengeStatsModelToJson(
       'rankPosition': instance.rankPosition,
       'achievedBadges': instance.achievedBadges,
       'categoryProgress': instance.categoryProgress,
-      'lastActivityDate': instance.lastActivityDate.toIso8601String(),
+      'lastActivityDate': instance.lastActivityDate?.toIso8601String(),
     };

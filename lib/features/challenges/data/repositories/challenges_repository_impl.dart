@@ -1,4 +1,4 @@
-// lib/features/challenges/data/repositories/challenges_repository_impl.dart - ACTUALIZADO PARA API
+// lib/features/challenges/data/repositories/challenges_repository_impl.dart - CORREGIDO PARA API REAL
 import 'package:injectable/injectable.dart';
 import '../../../../core/utils/either.dart';
 import '../../../../core/errors/failures.dart';
@@ -24,7 +24,7 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
     required this.localDataSource,
     required this.networkInfo,
   }) {
-    print('✅ [CHALLENGES REPOSITORY] Constructor - Now using API endpoints');
+    print('✅ [CHALLENGES REPOSITORY] Constructor - Now using REAL Challenge API endpoints');
   }
 
   @override
@@ -33,25 +33,33 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
     String? category,
   }) async {
     try {
-      print('🎯 [CHALLENGES REPOSITORY] Getting challenges from API');
+      print('🎯 [CHALLENGES REPOSITORY] Getting challenges from REAL API');
       print('🎯 [CHALLENGES REPOSITORY] Type: $type, Category: $category');
       
       if (await networkInfo.isConnected) {
         try {
-          // 🔧 USAR API REAL
-          final remoteChallenges = await remoteDataSource.getChallenges(
-            type: type,
-            category: category,
-          );
+          // 🔧 USAR API REAL - GET /api/quiz/challenges
+          final remoteChallenges = await remoteDataSource.getAllChallenges();
+          
+          // Filtrar por tipo si se especifica
+          List<ChallengeModel> filteredChallenges = remoteChallenges;
+          if (type != null) {
+            filteredChallenges = remoteChallenges.where((c) => c.type == type).toList();
+          }
+          
+          // Filtrar por categoría si se especifica
+          if (category != null) {
+            filteredChallenges = filteredChallenges.where((c) => c.category.toLowerCase() == category.toLowerCase()).toList();
+          }
           
           // Cache los challenges obtenidos
-          await localDataSource.cacheChallenges(remoteChallenges);
+          await localDataSource.cacheChallenges(filteredChallenges);
           
-          print('✅ [CHALLENGES REPOSITORY] Successfully fetched ${remoteChallenges.length} challenges from API');
-          return Right(remoteChallenges);
+          print('✅ [CHALLENGES REPOSITORY] Successfully fetched ${filteredChallenges.length} challenges from REAL API');
+          return Right(filteredChallenges);
           
         } catch (e) {
-          print('⚠️ [CHALLENGES REPOSITORY] API fetch failed, using local cache: $e');
+          print('⚠️ [CHALLENGES REPOSITORY] REAL API fetch failed, using local cache: $e');
           final localChallenges = await localDataSource.getCachedChallenges();
           return Right(localChallenges);
         }
@@ -75,19 +83,19 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
   @override
   Future<Either<Failure, ChallengeEntity>> getChallengeById(String id) async {
     try {
-      print('🎯 [CHALLENGES REPOSITORY] Getting challenge by ID: $id');
+      print('🎯 [CHALLENGES REPOSITORY] Getting challenge by ID from REAL API: $id');
       
       if (await networkInfo.isConnected) {
         try {
-          // 🔧 USAR API REAL
+          // 🔧 USAR API REAL - GET /api/quiz/challenges/{id}
           final remoteChallenge = await remoteDataSource.getChallengeById(id);
           await localDataSource.cacheChallenge(remoteChallenge);
           
-          print('✅ [CHALLENGES REPOSITORY] Successfully fetched challenge from API: ${remoteChallenge.title}');
+          print('✅ [CHALLENGES REPOSITORY] Successfully fetched challenge from REAL API: ${remoteChallenge.title}');
           return Right(remoteChallenge);
           
         } catch (e) {
-          print('⚠️ [CHALLENGES REPOSITORY] API fetch failed, using local cache: $e');
+          print('⚠️ [CHALLENGES REPOSITORY] REAL API fetch failed, using local cache: $e');
           final localChallenge = await localDataSource.getCachedChallenge(id);
           if (localChallenge != null) {
             return Right(localChallenge);
@@ -113,19 +121,19 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
   @override
   Future<Either<Failure, UserChallengeStatsEntity>> getUserStats(String userId) async {
     try {
-      print('🎯 [CHALLENGES REPOSITORY] Getting user stats for: $userId');
+      print('🎯 [CHALLENGES REPOSITORY] Getting user stats from REAL API for: $userId');
       
       if (await networkInfo.isConnected) {
         try {
-          // 🔧 USAR API REAL
+          // 🔧 USAR API REAL - GET /api/quiz/challenges/user-challenges/{userId}
           final remoteStats = await remoteDataSource.getUserStats(userId);
           await localDataSource.cacheUserStats(userId, remoteStats);
           
-          print('✅ [CHALLENGES REPOSITORY] Successfully fetched user stats from API');
+          print('✅ [CHALLENGES REPOSITORY] Successfully fetched user stats from REAL API');
           return Right(remoteStats);
           
         } catch (e) {
-          print('⚠️ [CHALLENGES REPOSITORY] API stats fetch failed, using local cache: $e');
+          print('⚠️ [CHALLENGES REPOSITORY] REAL API stats fetch failed, using local cache: $e');
           final localStats = await localDataSource.getCachedUserStats(userId);
           if (localStats != null) {
             return Right(localStats);
@@ -151,10 +159,10 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
   @override
   Future<Either<Failure, void>> joinChallenge(String challengeId, String userId) async {
     try {
-      print('🎯 [CHALLENGES REPOSITORY] Joining challenge: $challengeId for user: $userId');
+      print('🎯 [CHALLENGES REPOSITORY] Joining challenge via REAL API: $challengeId for user: $userId');
       
       if (await networkInfo.isConnected) {
-        // 🔧 USAR API REAL
+        // 🔧 USAR API REAL - POST /api/quiz/challenges/join/{challengeId}
         await remoteDataSource.joinChallenge(challengeId, userId);
         
         // Actualizar en caché local
@@ -186,7 +194,7 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
           await localDataSource.cacheChallenge(updatedChallenge);
         }
         
-        print('✅ [CHALLENGES REPOSITORY] Successfully joined challenge via API');
+        print('✅ [CHALLENGES REPOSITORY] Successfully joined challenge via REAL API');
         return const Right(null);
         
       } else {
@@ -205,7 +213,7 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
       print('🎯 [CHALLENGES REPOSITORY] User: $userId, Progress: $progress');
       
       // Por ahora solo actualizar localmente
-      // TODO: Implementar endpoint de actualización de progreso si existe
+      // TODO: Implementar endpoint de actualización de progreso si existe en la API
       final challenge = await localDataSource.getCachedChallenge(challengeId);
       if (challenge != null) {
         final updatedChallenge = ChallengeModel.fromEntity(
@@ -247,7 +255,7 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
     }
   }
 
-  // 🆕 NUEVO MÉTODO PARA ENVIAR EVIDENCIA
+  // 🆕 NUEVO MÉTODO PARA ENVIAR EVIDENCIA VIA API REAL
   Future<Either<Failure, void>> submitEvidence({
     required String userChallengeId,
     required String submissionType,
@@ -258,10 +266,10 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
     Map<String, dynamic>? metadata,
   }) async {
     try {
-      print('🎯 [CHALLENGES REPOSITORY] Submitting evidence for: $userChallengeId');
+      print('🎯 [CHALLENGES REPOSITORY] Submitting evidence via REAL API for: $userChallengeId');
       
       if (await networkInfo.isConnected) {
-        // 🔧 USAR API REAL
+        // 🔧 USAR API REAL - POST /api/quiz/challenges/submit-evidence
         await remoteDataSource.submitEvidence(
           userChallengeId: userChallengeId,
           submissionType: submissionType,
@@ -272,7 +280,7 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
           metadata: metadata,
         );
         
-        print('✅ [CHALLENGES REPOSITORY] Evidence submitted successfully via API');
+        print('✅ [CHALLENGES REPOSITORY] Evidence submitted successfully via REAL API');
         return const Right(null);
         
       } else {
@@ -302,12 +310,13 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
     }
   }
 
-  // 🆕 NUEVO MÉTODO PARA OBTENER CHALLENGES ACTIVOS
+  // 🆕 NUEVO MÉTODO PARA OBTENER CHALLENGES ACTIVOS VIA API REAL
   Future<Either<Failure, List<ChallengeEntity>>> getActiveChallengesFromAPI() async {
     try {
-      print('🎯 [CHALLENGES REPOSITORY] Getting active challenges from API');
+      print('🎯 [CHALLENGES REPOSITORY] Getting active challenges from REAL API');
       
       if (await networkInfo.isConnected) {
+        // 🔧 USAR API REAL - GET /api/quiz/challenges/active
         final activeChallenges = await remoteDataSource.getActiveChallenges();
         
         // Cache los challenges activos
@@ -315,7 +324,7 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
           await localDataSource.cacheChallenges(activeChallenges);
         }
         
-        print('✅ [CHALLENGES REPOSITORY] Successfully fetched ${activeChallenges.length} active challenges');
+        print('✅ [CHALLENGES REPOSITORY] Successfully fetched ${activeChallenges.length} active challenges from REAL API');
         return Right(activeChallenges);
       } else {
         // Fallback to local cache
@@ -329,18 +338,19 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
     }
   }
 
-  // 🆕 NUEVO MÉTODO PARA OBTENER CHALLENGES DEL USUARIO
+  // 🆕 NUEVO MÉTODO PARA OBTENER CHALLENGES DEL USUARIO VIA API REAL
   Future<Either<Failure, List<ChallengeEntity>>> getUserChallengesFromAPI(String userId) async {
     try {
-      print('🎯 [CHALLENGES REPOSITORY] Getting user challenges from API: $userId');
+      print('🎯 [CHALLENGES REPOSITORY] Getting user challenges from REAL API: $userId');
       
       if (await networkInfo.isConnected) {
+        // 🔧 USAR API REAL - GET /api/quiz/challenges/user-challenges/{userId}
         final userChallenges = await remoteDataSource.getUserChallenges(userId);
         
         // Cache user challenges with specific user prefix
         await localDataSource.cacheActiveChallenges(userId, userChallenges);
         
-        print('✅ [CHALLENGES REPOSITORY] Successfully fetched ${userChallenges.length} user challenges');
+        print('✅ [CHALLENGES REPOSITORY] Successfully fetched ${userChallenges.length} user challenges from REAL API');
         return Right(userChallenges);
       } else {
         // Fallback to local cache
@@ -350,6 +360,47 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
     } catch (e) {
       print('❌ [CHALLENGES REPOSITORY] Error fetching user challenges: $e');
       return Left(UnknownFailure('Error fetching user challenges: ${e.toString()}'));
+    }
+  }
+
+  // 🆕 MÉTODO PARA VALIDAR EVIDENCIAS (PARA ADMINS)
+  Future<Either<Failure, void>> validateSubmission(String submissionId, int validationScore, String validationNotes) async {
+    try {
+      print('🎯 [CHALLENGES REPOSITORY] Validating submission via REAL API: $submissionId');
+      
+      if (await networkInfo.isConnected) {
+        // 🔧 USAR API REAL - POST /api/quiz/challenges/validate/{submissionId}
+        await remoteDataSource.validateSubmission(submissionId, validationScore, validationNotes);
+        
+        print('✅ [CHALLENGES REPOSITORY] Submission validated successfully via REAL API');
+        return const Right(null);
+        
+      } else {
+        return Left(NetworkFailure('No network connection to validate submission'));
+      }
+    } catch (e) {
+      print('❌ [CHALLENGES REPOSITORY] Error validating submission: $e');
+      return Left(UnknownFailure('Error validating submission: ${e.toString()}'));
+    }
+  }
+
+  // 🆕 MÉTODO PARA OBTENER VALIDACIONES PENDIENTES (PARA ADMINS)
+  Future<Either<Failure, List<Map<String, dynamic>>>> getPendingValidations() async {
+    try {
+      print('🎯 [CHALLENGES REPOSITORY] Getting pending validations from REAL API');
+      
+      if (await networkInfo.isConnected) {
+        // 🔧 USAR API REAL - GET /api/quiz/challenges/pending-validation
+        final pendingValidations = await remoteDataSource.getPendingValidations();
+        
+        print('✅ [CHALLENGES REPOSITORY] Successfully fetched ${pendingValidations.length} pending validations from REAL API');
+        return Right(pendingValidations);
+      } else {
+        return Left(NetworkFailure('No network connection to fetch pending validations'));
+      }
+    } catch (e) {
+      print('❌ [CHALLENGES REPOSITORY] Error fetching pending validations: $e');
+      return Left(UnknownFailure('Error fetching pending validations: ${e.toString()}'));
     }
   }
 
@@ -365,13 +416,13 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
     try {
       print('🎯 [CHALLENGES REPOSITORY] Getting active challenges for user: $userId');
       
-      // Primero intentar obtener del API
+      // Primero intentar obtener del API REAL
       final apiResult = await getActiveChallengesFromAPI();
       
       return apiResult.fold(
         (failure) async {
           // Si falla el API, usar cache local
-          print('⚠️ [CHALLENGES REPOSITORY] API failed, using local cache for active challenges');
+          print('⚠️ [CHALLENGES REPOSITORY] REAL API failed, using local cache for active challenges');
           final localChallenges = await localDataSource.getCachedActiveChallenges(userId);
           return Right(localChallenges);
         },

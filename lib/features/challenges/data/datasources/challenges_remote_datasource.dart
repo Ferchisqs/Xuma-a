@@ -1,21 +1,18 @@
-// lib/features/challenges/data/datasources/challenges_remote_datasource.dart - ACTUALIZADO PARA API
+// lib/features/challenges/data/datasources/challenges_remote_datasource.dart - CORREGIDO PARA API REAL
 import 'package:injectable/injectable.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../models/challenge_model.dart';
 import '../models/user_challenge_stats_model.dart';
 import '../../domain/entities/challenge_entity.dart';
-import '../../../learning/data/models/topic_model.dart'; // 🆕 IMPORT TOPIC MODEL
+import '../../../learning/data/models/topic_model.dart';
 
 abstract class ChallengesRemoteDataSource {
-  // 🔧 MÉTODO ACTUALIZADO - ahora usa topics del content service
+  // Obtener categorías (topics) del content service
   Future<List<TopicModel>> getTopics();
   
-  // 🆕 NUEVOS MÉTODOS PARA CHALLENGES API
-  Future<List<ChallengeModel>> getChallenges({
-    ChallengeType? type,
-    String? category,
-  });
+  // 🆕 ENDPOINTS REALES DE CHALLENGES API
+  Future<List<ChallengeModel>> getAllChallenges();
   Future<List<ChallengeModel>> getActiveChallenges();
   Future<ChallengeModel> getChallengeById(String id);
   Future<void> joinChallenge(String challengeId, String userId);
@@ -28,8 +25,10 @@ abstract class ChallengesRemoteDataSource {
     Map<String, dynamic>? measurementData,
     Map<String, dynamic>? metadata,
   });
-  Future<UserChallengeStatsModel> getUserStats(String userId);
   Future<List<ChallengeModel>> getUserChallenges(String userId);
+  Future<UserChallengeStatsModel> getUserStats(String userId);
+  Future<List<Map<String, dynamic>>> getPendingValidations();
+  Future<void> validateSubmission(String submissionId, int validationScore, String validationNotes);
 }
 
 @Injectable(as: ChallengesRemoteDataSource)
@@ -37,16 +36,15 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
   final ApiClient apiClient;
 
   ChallengesRemoteDataSourceImpl(this.apiClient) {
-    print('✅ [CHALLENGES REMOTE] Constructor - Challenge API datasource initialized');
+    print('✅ [CHALLENGES REMOTE] Constructor - Real Challenge API datasource initialized');
   }
 
   @override
   Future<List<TopicModel>> getTopics() async {
     try {
-      print('🎯 [CHALLENGES] === FETCHING TOPICS AS CHALLENGE CATEGORIES ===');
+      print('🎯 [CHALLENGES] === FETCHING TOPICS AS CATEGORIES ===');
       print('🎯 [CHALLENGES] Using content service: /api/content/topics');
       
-      // 🔧 USAR EL MISMO ENDPOINT QUE LEARNING Y TRIVIA
       final response = await apiClient.getContent('/api/content/topics');
       
       print('🎯 [CHALLENGES] Response Status: ${response.statusCode}');
@@ -92,26 +90,15 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
   }
 
   @override
-  Future<List<ChallengeModel>> getChallenges({
-    ChallengeType? type,
-    String? category,
-  }) async {
+  Future<List<ChallengeModel>> getAllChallenges() async {
     try {
       print('🎯 [CHALLENGES] === FETCHING ALL CHALLENGES ===');
-      print('🎯 [CHALLENGES] Type: $type, Category: $category');
-      print('🎯 [CHALLENGES] Endpoint: /api/quiz/challenges');
+      print('🎯 [CHALLENGES] Endpoint: GET /api/quiz/challenges');
       
-      final queryParams = <String, dynamic>{};
-      if (type != null) queryParams['type'] = type.name;
-      if (category != null) queryParams['category'] = category;
-      
-      final response = await apiClient.getQuiz(
-        '/api/quiz/challenges',
-        queryParameters: queryParams.isNotEmpty ? queryParams : null,
-      );
+      final response = await apiClient.getQuiz('/api/quiz/challenges');
       
       print('🎯 [CHALLENGES] Response Status: ${response.statusCode}');
-      print('🎯 [CHALLENGES] Response Data: ${response.data}');
+      print('🎯 [CHALLENGES] Response Data Type: ${response.data.runtimeType}');
       
       List<dynamic> challengesJson = _extractListFromResponse(response.data, 'challenges');
       print('🔍 [CHALLENGES] Found ${challengesJson.length} challenges in response');
@@ -131,7 +118,7 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
             continue;
           }
           
-          final adaptedChallenge = _adaptChallengeStructure(rawChallenge, i);
+          final adaptedChallenge = _adaptChallengeFromAPI(rawChallenge, i);
           final challenge = ChallengeModel.fromJson(adaptedChallenge);
           challenges.add(challenge);
           
@@ -148,7 +135,7 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
       return challenges;
       
     } catch (e) {
-      print('❌ [CHALLENGES] Error fetching challenges: $e');
+      print('❌ [CHALLENGES] Error fetching all challenges: $e');
       throw ServerException('Failed to fetch challenges: ${e.toString()}');
     }
   }
@@ -157,7 +144,7 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
   Future<List<ChallengeModel>> getActiveChallenges() async {
     try {
       print('🎯 [CHALLENGES] === FETCHING ACTIVE CHALLENGES ===');
-      print('🎯 [CHALLENGES] Endpoint: /api/quiz/challenges/active');
+      print('🎯 [CHALLENGES] Endpoint: GET /api/quiz/challenges/active');
       
       final response = await apiClient.getQuiz('/api/quiz/challenges/active');
       
@@ -177,7 +164,7 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
         try {
           final rawChallenge = challengesJson[i];
           if (rawChallenge is Map<String, dynamic>) {
-            final adaptedChallenge = _adaptChallengeStructure(rawChallenge, i);
+            final adaptedChallenge = _adaptChallengeFromAPI(rawChallenge, i);
             final challenge = ChallengeModel.fromJson(adaptedChallenge);
             challenges.add(challenge);
             print('✅ [CHALLENGES] Processed active challenge ${i + 1}: "${challenge.title}"');
@@ -202,7 +189,7 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
     try {
       print('🎯 [CHALLENGES] === FETCHING CHALLENGE BY ID ===');
       print('🎯 [CHALLENGES] Challenge ID: $id');
-      print('🎯 [CHALLENGES] Endpoint: /api/quiz/challenges/$id');
+      print('🎯 [CHALLENGES] Endpoint: GET /api/quiz/challenges/$id');
       
       final response = await apiClient.getQuiz('/api/quiz/challenges/$id');
       
@@ -216,7 +203,7 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
         challengeData['id'] = id;
       }
       
-      final adaptedChallenge = _adaptChallengeStructure(challengeData, 0);
+      final adaptedChallenge = _adaptChallengeFromAPI(challengeData, 0);
       final challenge = ChallengeModel.fromJson(adaptedChallenge);
       
       print('✅ [CHALLENGES] Successfully fetched challenge: ${challenge.title}');
@@ -233,16 +220,21 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
     try {
       print('🎯 [CHALLENGES] === JOINING CHALLENGE ===');
       print('🎯 [CHALLENGES] Challenge ID: $challengeId, User ID: $userId');
-      print('🎯 [CHALLENGES] Endpoint: /api/quiz/challenges/join/$challengeId');
+      print('🎯 [CHALLENGES] Endpoint: POST /api/quiz/challenges/join/$challengeId');
       
-      await apiClient.postQuiz(
+      final requestData = {
+        'userId': userId,
+      };
+      
+      print('🎯 [CHALLENGES] Request Data: $requestData');
+      
+      final response = await apiClient.postQuiz(
         '/api/quiz/challenges/join/$challengeId',
-        data: {
-          'userId': userId,
-        },
+        data: requestData,
       );
       
       print('✅ [CHALLENGES] Successfully joined challenge: $challengeId');
+      print('✅ [CHALLENGES] Response: ${response.data}');
       
     } catch (e) {
       print('❌ [CHALLENGES] Error joining challenge: $e');
@@ -264,7 +256,7 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
       print('🎯 [CHALLENGES] === SUBMITTING EVIDENCE ===');
       print('🎯 [CHALLENGES] User Challenge ID: $userChallengeId');
       print('🎯 [CHALLENGES] Submission Type: $submissionType');
-      print('🎯 [CHALLENGES] Endpoint: /api/quiz/challenges/submit-evidence');
+      print('🎯 [CHALLENGES] Endpoint: POST /api/quiz/challenges/submit-evidence');
       
       final requestData = {
         'userChallengeId': userChallengeId,
@@ -287,12 +279,13 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
       
       print('🎯 [CHALLENGES] Request Data: $requestData');
       
-      await apiClient.postQuiz(
+      final response = await apiClient.postQuiz(
         '/api/quiz/challenges/submit-evidence',
         data: requestData,
       );
       
       print('✅ [CHALLENGES] Evidence submitted successfully');
+      print('✅ [CHALLENGES] Response: ${response.data}');
       
     } catch (e) {
       print('❌ [CHALLENGES] Error submitting evidence: $e');
@@ -301,38 +294,11 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
   }
 
   @override
-  Future<UserChallengeStatsModel> getUserStats(String userId) async {
-    try {
-      print('🎯 [CHALLENGES] === FETCHING USER STATS ===');
-      print('🎯 [CHALLENGES] User ID: $userId');
-      print('🎯 [CHALLENGES] Endpoint: /api/quiz/challenges/user-challenges/$userId');
-      
-      final response = await apiClient.getQuiz('/api/quiz/challenges/user-challenges/$userId');
-      
-      print('🎯 [CHALLENGES] Response Status: ${response.statusCode}');
-      print('🎯 [CHALLENGES] Response Data: ${response.data}');
-      
-      Map<String, dynamic> statsData = _extractMapFromResponse(response.data);
-      
-      // Adapt stats structure if needed
-      final adaptedStats = _adaptUserStatsStructure(statsData, userId);
-      final stats = UserChallengeStatsModel.fromJson(adaptedStats);
-      
-      print('✅ [CHALLENGES] User stats fetched successfully');
-      return stats;
-      
-    } catch (e) {
-      print('❌ [CHALLENGES] Error fetching user stats: $e');
-      throw ServerException('Failed to fetch user stats: ${e.toString()}');
-    }
-  }
-
-  @override
   Future<List<ChallengeModel>> getUserChallenges(String userId) async {
     try {
       print('🎯 [CHALLENGES] === FETCHING USER CHALLENGES ===');
       print('🎯 [CHALLENGES] User ID: $userId');
-      print('🎯 [CHALLENGES] Endpoint: /api/quiz/challenges/user-challenges/$userId');
+      print('🎯 [CHALLENGES] Endpoint: GET /api/quiz/challenges/user-challenges/$userId');
       
       final response = await apiClient.getQuiz('/api/quiz/challenges/user-challenges/$userId');
       
@@ -347,7 +313,7 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
         try {
           final rawChallenge = challengesJson[i];
           if (rawChallenge is Map<String, dynamic>) {
-            final adaptedChallenge = _adaptChallengeStructure(rawChallenge, i);
+            final adaptedChallenge = _adaptChallengeFromAPI(rawChallenge, i);
             final challenge = ChallengeModel.fromJson(adaptedChallenge);
             challenges.add(challenge);
             print('✅ [CHALLENGES] Processed user challenge ${i + 1}: "${challenge.title}"');
@@ -364,6 +330,83 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
     } catch (e) {
       print('❌ [CHALLENGES] Error fetching user challenges: $e');
       throw ServerException('Failed to fetch user challenges: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<UserChallengeStatsModel> getUserStats(String userId) async {
+    try {
+      print('🎯 [CHALLENGES] === FETCHING USER STATS ===');
+      print('🎯 [CHALLENGES] User ID: $userId');
+      // Nota: Este endpoint puede necesitar ser diferente según tu API
+      print('🎯 [CHALLENGES] Endpoint: GET /api/quiz/challenges/user-challenges/$userId');
+      
+      final response = await apiClient.getQuiz('/api/quiz/challenges/user-challenges/$userId');
+      
+      print('🎯 [CHALLENGES] Response Status: ${response.statusCode}');
+      print('🎯 [CHALLENGES] Response Data: ${response.data}');
+      
+      Map<String, dynamic> statsData = _extractMapFromResponse(response.data);
+      
+      // Adapt stats structure if needed
+      final adaptedStats = _adaptUserStatsFromAPI(statsData, userId);
+      final stats = UserChallengeStatsModel.fromJson(adaptedStats);
+      
+      print('✅ [CHALLENGES] User stats fetched successfully');
+      return stats;
+      
+    } catch (e) {
+      print('❌ [CHALLENGES] Error fetching user stats: $e');
+      throw ServerException('Failed to fetch user stats: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getPendingValidations() async {
+    try {
+      print('🎯 [CHALLENGES] === FETCHING PENDING VALIDATIONS ===');
+      print('🎯 [CHALLENGES] Endpoint: GET /api/quiz/challenges/pending-validation');
+      
+      final response = await apiClient.getQuiz('/api/quiz/challenges/pending-validation');
+      
+      print('🎯 [CHALLENGES] Response Status: ${response.statusCode}');
+      
+      List<dynamic> validationsJson = _extractListFromResponse(response.data, 'validations');
+      print('🔍 [CHALLENGES] Found ${validationsJson.length} pending validations');
+      
+      return validationsJson.cast<Map<String, dynamic>>();
+      
+    } catch (e) {
+      print('❌ [CHALLENGES] Error fetching pending validations: $e');
+      throw ServerException('Failed to fetch pending validations: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<void> validateSubmission(String submissionId, int validationScore, String validationNotes) async {
+    try {
+      print('🎯 [CHALLENGES] === VALIDATING SUBMISSION ===');
+      print('🎯 [CHALLENGES] Submission ID: $submissionId');
+      print('🎯 [CHALLENGES] Endpoint: POST /api/quiz/challenges/validate/$submissionId');
+      
+      final requestData = {
+        'validationScore': validationScore,
+        'validationNotes': validationNotes,
+      };
+      
+      print('🎯 [CHALLENGES] Request Data: $requestData');
+      
+      final response = await apiClient.postQuiz(
+        '/api/quiz/challenges/validate/$submissionId',
+        data: requestData,
+      );
+      
+      print('✅ [CHALLENGES] Submission validated successfully');
+      print('✅ [CHALLENGES] Response: ${response.data}');
+      
+    } catch (e) {
+      print('❌ [CHALLENGES] Error validating submission: $e');
+      throw ServerException('Failed to validate submission: ${e.toString()}');
     }
   }
 
@@ -406,70 +449,51 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
     throw ServerException('Invalid response format: expected Map<String, dynamic>');
   }
 
-  Map<String, dynamic> _adaptChallengeStructure(
-    Map<String, dynamic> serverChallenge,
+  Map<String, dynamic> _adaptChallengeFromAPI(
+    Map<String, dynamic> apiChallenge,
     int index,
   ) {
-    print('🔄 [CHALLENGES] Adapting challenge structure for index $index');
+    print('🔄 [CHALLENGES] Adapting challenge structure from API for index $index');
     
-    // Si ya tiene la estructura correcta, devolver tal como está
-    if (serverChallenge.containsKey('title') && 
-        serverChallenge.containsKey('type') &&
-        serverChallenge.containsKey('difficulty')) {
-      print('✅ [CHALLENGES] Challenge already has correct structure');
-      
-      // Asegurar campos requeridos
-      final adaptedChallenge = Map<String, dynamic>.from(serverChallenge);
-      
-      adaptedChallenge['id'] ??= 'challenge_${index + 1}';
-      adaptedChallenge['isParticipating'] ??= false;
-      adaptedChallenge['currentProgress'] ??= 0;
-      adaptedChallenge['targetProgress'] ??= 10;
-      adaptedChallenge['status'] ??= 'notStarted';
-      adaptedChallenge['createdAt'] ??= DateTime.now().toIso8601String();
-      
-      return adaptedChallenge;
-    }
-    
-    // Adaptar estructura del servidor a estructura esperada
+    // Mapear campos de la API a estructura esperada
     return {
-      'id': serverChallenge['id'] ?? 'challenge_${index + 1}',
-      'title': serverChallenge['title'] ?? serverChallenge['name'] ?? 'Challenge ${index + 1}',
-      'description': serverChallenge['description'] ?? 'Challenge description',
-      'category': serverChallenge['category'] ?? 'general',
-      'imageUrl': serverChallenge['imageUrl'] ?? '',
-      'iconCode': _getIconForCategory(serverChallenge['category'] ?? 'general'),
-      'type': _mapChallengeType(serverChallenge['type']),
-      'difficulty': _mapChallengeDifficulty(serverChallenge['difficulty']),
-      'totalPoints': serverChallenge['points'] ?? serverChallenge['totalPoints'] ?? 100,
-      'currentProgress': serverChallenge['currentProgress'] ?? 0,
-      'targetProgress': serverChallenge['targetProgress'] ?? serverChallenge['target'] ?? 10,
-      'status': _mapChallengeStatus(serverChallenge['status']),
-      'startDate': serverChallenge['startDate'] ?? DateTime.now().toIso8601String(),
-      'endDate': serverChallenge['endDate'] ?? DateTime.now().add(const Duration(days: 7)).toIso8601String(),
-      'requirements': _extractRequirements(serverChallenge),
-      'rewards': _extractRewards(serverChallenge),
-      'isParticipating': serverChallenge['isParticipating'] ?? false,
-      'completedAt': serverChallenge['completedAt'],
-      'createdAt': serverChallenge['createdAt'] ?? DateTime.now().toIso8601String(),
+      'id': apiChallenge['id'] ?? 'challenge_${index + 1}',
+      'title': apiChallenge['title'] ?? apiChallenge['name'] ?? 'Challenge ${index + 1}',
+      'description': apiChallenge['description'] ?? 'Challenge description from API',
+      'category': apiChallenge['category'] ?? apiChallenge['type'] ?? 'general',
+      'imageUrl': apiChallenge['imageUrl'] ?? apiChallenge['image'] ?? '',
+      'iconCode': _getIconForCategory(apiChallenge['category'] ?? 'general'),
+      'type': _mapChallengeType(apiChallenge['challengeType'] ?? apiChallenge['type']),
+      'difficulty': _mapChallengeDifficulty(apiChallenge['difficulty']),
+      'totalPoints': apiChallenge['points'] ?? apiChallenge['totalPoints'] ?? apiChallenge['reward'] ?? 100,
+      'currentProgress': apiChallenge['currentProgress'] ?? apiChallenge['progress'] ?? 0,
+      'targetProgress': apiChallenge['targetProgress'] ?? apiChallenge['target'] ?? apiChallenge['goal'] ?? 10,
+      'status': _mapChallengeStatus(apiChallenge['status']),
+      'startDate': apiChallenge['startDate'] ?? apiChallenge['createdAt'] ?? DateTime.now().toIso8601String(),
+      'endDate': apiChallenge['endDate'] ?? apiChallenge['expiresAt'] ?? DateTime.now().add(const Duration(days: 7)).toIso8601String(),
+      'requirements': _extractRequirements(apiChallenge),
+      'rewards': _extractRewards(apiChallenge),
+      'isParticipating': apiChallenge['isParticipating'] ?? apiChallenge['joined'] ?? false,
+      'completedAt': apiChallenge['completedAt'],
+      'createdAt': apiChallenge['createdAt'] ?? DateTime.now().toIso8601String(),
     };
   }
 
-  Map<String, dynamic> _adaptUserStatsStructure(
-    Map<String, dynamic> serverStats,
+  Map<String, dynamic> _adaptUserStatsFromAPI(
+    Map<String, dynamic> apiStats,
     String userId,
   ) {
     return {
-      'totalChallengesCompleted': serverStats['completed'] ?? serverStats['totalCompleted'] ?? 0,
-      'currentActiveChallenges': serverStats['active'] ?? serverStats['currentActive'] ?? 0,
-      'totalPointsEarned': serverStats['points'] ?? serverStats['totalPoints'] ?? 0,
-      'currentStreak': serverStats['streak'] ?? serverStats['currentStreak'] ?? 0,
-      'bestStreak': serverStats['bestStreak'] ?? serverStats['maxStreak'] ?? 0,
-      'currentRank': serverStats['rank'] ?? 'Eco Principiante',
-      'rankPosition': serverStats['position'] ?? serverStats['rankPosition'] ?? 1000,
-      'achievedBadges': serverStats['badges'] ?? serverStats['achievedBadges'] ?? [],
-      'categoryProgress': serverStats['categoryProgress'] ?? {},
-      'lastActivityDate': serverStats['lastActivity'] ?? DateTime.now().toIso8601String(),
+      'totalChallengesCompleted': apiStats['completed'] ?? apiStats['totalCompleted'] ?? 0,
+      'currentActiveChallenges': apiStats['active'] ?? apiStats['currentActive'] ?? 0,
+      'totalPointsEarned': apiStats['points'] ?? apiStats['totalPoints'] ?? 0,
+      'currentStreak': apiStats['streak'] ?? apiStats['currentStreak'] ?? 0,
+      'bestStreak': apiStats['bestStreak'] ?? apiStats['maxStreak'] ?? 0,
+      'currentRank': apiStats['rank'] ?? 'Eco Principiante',
+      'rankPosition': apiStats['position'] ?? apiStats['rankPosition'] ?? 1000,
+      'achievedBadges': apiStats['badges'] ?? apiStats['achievedBadges'] ?? [],
+      'categoryProgress': apiStats['categoryProgress'] ?? {},
+      'lastActivityDate': apiStats['lastActivity'] ?? DateTime.now().toIso8601String(),
     };
   }
 
@@ -479,10 +503,13 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
     
     switch (typeStr) {
       case 'weekly':
+      case 'semanal':
         return 'weekly';
       case 'monthly':
+      case 'mensual':
         return 'monthly';
       case 'special':
+      case 'especial':
         return 'special';
       default:
         return 'daily';
@@ -513,9 +540,11 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
     switch (statusStr) {
       case 'active':
       case 'activo':
+      case 'in_progress':
         return 'active';
       case 'completed':
       case 'completado':
+      case 'finished':
         return 'completed';
       case 'expired':
       case 'expirado':
@@ -525,32 +554,32 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
     }
   }
 
-  List<String> _extractRequirements(Map<String, dynamic> serverChallenge) {
-    if (serverChallenge.containsKey('requirements') && serverChallenge['requirements'] is List) {
-      return List<String>.from(serverChallenge['requirements']);
+  List<String> _extractRequirements(Map<String, dynamic> apiChallenge) {
+    if (apiChallenge.containsKey('requirements') && apiChallenge['requirements'] is List) {
+      return List<String>.from(apiChallenge['requirements']);
     }
     
     // Default requirements based on category
-    final category = serverChallenge['category'] ?? 'general';
+    final category = apiChallenge['category'] ?? 'general';
     switch (category.toLowerCase()) {
       case 'reciclaje':
-        return ['Materiales reciclables', 'Contenedor apropiado'];
+        return ['Materiales reciclables', 'Contenedor apropiado', 'Foto de confirmación'];
       case 'energia':
-        return ['Dispositivos electrónicos', 'Monitor de consumo'];
+        return ['Dispositivos electrónicos', 'Monitor de consumo', 'Evidencia fotográfica'];
       case 'agua':
-        return ['Medidor de agua', 'Recipientes'];
+        return ['Medidor de agua', 'Recipientes', 'Registro fotográfico'];
       default:
-        return ['Seguir las instrucciones', 'Tomar fotografías'];
+        return ['Seguir las instrucciones', 'Tomar fotografías de evidencia', 'Esperar validación'];
     }
   }
 
-  List<String> _extractRewards(Map<String, dynamic> serverChallenge) {
-    if (serverChallenge.containsKey('rewards') && serverChallenge['rewards'] is List) {
-      return List<String>.from(serverChallenge['rewards']);
+  List<String> _extractRewards(Map<String, dynamic> apiChallenge) {
+    if (apiChallenge.containsKey('rewards') && apiChallenge['rewards'] is List) {
+      return List<String>.from(apiChallenge['rewards']);
     }
     
-    final points = serverChallenge['points'] ?? serverChallenge['totalPoints'] ?? 100;
-    return ['$points puntos', 'Badge de logro'];
+    final points = apiChallenge['points'] ?? apiChallenge['totalPoints'] ?? 100;
+    return ['$points puntos EcoXuma', 'Badge de logro', 'Contribución al medio ambiente'];
   }
 
   int _getIconForCategory(String category) {

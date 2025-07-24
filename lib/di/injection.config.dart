@@ -37,6 +37,8 @@ import '../features/challenges/domain/usecases/complete_challenge_usecase.dart'
     as _i522;
 import '../features/challenges/domain/usecases/get_active_challenges_usecase.dart'
     as _i929;
+import '../features/challenges/domain/usecases/get_challenge_categories_usecase.dart'
+    as _i229;
 import '../features/challenges/domain/usecases/get_challenges_usecase.dart'
     as _i1010;
 import '../features/challenges/domain/usecases/get_user_challenge_stats_usecase.dart'
@@ -47,12 +49,16 @@ import '../features/challenges/domain/usecases/join_challenge_usecase.dart'
     as _i79;
 import '../features/challenges/domain/usecases/start_challenge_usecase.dart'
     as _i23;
+import '../features/challenges/domain/usecases/submit_evidence_usecase.dart'
+    as _i1042;
 import '../features/challenges/domain/usecases/update_challenge_progress_usecase.dart'
     as _i1056;
 import '../features/challenges/presentation/cubit/challenge_detail_cubit.dart'
     as _i366;
 import '../features/challenges/presentation/cubit/challenges_cubit.dart'
     as _i314;
+import '../features/challenges/presentation/cubit/evidence_submission_cubit.dart'
+    as _i64;
 import '../features/companion/data/datasources/companion_local_datasource.dart'
     as _i1032;
 import '../features/companion/data/datasources/companion_remote_datasource.dart'
@@ -379,22 +385,22 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i420.SearchLessonsUseCase(gh<_i852.LearningRepository>()));
     gh.factory<_i813.UpdateLessonProgressUseCase>(() =>
         _i813.UpdateLessonProgressUseCase(gh<_i852.LearningRepository>()));
+    gh.factory<_i852.GetQuestionByIdUseCase>(
+        () => _i852.GetQuestionByIdUseCase(gh<_i992.QuizRepository>()));
+    gh.factory<_i865.GetQuizzesByTopicUseCase>(
+        () => _i865.GetQuizzesByTopicUseCase(gh<_i992.QuizRepository>()));
+    gh.factory<_i714.GetQuizByIdUseCase>(
+        () => _i714.GetQuizByIdUseCase(gh<_i992.QuizRepository>()));
     gh.factory<_i806.GetQuizQuestionsUseCase>(
         () => _i806.GetQuizQuestionsUseCase(gh<_i992.QuizRepository>()));
     gh.factory<_i907.GetQuizResultsUseCase>(
         () => _i907.GetQuizResultsUseCase(gh<_i992.QuizRepository>()));
+    gh.factory<_i462.GetUserQuizProgressUseCase>(
+        () => _i462.GetUserQuizProgressUseCase(gh<_i992.QuizRepository>()));
     gh.factory<_i112.StartQuizSessionUseCase>(
         () => _i112.StartQuizSessionUseCase(gh<_i992.QuizRepository>()));
     gh.factory<_i591.SubmitQuizAnswerUseCase>(
         () => _i591.SubmitQuizAnswerUseCase(gh<_i992.QuizRepository>()));
-    gh.factory<_i865.GetQuizzesByTopicUseCase>(
-        () => _i865.GetQuizzesByTopicUseCase(gh<_i992.QuizRepository>()));
-    gh.factory<_i852.GetQuestionByIdUseCase>(
-        () => _i852.GetQuestionByIdUseCase(gh<_i992.QuizRepository>()));
-    gh.factory<_i714.GetQuizByIdUseCase>(
-        () => _i714.GetQuizByIdUseCase(gh<_i992.QuizRepository>()));
-    gh.factory<_i462.GetUserQuizProgressUseCase>(
-        () => _i462.GetUserQuizProgressUseCase(gh<_i992.QuizRepository>()));
     gh.factory<_i22.GetRandomTipUseCase>(
         () => _i22.GetRandomTipUseCase(gh<_i406.TipsRepository>()));
     gh.factory<_i22.GetRandomTipWithoutParamsUseCase>(() =>
@@ -465,6 +471,8 @@ extension GetItInjectableX on _i174.GetIt {
         _i929.GetActiveChallengesUseCase(gh<_i959.ChallengesRepository>()));
     gh.factory<_i1010.GetChallengesUseCase>(
         () => _i1010.GetChallengesUseCase(gh<_i959.ChallengesRepository>()));
+    gh.factory<_i229.GetChallengeCategoriesUseCase>(() =>
+        _i229.GetChallengeCategoriesUseCase(gh<_i959.ChallengesRepository>()));
     gh.factory<_i31.GetUserChallengeStatsUseCase>(() =>
         _i31.GetUserChallengeStatsUseCase(gh<_i959.ChallengesRepository>()));
     gh.factory<_i287.GetUserProgressUseCase>(
@@ -473,6 +481,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i79.StartChallengeUseCase(gh<_i959.ChallengesRepository>()));
     gh.factory<_i23.StartChallengeUseCase>(
         () => _i23.StartChallengeUseCase(gh<_i959.ChallengesRepository>()));
+    gh.factory<_i1042.SubmitEvidenceUseCase>(
+        () => _i1042.SubmitEvidenceUseCase(gh<_i959.ChallengesRepository>()));
     gh.factory<_i1056.UpdateChallengeProgressUseCase>(() =>
         _i1056.UpdateChallengeProgressUseCase(
             gh<_i959.ChallengesRepository>()));
@@ -485,6 +495,13 @@ extension GetItInjectableX on _i174.GetIt {
           getCompanionShopUseCase: gh<_i76.GetCompanionShopUseCase>(),
           purchaseCompanionUseCase: gh<_i395.PurchaseCompanionUseCase>(),
           tokenManager: gh<_i497.TokenManager>(),
+        ));
+    gh.factory<_i366.ChallengeDetailCubit>(() => _i366.ChallengeDetailCubit(
+          startChallengeUseCase: gh<_i23.StartChallengeUseCase>(),
+          completeChallengeUseCase: gh<_i522.CompleteChallengeUseCase>(),
+          updateChallengeProgressUseCase:
+              gh<_i1056.UpdateChallengeProgressUseCase>(),
+          submitEvidenceUseCase: gh<_i1042.SubmitEvidenceUseCase>(),
         ));
     gh.factory<_i568.LessonListCubit>(() => _i568.LessonListCubit(
           getLessonsByCategoryUseCase: gh<_i194.GetLessonsByCategoryUseCase>(),
@@ -501,11 +518,10 @@ extension GetItInjectableX on _i174.GetIt {
           localDataSource: gh<_i195.LearningLocalDataSource>(),
           networkInfo: gh<_i6.NetworkInfo>(),
         ));
-    gh.factory<_i366.ChallengeDetailCubit>(() => _i366.ChallengeDetailCubit(
-          startChallengeUseCase: gh<_i23.StartChallengeUseCase>(),
-          completeChallengeUseCase: gh<_i522.CompleteChallengeUseCase>(),
-          updateChallengeProgressUseCase:
-              gh<_i1056.UpdateChallengeProgressUseCase>(),
+    gh.factory<_i314.ChallengesCubit>(() => _i314.ChallengesCubit(
+          getChallengesUseCase: gh<_i1010.GetChallengesUseCase>(),
+          getUserStatsUseCase: gh<_i31.GetUserChallengeStatsUseCase>(),
+          getCategoriesUseCase: gh<_i229.GetChallengeCategoriesUseCase>(),
         ));
     gh.factory<_i0.CompanionDetailCubit>(() => _i0.CompanionDetailCubit(
           feedCompanionUseCase: gh<_i960.FeedCompanionUseCase>(),
@@ -516,16 +532,14 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i711.EvolveCompanionViaApiUseCase>(),
           featureCompanionUseCase: gh<_i913.FeatureCompanionUseCase>(),
         ));
-    gh.factory<_i314.ChallengesCubit>(() => _i314.ChallengesCubit(
-          getChallengesUseCase: gh<_i1010.GetChallengesUseCase>(),
-          getUserProgressUseCase: gh<_i287.GetUserProgressUseCase>(),
-        ));
     gh.factory<_i582.GetContentsByTopicUseCase>(
         () => _i582.GetContentsByTopicUseCase(gh<_i19.ContentRepository>()));
     gh.factory<_i677.GetContentByIdUseCase>(
         () => _i677.GetContentByIdUseCase(gh<_i19.ContentRepository>()));
     gh.factory<_i175.GetTopicsUseCase>(
         () => _i175.GetTopicsUseCase(gh<_i19.ContentRepository>()));
+    gh.factory<_i64.EvidenceSubmissionCubit>(() => _i64.EvidenceSubmissionCubit(
+        submitEvidenceUseCase: gh<_i1042.SubmitEvidenceUseCase>()));
     gh.factory<_i992.LearningCubit>(() =>
         _i992.LearningCubit(getTopicsUseCase: gh<_i175.GetTopicsUseCase>()));
     gh.factory<_i921.ContentCubit>(() => _i921.ContentCubit(
