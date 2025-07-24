@@ -1,5 +1,6 @@
 // lib/features/auth/domain/services/auth_service.dart
 import 'package:injectable/injectable.dart';
+import 'package:xuma_a/features/auth/domain/usecases/register_usecase.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/either.dart';
 import '../entities/user_entity.dart';
@@ -31,6 +32,14 @@ class AuthService {
     return await _authRepository.isLoggedIn();
   }
 
+  Future<Either<Failure, UserEntity>> registerWithParentalConsent(RegisterParams params) async {
+    try {
+      return await _authRepository.registerWithParentalConsent(params);
+    } catch (e) {
+      return Left(ServerFailure('Error en registro con consentimiento parental: $e'));
+    }
+  }
+
   // ==================== GESTIÓN DE TOKENS ====================
   
   Future<Either<Failure, Map<String, dynamic>>> validateToken(String token) async {
@@ -57,6 +66,50 @@ class AuthService {
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure('Error revocando token: $e'));
+    }
+  }
+
+  Future<Either<Failure, bool>> hasValidToken() async {
+    try {
+      final currentUserResult = await getCurrentUser();
+      
+      return currentUserResult.fold(
+        (failure) => const Right(false),
+        (user) => Right(user != null),
+      );
+    } catch (e) {
+      return Left(ServerFailure('Error verificando token: $e'));
+    }
+  }
+
+  Future<Either<Failure, bool>> isTokenValid() async {
+    try {
+      final result = await _remoteDataSource.getCurrentUser();
+      return Right(result != null);
+    } catch (e) {
+      return const Right(false);
+    }
+  }
+
+  Future<Either<Failure, Map<String, dynamic>>> refreshUserToken(String refreshToken) async {
+    try {
+      final result = await _remoteDataSource.refreshToken(refreshToken);
+      return Right(result);
+    } catch (e) {
+      return Left(ServerFailure('Error renovando token: $e'));
+    }
+  }
+
+  Future<Either<Failure, bool>> autoRefreshToken() async {
+    try {
+      final currentUserResult = await getCurrentUser();
+      
+      return currentUserResult.fold(
+        (failure) => const Right(false),
+        (user) => Right(user != null),
+      );
+    } catch (e) {
+      return Left(ServerFailure('Error en auto-refresh: $e'));
     }
   }
 
@@ -139,7 +192,6 @@ class AuthService {
 
   // ==================== MÉTODOS HELPER ====================
   
-  /// Verifica si el usuario necesita verificar su email
   Future<Either<Failure, bool>> needsEmailVerification(String userId) async {
     final result = await getVerificationStatus(userId);
     return result.fold(
@@ -148,7 +200,6 @@ class AuthService {
     );
   }
 
-  /// Verifica si el usuario necesita consentimiento parental
   Future<Either<Failure, bool>> needsParentalConsent(String userId) async {
     final result = await getParentalConsentStatus(userId);
     return result.fold(
@@ -157,7 +208,6 @@ class AuthService {
     );
   }
 
-  /// Obtiene el estado completo de autenticación del usuario
   Future<Either<Failure, Map<String, dynamic>>> getFullAuthStatus(String userId) async {
     try {
       final verificationResult = await getVerificationStatus(userId);
@@ -171,12 +221,65 @@ class AuthService {
             'emailVerification': verificationStatus,
             'parentalConsent': consentStatus,
             'isFullyAuthenticated': (verificationStatus['isVerified'] ?? false) && 
-                                  !(consentStatus['requiresConsent'] ?? false),
+                                !(consentStatus['requiresConsent'] ?? false),
           }),
         ),
       );
     } catch (e) {
       return Left(ServerFailure('Error obteniendo estado completo: $e'));
     }
+  }
+
+  Future<Either<Failure, Map<String, dynamic>>> getCompleteAuthStatus(String userId) async {
+    try {
+      final verificationResult = await getVerificationStatus(userId);
+      final consentResult = await getParentalConsentStatus(userId);
+      final tokenValidResult = await hasValidToken();
+      
+      return verificationResult.fold(
+        (failure) => Left(failure),
+        (verificationStatus) => consentResult.fold(
+          (failure) => Left(failure),
+          (consentStatus) => tokenValidResult.fold(
+            (failure) => Left(failure),
+            (hasToken) => Right({
+              'hasValidToken': hasToken,
+              'emailVerification': verificationStatus,
+              'parentalConsent': consentStatus,
+              'isFullyAuthenticated': hasToken && 
+                                    (verificationStatus['isVerified'] ?? false) && 
+                                    !(consentStatus['requiresConsent'] ?? false),
+            }),
+          ),
+        ),
+      );
+    } catch (e) {
+      return Left(ServerFailure('Error obteniendo estado completo: $e'));
+    }
+  }
+
+  Future<Either<Failure, bool>> canUserAccess(String userId) async {
+    final statusResult = await getCompleteAuthStatus(userId);
+    
+    return statusResult.fold(
+      (failure) => Left(failure),
+      (status) => Right(status['isFullyAuthenticated'] ?? false),
+    );
+  }
+
+  Future<Either<Failure, bool>> activelyNeedsParentalConsent(String userId) async {
+    final result = await getParentalConsentStatus(userId);
+    return result.fold(
+      (failure) => Left(failure),
+      (status) => Right(status['requiresConsent'] ?? false),
+    );
+  }
+
+  Future<Either<Failure, bool>> activelyNeedsEmailVerification(String userId) async {
+    final result = await getVerificationStatus(userId);
+    return result.fold(
+      (failure) => Left(failure),
+      (status) => Right(!(status['isVerified'] ?? false)),
+    );
   }
 }

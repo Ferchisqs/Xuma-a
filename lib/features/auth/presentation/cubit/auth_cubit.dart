@@ -2,16 +2,18 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
+import 'dart:async';
 import '../../domain/entities/user_entity.dart';
-import '../../domain/entities/parental_info.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/register_usecase.dart';
 import '../../domain/services/auth_service.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../../../profile/domain/services/profile_service.dart';
 import '../../../profile/domain/entities/user_profile_entity.dart';
+import '../../domain/entities/parental_info.dart';
+import '../../../../core/services/token_manager.dart';
 
-// ==================== ESTADOS MEJORADOS ====================
+// ==================== ESTADOS ====================
 abstract class AuthState extends Equatable {
   const AuthState();
 
@@ -35,14 +37,14 @@ class AuthAuthenticated extends AuthState {
   final bool emailVerified;
   final bool parentalConsentApproved;
   final UserProfileEntity? fullProfile;
-  final bool isProfileLoading; // 🆕 INDICADOR DE CARGA DE PERFIL
+  final bool isProfileLoading;
 
   const AuthAuthenticated(
     this.user, {
     this.emailVerified = true,
     this.parentalConsentApproved = true,
     this.fullProfile,
-    this.isProfileLoading = false, // 🆕 DEFAULT FALSE
+    this.isProfileLoading = false,
   });
 
   @override
@@ -106,24 +108,29 @@ class AuthTokenRefreshed extends AuthState {
   List<Object> get props => [user];
 }
 
-// ==================== CUBIT MEJORADO ====================
+// ==================== CUBIT ====================
 @injectable
 class AuthCubit extends Cubit<AuthState> {
   final LoginUseCase _loginUseCase;
   final RegisterUseCase _registerUseCase;
   final AuthService _authService;
   final ProfileService _profileService;
+  final TokenManager _tokenManager;
 
   AuthCubit({
     required LoginUseCase loginUseCase,
     required RegisterUseCase registerUseCase,
     required AuthService authService,
     required ProfileService profileService,
+    required TokenManager tokenManager,
   }) : _loginUseCase = loginUseCase,
        _registerUseCase = registerUseCase,
        _authService = authService,
        _profileService = profileService,
+       _tokenManager = tokenManager,
        super(AuthInitial());
+
+  // ==================== MÉTODOS PRINCIPALES ====================
 
   Future<void> login(String email, String password) async {
     emit(const AuthLoading(message: 'Iniciando sesión...'));
@@ -134,179 +141,320 @@ class AuthCubit extends Cubit<AuthState> {
 
       await result.fold(
         (failure) async {
-          print('❌ Login failed: ${failure.message}');
           final userFriendlyMessage = ErrorHandler.getErrorMessage(failure.message);
           emit(AuthError(userFriendlyMessage));
         },
         (user) async {
-          print('✅ Login successful for: ${user.email}');
           await _handleSuccessfulAuth(user);
         },
       );
     } catch (e) {
-      print('❌ Login exception: $e');
       final userFriendlyMessage = ErrorHandler.getErrorMessage(e.toString());
       emit(AuthError(userFriendlyMessage));
     }
   }
-Future<void> register({
-  required String firstName,
-  required String lastName,
-  required String email,
-  required String password,
-  required String confirmPassword,
-  required int age,
-}) async {
-  emit(const AuthLoading(message: 'Creando tu cuenta...'));
 
-  try {
-    final baseParams = RegisterParams(
-      firstName: firstName,
-      lastName: lastName,
-      email: email,
-      password: password,
-      confirmPassword: confirmPassword,
-      age: age,
-    );
+  Future<void> register({
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String password,
+    required String confirmPassword,
+    required int age,
+  }) async {
+    emit(const AuthLoading(message: 'Creando tu cuenta...'));
 
-    print('🔍 Registering user: $email, age: $age');
-
-    if (baseParams.needsParentalConsent) {
-      print('👨‍👩‍👧‍👦 Menor de 13, requiere info parental');
-      emit(AuthParentalInfoRequired(baseParams));
-      return;
-    }
-
-    final result = await _registerUseCase(baseParams);
-
-    await result.fold(
-      (failure) async {
-        print('❌ Registration failed: ${failure.message}');
-        
-        // 🚫 AQUÍ ESTÁ EL PROBLEMA - ESTAS LÍNEAS DEBEN ELIMINARSE
-        /*
-        if (failure.message.toLowerCase().contains('password') && 
-            failure.message.toLowerCase().contains('mismo')) {
-          // Error específico de contraseñas duplicadas (problema del backend)
-          userFriendlyMessage = 'Esta contraseña ya está en uso. Por favor elige una contraseña diferente.';
-        }
-        */
-        
-        // ✅ MANEJO CORRECTO DE ERRORES DE REGISTRO
-        String userFriendlyMessage;
-        
-        if (failure.message.toLowerCase().contains('already exists') ||
-            failure.message.toLowerCase().contains('ya existe') ||
-            failure.message.toLowerCase().contains('duplicate') ||
-            (failure.message.toLowerCase().contains('email') && 
-             failure.message.toLowerCase().contains('use'))) {
-          userFriendlyMessage = 'Este email ya está registrado. Intenta iniciar sesión o usa otro email.';
-        } else if (failure.message.toLowerCase().contains('validation') ||
-                   failure.message.toLowerCase().contains('invalid')) {
-          userFriendlyMessage = 'Datos de registro inválidos. Verifica la información ingresada.';
-        } else if (failure.message.toLowerCase().contains('network') ||
-                   failure.message.toLowerCase().contains('connection')) {
-          userFriendlyMessage = 'Error de conexión. Verifica tu internet e intenta nuevamente.';
-        } else {
-          userFriendlyMessage = ErrorHandler.getErrorMessage(failure.message);
-        }
-        
-        emit(AuthError(userFriendlyMessage));
-      },
-      (user) async {
-        print('✅ Registration successful for: ${user.email}');
-        await _handleSuccessfulAuth(user);
-      },
-    );
-  } catch (e) {
-    print('❌ Registration exception: $e');
-    final userFriendlyMessage = ErrorHandler.getErrorMessage(e.toString());
-    emit(AuthError(userFriendlyMessage));
-  }
-}
-
-Future<void> registerWithParentalInfo({
-  required RegisterParams baseParams,
-  required ParentalInfo parentalInfo,
-}) async {
-  emit(const AuthLoading(message: 'Registrando con consentimiento parental...'));
-
-  try {
-    final completeParams = RegisterParams(
-      firstName: baseParams.firstName,
-      lastName: baseParams.lastName,
-      email: baseParams.email,
-      password: baseParams.password,
-      confirmPassword: baseParams.confirmPassword,
-      age: baseParams.age,
-      parentalInfo: parentalInfo,
-    );
-
-    final result = await _registerUseCase(completeParams);
-
-    await result.fold(
-      (failure) async {
-        print('❌ Parental registration failed: ${failure.message}');
-        
-        // 🆕 MANEJO ESPECÍFICO PARA REGISTRO PARENTAL
-        String userFriendlyMessage;
-        
-        if (failure.message.toLowerCase().contains('already exists') ||
-            failure.message.toLowerCase().contains('ya existe')) {
-          userFriendlyMessage = 'El email del tutor ya está registrado. Verifica la dirección de correo.';
-        } else if (failure.message.toLowerCase().contains('guardian') ||
-                   failure.message.toLowerCase().contains('tutor')) {
-          userFriendlyMessage = 'Error con la información del tutor. Verifica los datos ingresados.';
-        } else {
-          userFriendlyMessage = ErrorHandler.getErrorMessage(failure.message);
-        }
-        
-        emit(AuthError(userFriendlyMessage));
-      },
-      (user) async {
-        print('✅ Parental registration successful');
-        emit(AuthParentalConsentPending(user, parentalInfo.guardianEmail));
-      },
-    );
-  } catch (e) {
-    print('❌ Parental registration exception: $e');
-    final userFriendlyMessage = ErrorHandler.getErrorMessage(e.toString());
-    emit(AuthError(userFriendlyMessage));
-  }
-}
-
-  Future<void> logout() async {
-    emit(const AuthLoading(message: 'Cerrando sesión...'));
-    
     try {
-      print('🔍 Starting logout process...');
-      
-      final result = await _authService.logout();
-      
+      final baseParams = RegisterParams(
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        password: password,
+        confirmPassword: confirmPassword,
+        age: age,
+      );
+
+      print('🔍 Registering user: $email, age: $age');
+
+      if (baseParams.needsParentalConsent) {
+        print('👨‍👩‍👧‍👦 Menor de 13, requiere info parental');
+        emit(AuthParentalInfoRequired(baseParams));
+        return;
+      }
+
+      final result = await _registerUseCase(baseParams);
+
       await result.fold(
         (failure) async {
-          print('⚠️ Server logout failed: ${failure.message}');
-          print('✅ Cleaning local session anyway...');
-          emit(AuthInitial());
+          print('❌ Registration failed: ${failure.message}');
+          
+          String userFriendlyMessage;
+          
+          if (failure.message.toLowerCase().contains('already exists') ||
+              failure.message.toLowerCase().contains('ya existe') ||
+              failure.message.toLowerCase().contains('duplicate') ||
+              (failure.message.toLowerCase().contains('email') && 
+               failure.message.toLowerCase().contains('use'))) {
+            userFriendlyMessage = 'Este email ya está registrado. Intenta iniciar sesión o usa otro email.';
+          } else if (failure.message.toLowerCase().contains('validation') ||
+                     failure.message.toLowerCase().contains('invalid')) {
+            userFriendlyMessage = 'Datos de registro inválidos. Verifica la información ingresada.';
+          } else if (failure.message.toLowerCase().contains('network') ||
+                     failure.message.toLowerCase().contains('connection')) {
+            userFriendlyMessage = 'Error de conexión. Verifica tu internet e intenta nuevamente.';
+          } else {
+            userFriendlyMessage = ErrorHandler.getErrorMessage(failure.message);
+          }
+          
+          emit(AuthError(userFriendlyMessage));
         },
-        (_) async {
-          print('✅ Server logout successful, cleaning local session...');
-          emit(AuthInitial());
+        (user) async {
+          print('✅ Registration successful for: ${user.email}');
+          
+          final hasValidToken = await _hasValidToken();
+          
+          if (hasValidToken) {
+            print('✅ [AUTH] User fully authenticated after registration (has tokens)');
+            await _handleSuccessfulAuth(user);
+          } else {
+            print('📧 [AUTH] User registered but needs email verification (no tokens)');
+            emit(AuthEmailVerificationRequired(user));
+          }
         },
       );
     } catch (e) {
-      print('❌ Logout exception: $e');
-      print('✅ Exception during logout, but cleaning local session...');
-      emit(AuthInitial());
+      print('❌ Registration exception: $e');
+      final userFriendlyMessage = ErrorHandler.getErrorMessage(e.toString());
+      emit(AuthError(userFriendlyMessage));
     }
   }
 
- 
+  Future<void> registerWithParentalInfo({
+    required RegisterParams baseParams,
+    required ParentalInfo parentalInfo,
+  }) async {
+    emit(const AuthLoading(message: 'Registrando con consentimiento parental...'));
+
+    try {
+      final completeParams = RegisterParams(
+        firstName: baseParams.firstName,
+        lastName: baseParams.lastName,
+        email: baseParams.email,
+        password: baseParams.password,
+        confirmPassword: baseParams.confirmPassword,
+        age: baseParams.age,
+        parentalInfo: parentalInfo,
+      );
+
+      final result = await _authService.registerWithParentalConsent(completeParams);
+
+      await result.fold(
+        (failure) async {
+          print('❌ Parental registration failed: ${failure.message}');
+          
+          String userFriendlyMessage;
+          
+          if (failure.message.toLowerCase().contains('already exists') ||
+              failure.message.toLowerCase().contains('ya existe')) {
+            userFriendlyMessage = 'El email del tutor ya está registrado. Verifica la dirección de correo.';
+          } else if (failure.message.toLowerCase().contains('guardian') ||
+                     failure.message.toLowerCase().contains('tutor')) {
+            userFriendlyMessage = 'Error con la información del tutor. Verifica los datos ingresados.';
+          } else {
+            userFriendlyMessage = ErrorHandler.getErrorMessage(failure.message);
+          }
+          
+          emit(AuthError(userFriendlyMessage));
+        },
+        (user) async {
+          print('✅ Parental registration successful');
+          emit(AuthParentalConsentPending(user, parentalInfo.parentEmail));
+          startPeriodicCheck(user.id);
+        },
+      );
+    } catch (e) {
+      print('❌ Parental registration exception: $e');
+      final userFriendlyMessage = ErrorHandler.getErrorMessage(e.toString());
+      emit(AuthError(userFriendlyMessage));
+    }
+  }
+
+  // ==================== MÉTODOS DE TOKEN ====================
+
+  Future<void> refreshToken() async {
+    try {
+      print('🔄 [AUTH] Attempting to refresh token...');
+      
+      final storedRefreshToken = await _tokenManager.getRefreshToken();
+      
+      if (storedRefreshToken == null) {
+        print('⚠️ [AUTH] No refresh token available');
+        emit(AuthInitial());
+        return;
+      }
+      
+      final result = await _authService.refreshUserToken(storedRefreshToken);
+      
+      await result.fold(
+        (failure) async {
+          print('❌ [AUTH] Token refresh failed: ${failure.message}');
+          await cleanInconsistentState();
+        },
+        (response) async {
+          print('✅ [AUTH] Token refreshed successfully');
+          await validateCurrentToken();
+        },
+      );
+    } catch (e) {
+      print('❌ [AUTH] Exception during token refresh: $e');
+      await cleanInconsistentState();
+    }
+  }
+
+  Future<bool> autoRefreshToken() async {
+    try {
+      print('🔄 [AUTH] Auto-refreshing token...');
+      
+      final storedRefreshToken = await _tokenManager.getRefreshToken();
+      
+      if (storedRefreshToken == null) {
+        print('⚠️ [AUTH] No refresh token for auto-refresh');
+        return false;
+      }
+      
+      final result = await _authService.refreshUserToken(storedRefreshToken);
+      
+      return await result.fold(
+        (failure) async {
+          print('❌ [AUTH] Auto token refresh failed: ${failure.message}');
+          return false;
+        },
+        (response) async {
+          print('✅ [AUTH] Auto token refresh successful');
+          return true;
+        },
+      );
+    } catch (e) {
+      print('❌ [AUTH] Exception during auto token refresh: $e');
+      return false;
+    }
+  }
+
+  Future<bool> _hasValidToken() async {
+    try {
+      final result = await _authService.hasValidToken();
+      
+      return await result.fold(
+        (failure) async {
+          print('⚠️ [AUTH] Error checking token validity: ${failure.message}');
+          return false;
+        },
+        (isValid) async {
+          return isValid;
+        },
+      );
+    } catch (e) {
+      print('❌ [AUTH] Exception checking token validity: $e');
+      return false;
+    }
+  }
+
+  // ==================== MÉTODOS DE NAVEGACIÓN Y CONTROL ====================
+
+  void reset() {
+    emit(AuthInitial());
+  }
+
+  void acknowledgeParentalConsent() {
+    emit(AuthInitial());
+  }
+
+  void cancelParentalProcess() {
+    emit(AuthInitial());
+  }
+
+  void goBackToVerification(UserEntity user) {
+    emit(AuthEmailVerificationRequired(user));
+  }
+
+  // ==================== CONSENTIMIENTO PARENTAL ====================
+
+  Future<void> checkParentalConsentStatus(String userId) async {
+    try {
+      final result = await _authService.getParentalConsentStatus(userId);
+
+      await result.fold(
+        (failure) async {
+          print('⚠️ [AUTH] Error checking parental consent status: ${failure.message}');
+        },
+        (status) async {
+          print('🔍 [AUTH] Parental consent status: $status');
+          
+          if (status['isApproved'] == true || status['approved'] == true) {
+            print('✅ [AUTH] Parental consent approved, attempting authentication...');
+            await validateCurrentToken();
+          } else {
+            print('⚠️ [AUTH] Parental consent still pending');
+          }
+        },
+      );
+    } catch (e) {
+      print('❌ [AUTH] Exception checking parental consent: $e');
+    }
+  }
+
+  Future<void> requestParentalConsent({
+    required String minorUserId,
+    required String parentEmail,
+    required String parentName,
+    required String relationship,
+  }) async {
+    try {
+      emit(const AuthLoading(message: 'Enviando solicitud parental...'));
+      
+      final result = await _authService.requestParentalConsent(
+        minorUserId: minorUserId,
+        parentEmail: parentEmail,
+        parentName: parentName,
+        relationship: relationship,
+      );
+
+      await result.fold(
+        (failure) async {
+          final userFriendlyMessage = ErrorHandler.getErrorMessage(failure.message);
+          emit(AuthError(userFriendlyMessage));
+        },
+        (response) async {
+          print('✅ [AUTH] Parental consent request sent successfully');
+          
+          final tempUser = UserEntity(
+            id: minorUserId,
+            email: '',
+            firstName: '',
+            lastName: '',
+            age: 0,
+            createdAt: DateTime.now(),
+            needsParentalConsent: true,
+          );
+          
+          emit(AuthParentalConsentPending(tempUser, parentEmail));
+        },
+      );
+    } catch (e) {
+      final userFriendlyMessage = ErrorHandler.getErrorMessage(e.toString());
+      emit(AuthError(userFriendlyMessage));
+    }
+  }
+
   // ==================== VERIFICACIÓN DE EMAIL ====================
 
   Future<void> sendEmailVerification(String userId) async {
     final currentState = state;
-    if (currentState is! AuthEmailVerificationRequired) return;
+    if (currentState is! AuthEmailVerificationRequired && 
+        currentState is! AuthEmailVerificationSent) {
+      print('⚠️ [AUTH] Cannot send email verification from current state: ${currentState.runtimeType}');
+      return;
+    }
 
     emit(const AuthLoading(message: 'Enviando verificación...'));
 
@@ -318,10 +466,19 @@ Future<void> registerWithParentalInfo({
           final userFriendlyMessage = ErrorHandler.getErrorMessage(failure.message);
           emit(AuthError(userFriendlyMessage));
         },
-        (_) => emit(AuthEmailVerificationSent(
-          currentState.user,
-          currentState.user.email,
-        )),
+        (_) {
+          if (currentState is AuthEmailVerificationRequired) {
+            emit(AuthEmailVerificationSent(
+              currentState.user,
+              currentState.user.email,
+            ));
+          } else if (currentState is AuthEmailVerificationSent) {
+            emit(AuthEmailVerificationSent(
+              currentState.user,
+              currentState.email,
+            ));
+          }
+        },
       );
     } catch (e) {
       final userFriendlyMessage = ErrorHandler.getErrorMessage(e.toString());
@@ -332,7 +489,10 @@ Future<void> registerWithParentalInfo({
   Future<void> resendEmailVerification(String email) async {
     final currentState = state;
     if (currentState is! AuthEmailVerificationSent &&
-        currentState is! AuthEmailVerificationRequired) return;
+        currentState is! AuthEmailVerificationRequired) {
+      print('⚠️ [AUTH] Cannot resend email from current state: ${currentState.runtimeType}');
+      return;
+    }
 
     emit(const AuthLoading(message: 'Reenviando verificación...'));
 
@@ -364,323 +524,109 @@ Future<void> registerWithParentalInfo({
 
       await result.fold(
         (failure) async {
-          // No mostrar error, solo mantener estado actual
+          print('⚠️ [AUTH] Could not check email verification status: ${failure.message}');
         },
         (status) async {
-          if (status['isVerified'] == true) {
-            await validateCurrentToken();
-          }
-        },
-      );
-    } catch (e) {
-      // Silenciar errores de verificación automática
-    }
-  }
-
-  // ==================== CONSENTIMIENTO PARENTAL ====================
-
-  Future<void> checkParentalConsentStatus(String userId) async {
-    try {
-      final result = await _authService.getParentalConsentStatus(userId);
-
-      await result.fold(
-        (failure) async {
-          // No mostrar error para verificaciones automáticas
-        },
-        (status) async {
-          if (status['isApproved'] == true) {
-            await validateCurrentToken();
-          }
-        },
-      );
-    } catch (e) {
-      // Silenciar errores de verificación automática
-    }
-  }
-
-  // ==================== MÉTODO PRINCIPAL MEJORADO ====================
-
-  Future<void> _handleSuccessfulAuth(UserEntity user, {bool silent = false}) async {
-    try {
-      print('🔍 [AUTH] Handling successful auth for user: ${user.email}');
-      print('🔍 [AUTH] User data disponible:');
-      print('   - ID: ${user.id}');
-      print('   - Email: ${user.email}');
-      print('   - FirstName: ${user.firstName}');
-      print('   - LastName: ${user.lastName}');
-      print('   - Age: ${user.age}');
-      
-      // 🆕 EMITIR ESTADO AUTENTICADO INMEDIATAMENTE CON INDICADOR DE CARGA
-      emit(AuthAuthenticated(user, isProfileLoading: true));
-      
-      // 🆕 INTENTAR CARGAR PERFIL COMPLETO PASANDO DATOS DEL USUARIO ACTUAL
-      print('🔍 [AUTH] Loading full profile for user: ${user.id}');
-      
-      final profileResult = await _profileService.getUserProfile(user.id);
-      
-      await profileResult.fold(
-        (failure) async {
-          print('⚠️ [AUTH] Could not load full profile: ${failure.message}');
+          print('🔍 [AUTH] Email verification status: $status');
           
-          // 🆕 SI EL PERFIL FALLA, CREAR UNO BASADO EN LOS DATOS DEL USUARIO
-          print('🔧 [AUTH] Creating profile from user data...');
-          final fallbackProfile = _createProfileFromUserData(user);
-          emit(AuthAuthenticated(user, fullProfile: fallbackProfile, isProfileLoading: false));
-        },
-        (fullProfile) async {
-          print('✅ [AUTH] Full profile loaded successfully');
-          
-          // 🆕 VERIFICAR SI EL PERFIL TIENE DATOS PLACEHOLDER
-          if (_hasPlaceholderData(fullProfile)) {
-            print('⚠️ [AUTH] Profile has placeholder data, merging with user data...');
-            final mergedProfile = _mergeUserDataWithProfile(user, fullProfile);
-            emit(AuthAuthenticated(user, fullProfile: mergedProfile, isProfileLoading: false));
+          if (status['isVerified'] == true || status['verified'] == true) {
+            final currentState = state;
+            if (currentState is AuthEmailVerificationRequired) {
+              await handleEmailVerified(currentState.user);
+            } else if (currentState is AuthEmailVerificationSent) {
+              await handleEmailVerified(currentState.user);
+            }
           } else {
-            emit(AuthAuthenticated(user, fullProfile: fullProfile, isProfileLoading: false));
+            print('⚠️ [AUTH] Email still not verified');
           }
         },
       );
-      
     } catch (e) {
-      print('❌ [AUTH] Error in _handleSuccessfulAuth: $e');
-      // Si hay cualquier error, mantener autenticación básica
-      emit(AuthAuthenticated(user, isProfileLoading: false));
+      print('❌ [AUTH] Exception checking email verification: $e');
     }
   }
 
-  // 🆕 MÉTODO PARA VERIFICAR SI EL PERFIL TIENE DATOS PLACEHOLDER
-  bool _hasPlaceholderData(UserProfileEntity profile) {
-    // Verificar firstName
-    if (profile.firstName.toLowerCase() == 'string' || 
-        profile.firstName.toLowerCase() == 'user' ||
-        profile.firstName.toLowerCase() == 'example' ||
-        profile.firstName.trim().isEmpty) {
-      return true;
-    }
-    
-    // Verificar lastName
-    if (profile.lastName.toLowerCase() == 'string' || 
-        profile.lastName.toLowerCase() == 'user' ||
-        profile.lastName.toLowerCase() == 'example') {
-      return true;
-    }
-    
-    // Verificar age
-    if (profile.age == 0) {
-      return true;
-    }
-    
-    return false;
-  }
+  // ==================== VALIDACIÓN DE TOKEN ====================
 
-  // 🆕 MÉTODO PARA CREAR PERFIL DESDE DATOS DEL USUARIO
-  UserProfileEntity _createProfileFromUserData(UserEntity user) {
-    print('🔧 [AUTH] Creating profile from user data...');
-    
-    // Usar datos reales del usuario que se registró
-    return UserProfileEntity(
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName.isNotEmpty ? user.firstName : 'Usuario',
-      lastName: user.lastName.isNotEmpty ? user.lastName : 'XUMA\'A',
-      age: user.age > 0 ? user.age : 25,
-      avatarUrl: user.profilePicture,
-      bio: 'Miembro de la comunidad XUMA\'A 🌱',
-      location: null,
-      createdAt: user.createdAt,
-      updatedAt: DateTime.now(),
-      lastLogin: user.lastLogin ?? DateTime.now(),
-      needsParentalConsent: user.needsParentalConsent,
-      ecoPoints: 150, // Puntos iniciales
-      achievementsCount: 2, // Logros iniciales
-      lessonsCompleted: 1, // Lecciones iniciales
-      level: _getUserLevelFromAge(user.age > 0 ? user.age : 25),
-    );
-  }
-
-  // 🆕 MÉTODO PARA MEZCLAR DATOS DEL USUARIO CON EL PERFIL
-  UserProfileEntity _mergeUserDataWithProfile(UserEntity user, UserProfileEntity profile) {
-    print('🔧 [AUTH] Merging user data with profile...');
-    print('🔧 [AUTH] User firstName: ${user.firstName}');
-    print('🔧 [AUTH] Profile firstName: ${profile.firstName}');
-    print('🔧 [AUTH] User age: ${user.age}');
-    print('🔧 [AUTH] Profile age: ${profile.age}');
-    
-    return UserProfileEntity(
-      id: profile.id,
-      email: profile.email.isNotEmpty ? profile.email : user.email,
-      firstName: _isPlaceholder(profile.firstName) ? user.firstName : profile.firstName,
-      lastName: _isPlaceholder(profile.lastName) ? user.lastName : profile.lastName,
-      age: profile.age == 0 ? user.age : profile.age,
-      avatarUrl: profile.avatarUrl ?? user.profilePicture,
-      bio: profile.bio ?? 'Miembro de la comunidad XUMA\'A 🌱',
-      location: profile.location,
-      createdAt: profile.createdAt,
-      updatedAt: profile.updatedAt ?? DateTime.now(),
-      lastLogin: profile.lastLogin ?? user.lastLogin ?? DateTime.now(),
-      needsParentalConsent: profile.needsParentalConsent,
-      ecoPoints: profile.ecoPoints > 0 ? profile.ecoPoints : 150,
-      achievementsCount: profile.achievementsCount > 0 ? profile.achievementsCount : 2,
-      lessonsCompleted: profile.lessonsCompleted > 0 ? profile.lessonsCompleted : 1,
-      level: profile.level.isNotEmpty && !_isPlaceholder(profile.level) 
-          ? profile.level 
-          : _getUserLevelFromAge(profile.age > 0 ? profile.age : user.age),
-    );
-  }
-
-  // 🆕 HELPER PARA VERIFICAR SI ES PLACEHOLDER
-  bool _isPlaceholder(String value) {
-    if (value.trim().isEmpty) return true;
-    final lower = value.toLowerCase().trim();
-    return lower == 'string' || 
-           lower == 'user' || 
-           lower == 'example';
-  }
-
-  // 🆕 HELPER PARA OBTENER NIVEL BASADO EN EDAD
-  String _getUserLevelFromAge(int age) {
-    if (age < 13) return 'Eco Explorer';
-    if (age < 18) return 'Eco Guardian';
-    if (age < 25) return 'Eco Warrior';
-    return 'Eco Master';
-  }
-
-  // ==================== MÉTODO PARA RECARGAR PERFIL MEJORADO ====================
-  
-  Future<void> refreshUserProfile() async {
-    final currentState = state;
-    if (currentState is! AuthAuthenticated) return;
-    
+  Future<void> validateCurrentToken() async {
     try {
-      print('🔍 [AUTH] Refreshing user profile...');
-      print('🔍 [AUTH] Current user data:');
-      print('   - ID: ${currentState.user.id}');
-      print('   - Email: ${currentState.user.email}');
-      print('   - FirstName: ${currentState.user.firstName}');
-      print('   - LastName: ${currentState.user.lastName}');
-      print('   - Age: ${currentState.user.age}');
+      print('🔍 [AUTH] Validating current token...');
       
-      // 🆕 INDICAR QUE EL PERFIL SE ESTÁ CARGANDO
-      emit(AuthAuthenticated(
-        currentState.user,
-        fullProfile: currentState.fullProfile,
-        isProfileLoading: true,
-      ));
+      final currentUserResult = await _authService.getCurrentUser();
       
-      final profileResult = await _profileService.getUserProfile(currentState.user.id);
-      
-      await profileResult.fold(
+      await currentUserResult.fold(
         (failure) async {
-          print('⚠️ [AUTH] Could not refresh profile: ${failure.message}');
-          
-          // 🆕 SI FALLA, USAR DATOS DEL USUARIO ACTUAL
-          final fallbackProfile = _createProfileFromUserData(currentState.user);
-          emit(AuthAuthenticated(
-            currentState.user,
-            fullProfile: fallbackProfile,
-            isProfileLoading: false,
-          ));
+          print('❌ [AUTH] Token validation failed: ${failure.message}');
+          await cleanInconsistentState();
         },
-        (fullProfile) async {
-          print('✅ [AUTH] Profile refreshed successfully');
-          
-          // 🆕 VERIFICAR Y MEZCLAR DATOS SI ES NECESARIO
-          if (_hasPlaceholderData(fullProfile)) {
-            print('⚠️ [AUTH] Refreshed profile has placeholder data, merging...');
-            final mergedProfile = _mergeUserDataWithProfile(currentState.user, fullProfile);
-            emit(AuthAuthenticated(
-              currentState.user,
-              fullProfile: mergedProfile,
-              isProfileLoading: false,
-            ));
+        (user) async {
+          if (user != null) {
+            print('✅ [AUTH] Token validation successful for: ${user.email}');
+            
+            final currentState = state;
+            if (currentState is AuthAuthenticated) {
+              if (currentState.user.email.toLowerCase() != user.email.toLowerCase()) {
+                print('⚠️ [AUTH] User mismatch detected, cleaning state...');
+                await cleanInconsistentState();
+                return;
+              }
+            }
+            
+            await _handleSuccessfulAuth(user);
           } else {
-            emit(AuthAuthenticated(
-              currentState.user,
-              fullProfile: fullProfile,
-              isProfileLoading: false,
-            ));
+            print('⚠️ [AUTH] No user found during validation');
+            emit(AuthInitial());
           }
         },
       );
     } catch (e) {
-      print('❌ [AUTH] Error refreshing profile: $e');
-      // Volver al estado anterior
-      emit(AuthAuthenticated(
-        currentState.user,
-        fullProfile: currentState.fullProfile,
-        isProfileLoading: false,
-      ));
+      print('❌ [AUTH] Exception during token validation: $e');
+      emit(AuthInitial());
     }
   }
 
-  // 🆕 MÉTODO PARA FORZAR RECARGA CON DATOS DEL REGISTRO
-  Future<void> forceProfileReloadWithUserData() async {
-    final currentState = state;
-    if (currentState is! AuthAuthenticated) return;
-    
-    print('🔧 [AUTH] Forcing profile reload with user data...');
-    
-    // Crear perfil basado en datos del usuario actual
-    final userBasedProfile = _createProfileFromUserData(currentState.user);
-    
-    // Emitir inmediatamente
-    emit(AuthAuthenticated(
-      currentState.user,
-      fullProfile: userBasedProfile,
-      isProfileLoading: false,
-    ));
-    
-    // Luego intentar cargar el perfil real del servidor en background
+  // ==================== MÉTODOS DE LIMPIEZA ====================
+
+  Future<void> cleanInconsistentState() async {
     try {
-      final profileResult = await _profileService.getUserProfile(currentState.user.id);
+      print('🧹 [AUTH] Cleaning inconsistent state...');
       
-      await profileResult.fold(
-        (failure) async {
-          print('⚠️ [AUTH] Server profile still failing, keeping user-based profile');
-          // Mantener el perfil basado en usuario
-        },
-        (serverProfile) async {
-          print('✅ [AUTH] Server profile loaded, merging with user data');
-          final mergedProfile = _mergeUserDataWithProfile(currentState.user, serverProfile);
-          emit(AuthAuthenticated(
-            currentState.user,
-            fullProfile: mergedProfile,
-            isProfileLoading: false,
-          ));
-        },
-      );
+      await _authService.logout();
+      
+      emit(AuthInitial());
+      
+      print('✅ [AUTH] Inconsistent state cleaned');
     } catch (e) {
-      print('❌ [AUTH] Error in background profile load: $e');
-      // Mantener el perfil basado en usuario
+      print('❌ [AUTH] Error cleaning inconsistent state: $e');
+      emit(AuthInitial());
     }
   }
 
-  // ==================== MÉTODOS DE NAVEGACIÓN ====================
-
-  void acknowledgeParentalConsent() {
-    emit(AuthInitial());
+  Future<void> forceCompleteLogout() async {
+    try {
+      print('🔧 [AUTH] Forcing complete logout...');
+      
+      emit(const AuthLoading(message: 'Limpiando sesión...'));
+      
+      await _authService.logout();
+      
+      emit(AuthInitial());
+      
+      print('✅ [AUTH] Complete logout forced successfully');
+    } catch (e) {
+      print('❌ [AUTH] Error in force logout: $e');
+      emit(AuthInitial());
+    }
   }
 
-  void cancelParentalProcess() {
-    emit(AuthInitial());
-  }
-
-  void goBackToVerification(UserEntity user) {
-    emit(AuthEmailVerificationRequired(user));
-  }
-
-  void reset() {
-    emit(AuthInitial());
-  }
-
-  // ==================== AUTO-VERIFICACIÓN ====================
+  // ==================== VERIFICACIÓN PERIÓDICA ====================
 
   void startPeriodicCheck(String userId) {
     if (state is AuthEmailVerificationSent || 
         state is AuthParentalConsentPending) {
       
       Stream.periodic(const Duration(seconds: 30))
-          .take(20)
+          .take(20) // Verificar por 10 minutos máximo
           .listen((_) async {
         if (state is AuthEmailVerificationSent) {
           await checkEmailVerificationStatus(userId);
@@ -690,324 +636,133 @@ Future<void> registerWithParentalInfo({
       });
     }
   }
-  Future<void> debugAuthState() async {
-  try {
-    print('🔍 [AUTH_CUBIT] ========== AUTH DEBUG ==========');
-    print('🔍 [AUTH_CUBIT] Current state: ${state.runtimeType}');
-    
-    if (state is AuthAuthenticated) {
-      final authState = state as AuthAuthenticated;
-      print('🔍 [AUTH_CUBIT] Authenticated user: ${authState.user.email}');
-      print('🔍 [AUTH_CUBIT] User ID: ${authState.user.id}');
-      print('🔍 [AUTH_CUBIT] Has full profile: ${authState.fullProfile != null}');
-    }
-    
-    // Debug del servicio
-    final currentUserResult = await _authService.getCurrentUser();
-    await currentUserResult.fold(
-      (failure) async {
-        print('🔍 [AUTH_CUBIT] Service getCurrentUser failed: ${failure.message}');
-      },
-      (user) async {
-        if (user != null) {
-          print('🔍 [AUTH_CUBIT] Service user: ${user.email} (ID: ${user.id})');
-        } else {
-          print('🔍 [AUTH_CUBIT] Service returned null user');
-        }
-      },
-    );
-    
-    print('🔍 [AUTH_CUBIT] ================================');
-  } catch (e) {
-    print('❌ [AUTH_CUBIT] Error in debug: $e');
-  }
-}
 
-// 🆕 MÉTODO PARA FORZAR LIMPIEZA COMPLETA
-Future<void> forceCompleteLogout() async {
+  // Dentro de tu AuthCubit (lib/features/auth/presentation/cubit/auth_cubit.dart)
+Future<void> refreshUserProfile() async {
   try {
-    print('🔧 [AUTH_CUBIT] Forcing complete logout...');
-    
-    // Limpiar estado del cubit
-    emit(const AuthLoading(message: 'Limpiando sesión...'));
-    
-    // Logout del servicio (limpia tokens y cache)
-    await _authService.logout();
-    
-    // Estado inicial
-    emit(AuthInitial());
-    
-    print('✅ [AUTH_CUBIT] Complete logout forced successfully');
-  } catch (e) {
-    print('❌ [AUTH_CUBIT] Error in force logout: $e');
-    emit(AuthInitial()); // Asegurar que vuelva al estado inicial
-  }
-}
-
-// 🆕 MÉTODO MEJORADO PARA LOGIN QUE MANEJA MEJOR LOS USUARIOS DIFERENTES
-Future<void> loginWithUserSwitch(String email, String password) async {
-  emit(const AuthLoading(message: 'Verificando credenciales...'));
-
-  try {
-    // 🆕 VERIFICAR SI HAY UN USUARIO DIFERENTE LOGUEADO
     final currentState = state;
-    bool needsSwitch = false;
-    
     if (currentState is AuthAuthenticated) {
-      final currentUser = currentState.user;
-      if (currentUser.email.toLowerCase() != email.toLowerCase()) {
-        print('🔄 [AUTH_CUBIT] Different user detected, switching from ${currentUser.email} to $email');
-        needsSwitch = true;
-      }
-    }
-    
-    // Si necesitamos cambiar de usuario, hacer logout completo primero
-    if (needsSwitch) {
-      print('🔄 [AUTH_CUBIT] Performing user switch...');
-      await _authService.logout(); // Limpia tokens y cache
-      emit(const AuthLoading(message: 'Cambiando usuario...'));
-    }
-    
-    // Proceder con login normal
-    await login(email, password);
-    
-  } catch (e) {
-    print('❌ [AUTH_CUBIT] Error in login with user switch: $e');
-    final userFriendlyMessage = ErrorHandler.getErrorMessage(e.toString());
-    emit(AuthError(userFriendlyMessage));
-  }
-}
-
-// 🆕 MÉTODO PARA VALIDAR TOKEN SIN CAMBIAR ESTADO DE LOADING
-Future<bool> silentTokenValidation() async {
-  try {
-    print('🔍 [AUTH_CUBIT] Performing silent token validation...');
-    
-    final currentUserResult = await _authService.getCurrentUser();
-    
-    return await currentUserResult.fold(
-      (failure) async {
-        print('⚠️ [AUTH_CUBIT] Silent validation failed: ${failure.message}');
-        return false;
-      },
-      (user) async {
-        if (user != null) {
-          print('✅ [AUTH_CUBIT] Silent validation successful for: ${user.email}');
-          
-          // Solo actualizar si no hay estado de autenticación actual o es diferente usuario
-          final currentState = state;
-          if (currentState is! AuthAuthenticated ||
-              currentState.user.email != user.email) {
-            await _handleSuccessfulAuth(user, silent: true);
+      emit(const AuthLoading(message: 'Actualizando perfil...'));
+      
+      // Obtener el usuario actualizado
+      final userResult = await _authService.getCurrentUser();
+      
+      await userResult.fold(
+        (failure) async {
+          emit(AuthError('Error al actualizar perfil: ${failure.message}'));
+        },
+        (user) async {
+          if (user != null) {
+            // Obtener el perfil completo
+            final profileResult = await _profileService.getUserProfile(user.id);
+            
+            await profileResult.fold(
+              (failure) async {
+                emit(AuthAuthenticated(
+                  user,
+                  emailVerified: currentState.emailVerified,
+                  parentalConsentApproved: currentState.parentalConsentApproved,
+                  fullProfile: currentState.fullProfile,
+                  isProfileLoading: false,
+                ));
+              },
+              (profile) async {
+                emit(AuthAuthenticated(
+                  user,
+                  emailVerified: currentState.emailVerified,
+                  parentalConsentApproved: currentState.parentalConsentApproved,
+                  fullProfile: profile,
+                  isProfileLoading: false,
+                ));
+              },
+            );
+          } else {
+            emit(AuthInitial());
           }
-          return true;
-        } else {
-          print('⚠️ [AUTH_CUBIT] Silent validation returned null user');
-          return false;
-        }
-      },
-    );
+        },
+      );
+    }
   } catch (e) {
-    print('❌ [AUTH_CUBIT] Error in silent token validation: $e');
-    return false;
+    final currentState = state;
+    if (currentState is AuthAuthenticated) {
+      emit(AuthAuthenticated(
+        currentState.user,
+        emailVerified: currentState.emailVerified,
+        parentalConsentApproved: currentState.parentalConsentApproved,
+        fullProfile: currentState.fullProfile,
+        isProfileLoading: false,
+      ));
+    }
+    print('❌ [AUTH] Error refreshing user profile: $e');
   }
 }
 
-// 🆕 MÉTODO PARA INICIALIZACIÓN SEGURA
-Future<void> safeInitialization() async {
-  try {
-    print('🚀 [AUTH_CUBIT] Starting safe initialization...');
-    
-    // No emitir loading state para inicialización
-    final isValid = await silentTokenValidation();
-    
-    if (!isValid) {
-      print('⚠️ [AUTH_CUBIT] No valid session found, starting fresh');
+  // ==================== MÉTODOS PRIVADOS ====================
+
+  Future<void> _handleSuccessfulAuth(UserEntity user) async {
+    try {
+      emit(AuthAuthenticated(user, isProfileLoading: true));
+      
+      final profileResult = await _profileService.getUserProfile(user.id);
+      
+      await profileResult.fold(
+        (failure) async {
+          emit(AuthAuthenticated(user, isProfileLoading: false));
+        },
+        (profile) async {
+          emit(AuthAuthenticated(
+            user,
+            fullProfile: profile,
+            isProfileLoading: false,
+          ));
+        },
+      );
+    } catch (e) {
+      emit(AuthAuthenticated(user, isProfileLoading: false));
+    }
+  }
+
+  Future<void> handleEmailVerified(UserEntity user) async {
+    try {
+      final hasValidToken = await _hasValidToken();
+      
+      if (hasValidToken) {
+        await _handleSuccessfulAuth(user);
+      } else {
+        emit(AuthInitial());
+      }
+    } catch (e) {
       emit(AuthInitial());
     }
-    // Si es válido, silentTokenValidation ya actualizó el estado
-    
-  } catch (e) {
-    print('❌ [AUTH_CUBIT] Error in safe initialization: $e');
-    emit(AuthInitial());
   }
-}
 
-// 🆕 MÉTODO PARA LIMPIAR ESTADO INCONSISTENTE
-Future<void> cleanInconsistentState() async {
-  try {
-    print('🧹 [AUTH_CUBIT] Cleaning inconsistent state...');
-    
-    // Forzar logout completo
-    await _authService.logout();
-    
-    // Volver al estado inicial
-    emit(AuthInitial());
-    
-    print('✅ [AUTH_CUBIT] Inconsistent state cleaned');
-  } catch (e) {
-    print('❌ [AUTH_CUBIT] Error cleaning inconsistent state: $e');
-    emit(AuthInitial());
+  Future<void> logout() async {
+    try {
+      await _authService.logout();
+      emit(AuthInitial());
+    } catch (e) {
+      emit(AuthInitial());
+    }
   }
-}
 
-// 🆕 SOBRESCRIBIR EL MÉTODO validateCurrentToken PARA MEJOR MANEJO
-@override
-Future<void> validateCurrentToken() async {
-  try {
-    print('🔍 [AUTH_CUBIT] Validating current token...');
-    
-    final currentUserResult = await _authService.getCurrentUser();
-    
-    await currentUserResult.fold(
-      (failure) async {
-        print('❌ [AUTH_CUBIT] Token validation failed: ${failure.message}');
-        
-        // Si el token es inválido, limpiar estado
-        await cleanInconsistentState();
-      },
-      (user) async {
-        if (user != null) {
-          print('✅ [AUTH_CUBIT] Token validation successful for: ${user.email}');
-          
-          // Verificar consistencia con estado actual
-          final currentState = state;
-          if (currentState is AuthAuthenticated) {
-            if (currentState.user.email.toLowerCase() != user.email.toLowerCase()) {
-              print('⚠️ [AUTH_CUBIT] User mismatch detected, cleaning state...');
-              await cleanInconsistentState();
-              return;
-            }
-          }
-          
-          // Actualizar con usuario validado
-          await _handleSuccessfulAuth(user, silent: true);
-        } else {
-          print('⚠️ [AUTH_CUBIT] No user found during validation');
+  Future<void> checkAuthStatus() async {
+    try {
+      final result = await _authService.getCurrentUser();
+      
+      await result.fold(
+        (failure) async {
           emit(AuthInitial());
-        }
-      },
-    );
-  } catch (e) {
-    print('❌ [AUTH_CUBIT] Exception during token validation: $e');
-    emit(AuthInitial());
-  }
-}
-
-// 🆕 GETTER MEJORADO PARA VERIFICAR CONSISTENCIA DEL ESTADO
-bool get hasConsistentAuthState {
-  try {
-    final currentState = state;
-    if (currentState is AuthAuthenticated) {
-      // Verificar que tengamos datos básicos válidos
-      final user = currentState.user;
-      return user.email.isNotEmpty && 
-             user.id.isNotEmpty && 
-             user.firstName.isNotEmpty;
+        },
+        (user) async {
+          if (user != null) {
+            await _handleSuccessfulAuth(user);
+          } else {
+            emit(AuthInitial());
+          }
+        },
+      );
+    } catch (e) {
+      emit(AuthInitial());
     }
-    return false;
-  } catch (e) {
-    print('❌ [AUTH_CUBIT] Error checking state consistency: $e');
-    return false;
-  }
-}
-
-// 🆕 MÉTODO PARA DEBUG COMPLETO
-Future<void> fullDebugReport() async {
-  try {
-    print('🔍 [AUTH_CUBIT] ========== FULL DEBUG REPORT ==========');
-    
-    await debugAuthState();
-    
-    print('🔍 [AUTH_CUBIT] State consistency: $hasConsistentAuthState');
-    print('🔍 [AUTH_CUBIT] Is authenticated: $isAuthenticated');
-    print('🔍 [AUTH_CUBIT] Is loading: $isLoading');
-    print('🔍 [AUTH_CUBIT] Has full profile: $hasFullProfile');
-    
-    if (currentUser != null) {
-      final user = currentUser!;
-      print('🔍 [AUTH_CUBIT] Current user details:');
-      print('   - Email: ${user.email}');
-      print('   - ID: ${user.id}');
-      print('   - Name: ${user.firstName} ${user.lastName}');
-      print('   - Age: ${user.age}');
-    }
-    
-    print('🔍 [AUTH_CUBIT] =======================================');
-  } catch (e) {
-    print('❌ [AUTH_CUBIT] Error in full debug report: $e');
-  }
-}
-
-// ==================== MÉTODOS HELPER PARA EL WIDGET ====================
-
-/// Método seguro para obtener el usuario actual
-UserEntity? get safeCurrentUser {
-  try {
-    final currentState = state;
-    if (currentState is AuthAuthenticated && hasConsistentAuthState) {
-      return currentState.user;
-    }
-    return null;
-  } catch (e) {
-    print('❌ [AUTH_CUBIT] Error getting safe current user: $e');
-    return null;
-  }
-}
-
-/// Método para verificar si podemos confiar en el estado actual
-bool get canTrustCurrentState {
-  try {
-    return hasConsistentAuthState && 
-           isAuthenticated && 
-           !isLoading &&
-           currentUser != null;
-  } catch (e) {
-    print('❌ [AUTH_CUBIT] Error checking trust state: $e');
-    return false;
-  }
-}
-
-  // ==================== GETTERS MEJORADOS ====================
-  
-  UserEntity? get currentUser {
-    final currentState = state;
-    if (currentState is AuthAuthenticated) {
-      return currentState.user;
-    }
-    return null;
-  }
-
-  UserProfileEntity? get currentUserProfile {
-    final currentState = state;
-    if (currentState is AuthAuthenticated) {
-      return currentState.fullProfile;
-    }
-    return null;
-  }
-
-  bool get isAuthenticated => state is AuthAuthenticated;
-  
-  bool get isLoading => state is AuthLoading;
-
-  // 🆕 GETTER MEJORADO PARA ESTADO DE CARGA DE PERFIL
-  bool get isLoadingProfile {
-    final currentState = state;
-    return currentState is AuthAuthenticated && currentState.isProfileLoading;
-  }
-
-  bool get hasFullProfile {
-    final currentState = state;
-    return currentState is AuthAuthenticated && 
-           currentState.fullProfile != null && 
-           !currentState.isProfileLoading;
-  }
-
-  // 🆕 GETTER PARA SABER SI EL USUARIO ESTÁ AUTENTICADO PERO SIN PERFIL COMPLETO
-  bool get needsProfileLoad {
-    final currentState = state;
-    return currentState is AuthAuthenticated && 
-           currentState.fullProfile == null && 
-           !currentState.isProfileLoading;
   }
 }

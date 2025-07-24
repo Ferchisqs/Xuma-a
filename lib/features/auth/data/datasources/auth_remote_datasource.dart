@@ -1,26 +1,23 @@
-// lib/features/auth/data/datasources/auth_remote_datasource.dart - ACTUALIZADO
+// lib/features/auth/data/datasources/auth_remote_datasource.dart
 import 'package:injectable/injectable.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/config/api_endpoints.dart';
 import '../../../../core/errors/exceptions.dart';
-import '../../../../core/services/token_manager.dart'; // 🆕 IMPORTAR TOKEN MANAGER
+import '../../../../core/services/token_manager.dart';
 import '../models/user_model.dart';
 import '../../domain/usecases/register_usecase.dart';
 
 abstract class AuthRemoteDataSource {
-  // ==================== AUTENTICACIÓN BÁSICA ====================
   Future<UserModel> login(String email, String password);
   Future<UserModel> register(RegisterParams params);
   Future<UserModel> registerWithParentalConsent(RegisterParams params);
   Future<void> logout();
   Future<UserModel?> getCurrentUser();
   
-  // ==================== GESTIÓN DE TOKENS ====================
   Future<Map<String, dynamic>> validateToken(String token);
   Future<Map<String, dynamic>> refreshToken(String refreshToken);
   Future<void> revokeToken(String token);
   
-  // ==================== CONSENTIMIENTO PARENTAL ====================
   Future<Map<String, dynamic>> requestParentalConsent({
     required String minorUserId,
     required String parentEmail,
@@ -30,7 +27,6 @@ abstract class AuthRemoteDataSource {
   Future<Map<String, dynamic>> approveParentalConsent(String token);
   Future<Map<String, dynamic>> getParentalConsentStatus(String userId);
   
-  // ==================== VERIFICACIÓN DE EMAIL ====================
   Future<void> sendEmailVerification(String userId);
   Future<Map<String, dynamic>> verifyEmail(String token);
   Future<void> resendEmailVerification(String email);
@@ -40,246 +36,232 @@ abstract class AuthRemoteDataSource {
 @LazySingleton(as: AuthRemoteDataSource)
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final ApiClient _apiClient;
-  final TokenManager _tokenManager; // 🆕 AGREGAR TOKEN MANAGER
+  final TokenManager _tokenManager;
 
   AuthRemoteDataSourceImpl(this._apiClient, this._tokenManager);
 
-  // ==================== AUTENTICACIÓN BÁSICA ====================
-  
- @override
-Future<UserModel> login(String email, String password) async {
-  try {
-    print('🔍 [AUTH] Starting login for: $email');
-    
-    final response = await _apiClient.post(
-      ApiEndpoints.login,
-      data: {
-        'email': email,
-        'password': password,
-      },
-    );
-
-    print('🔍 [AUTH] Login Response Status: ${response.statusCode}');
-    print('🔍 [AUTH] Login Response Data: ${response.data}');
-
-    if (response.statusCode == 200) {
-      final responseData = response.data;
+  @override
+  Future<UserModel> login(String email, String password) async {
+    try {
+      print('🔍 [AUTH] Starting login for: $email');
       
-      // Verificar que la respuesta sea exitosa
-      if (responseData['success'] != true) {
-        throw ServerException('Login no exitoso: ${responseData['message'] ?? 'Error desconocido'}');
-      }
-      
-      // 🆕 GUARDAR TOKENS CON VERIFICACIÓN MEJORADA
-      try {
-        await _tokenManager.saveTokensFromResponse(responseData);
-        print('✅ [AUTH] Tokens saved after successful login');
+      final response = await _apiClient.post(
+        ApiEndpoints.login,
+        data: {
+          'email': email,
+          'password': password,
+        },
+      );
+
+      print('🔍 [AUTH] Login Response Status: ${response.statusCode}');
+      print('🔍 [AUTH] Login Response Data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final responseData = response.data;
         
-        // 🆕 VERIFICAR QUE LOS TOKENS SE GUARDARON CORRECTAMENTE
-        final savedToken = await _tokenManager.getAccessToken();
-        if (savedToken == null) {
-          throw ServerException('Error: Token no se guardó correctamente');
+        if (responseData['success'] != true) {
+          throw ServerException('Login no exitoso: ${responseData['message'] ?? 'Error desconocido'}');
         }
         
-        // Debug tokens
-        await _tokenManager.debugTokenInfo();
-      } catch (e) {
-        print('❌ [AUTH] CRITICAL ERROR: Could not save tokens: $e');
-        throw ServerException('Error guardando tokens de sesión: $e');
-      }
-      
-      // Extraer datos del usuario
-      Map<String, dynamic> userData = {};
-      
-      if (responseData['data'] != null) {
-        final data = responseData['data'];
+        try {
+          await _tokenManager.saveTokensFromResponse(responseData);
+          print('✅ [AUTH] Tokens saved after successful login');
+          
+          final savedToken = await _tokenManager.getAccessToken();
+          if (savedToken == null) {
+            throw ServerException('Error: Token no se guardó correctamente');
+          }
+          
+          await _tokenManager.debugTokenInfo();
+        } catch (e) {
+          print('❌ [AUTH] CRITICAL ERROR: Could not save tokens: $e');
+          throw ServerException('Error guardando tokens de sesión: $e');
+        }
         
-        if (data['user'] != null) {
-          userData = Map<String, dynamic>.from(data['user']);
-          userData['userId'] = data['userId'];
-          userData['id'] = data['userId'];
+        Map<String, dynamic> userData = {};
+        
+        if (responseData['data'] != null) {
+          final data = responseData['data'];
+          
+          if (data['user'] != null) {
+            userData = Map<String, dynamic>.from(data['user']);
+            userData['userId'] = data['userId'];
+            userData['id'] = data['userId'];
+          } else {
+            userData = Map<String, dynamic>.from(data);
+          }
         } else {
-          userData = Map<String, dynamic>.from(data);
+          throw ServerException('Datos de usuario no encontrados en la respuesta');
         }
+        
+        print('🔍 [AUTH] Final user data for LOGIN model: $userData');
+        
+        return _createUserModelFromApiData(userData, isLogin: true);
       } else {
-        throw ServerException('Datos de usuario no encontrados en la respuesta');
+        throw ServerException('Error en el login: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
       }
-      
-      print('🔍 [AUTH] Final user data for LOGIN model: $userData');
-      
-      return _createUserModelFromApiData(userData, isLogin: true);
-    } else {
-      throw ServerException('Error en el login: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
+    } catch (e) {
+      print('❌ [AUTH] Login Error Details: $e');
+      if (e is ServerException) rethrow;
+      throw ServerException('Error de conexión en login: $e');
     }
-  } catch (e) {
-    print('❌ [AUTH] Login Error Details: $e');
-    if (e is ServerException) rethrow;
-    throw ServerException('Error de conexión en login: $e');
   }
-}
 
-// ==================== MÉTODO CORREGIDO PARA REGISTER ====================
+  @override
+  Future<UserModel> register(RegisterParams params) async {
+    try {
+      print('🔍 [AUTH] Starting registration for: ${params.email}');
+      
+      final response = await _apiClient.post(
+        ApiEndpoints.register,
+        data: {
+          'email': params.email,
+          'password': params.password,
+          'confirmPassword': params.confirmPassword,
+          'age': params.age,
+          'firstName': params.firstName,
+          'lastName': params.lastName,
+        },
+      );
 
-@override
-Future<UserModel> register(RegisterParams params) async {
-  try {
-    print('🔍 [AUTH] Starting registration for: ${params.email}');
-    
-    final response = await _apiClient.post(
-      ApiEndpoints.register,
-      data: {
+      print('🔍 [AUTH] Register Response Status: ${response.statusCode}');
+      print('🔍 [AUTH] Register Response Data: ${response.data}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = response.data;
+        
+        if (responseData['success'] != true) {
+          throw ServerException('Registro no exitoso: ${responseData['message'] ?? 'Error desconocido'}');
+        }
+        
+        final data = responseData['data'] as Map<String, dynamic>?;
+        if (data == null) {
+          throw ServerException('Datos de usuario no encontrados en la respuesta de registro');
+        }
+        
+        final requiresEmailVerification = data['requiresEmailVerification'] ?? false;
+        final accountStatus = data['accountStatus'] ?? '';
+        
+        print('🔍 [AUTH] Registration analysis:');
+        print('   - Requires email verification: $requiresEmailVerification');
+        print('   - Account status: $accountStatus');
+        
+        if (requiresEmailVerification || accountStatus == 'pending_verification') {
+          print('📧 [AUTH] Registration successful but requires email verification');
+          return _createUserModelFromRegistrationData(data, params, needsEmailVerification: true);
+        }
+        
+        try {
+          await _tokenManager.saveTokensFromResponse(responseData);
+          
+          final savedToken = await _tokenManager.getAccessToken();
+          if (savedToken == null) {
+            throw ServerException('Error: Token de registro no se guardó correctamente');
+          }
+          
+          print('✅ [AUTH] Registration tokens saved successfully');
+        } catch (e) {
+          print('❌ [AUTH] CRITICAL ERROR: Could not save registration tokens: $e');
+          throw ServerException('Error guardando tokens de registro: $e');
+        }
+        
+        return _createUserModelFromRegistrationData(data, params, needsEmailVerification: false);
+        
+      } else {
+        throw ServerException('Error en el registro: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
+      }
+    } catch (e) {
+      print('❌ [AUTH] Register Error Details: $e');
+      if (e is ServerException) rethrow;
+      throw ServerException('Error de conexión en registro: $e');
+    }
+  }
+
+  @override
+  Future<UserModel> registerWithParentalConsent(RegisterParams params) async {
+    try {
+      print('🔍 [AUTH] Starting parental consent registration for: ${params.email}');
+      
+      final requestData = {
         'email': params.email,
         'password': params.password,
         'confirmPassword': params.confirmPassword,
         'age': params.age,
         'firstName': params.firstName,
         'lastName': params.lastName,
-      },
-    );
+        'needsParentalConsent': true,
+      };
 
-    print('🔍 [AUTH] Register Response Status: ${response.statusCode}');
-    print('🔍 [AUTH] Register Response Data: ${response.data}');
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final responseData = response.data;
-      
-      // Verificar que la respuesta sea exitosa
-      if (responseData['success'] != true) {
-        throw ServerException('Registro no exitoso: ${responseData['message'] ?? 'Error desconocido'}');
+      if (params.parentalInfo != null) {
+        requestData.addAll({
+          'guardianName': params.parentalInfo!.guardianName,
+          'relationship': params.parentalInfo!.relationship,
+          'guardianEmail': params.parentalInfo!.guardianEmail,
+        });
       }
-      
-      // 🆕 GUARDAR TOKENS CON VERIFICACIÓN
-      try {
-        await _tokenManager.saveTokensFromResponse(responseData);
+
+      final response = await _apiClient.post(
+        ApiEndpoints.register,
+        data: requestData,
+      );
+
+      print('🔍 [AUTH] Parental Register Response Status: ${response.statusCode}');
+      print('🔍 [AUTH] Parental Register Response Data: ${response.data}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = response.data;
         
-        final savedToken = await _tokenManager.getAccessToken();
-        if (savedToken == null) {
-          throw ServerException('Error: Token de registro no se guardó correctamente');
+        if (responseData['success'] != true) {
+          throw ServerException('Registro con consentimiento parental no exitoso: ${responseData['message'] ?? 'Error desconocido'}');
         }
         
-        print('✅ [AUTH] Registration tokens saved successfully');
-      } catch (e) {
-        print('❌ [AUTH] CRITICAL ERROR: Could not save registration tokens: $e');
-        throw ServerException('Error guardando tokens de registro: $e');
-      }
-      
-      Map<String, dynamic> userData = {};
-      
-      if (responseData['data'] != null) {
-        final data = responseData['data'];
-        
-        if (data['user'] != null) {
-          userData = Map<String, dynamic>.from(data['user']);
-          userData['userId'] = data['userId'];
-          userData['id'] = data['userId'];
-        } else {
-          userData = Map<String, dynamic>.from(data);
+        final data = responseData['data'] as Map<String, dynamic>?;
+        if (data == null) {
+          throw ServerException('Datos de usuario no encontrados en la respuesta de registro parental');
         }
         
-        // 🆕 ASEGURAR DATOS DEL REGISTRO
-        userData['firstName'] = userData['firstName'] ?? params.firstName;
-        userData['lastName'] = userData['lastName'] ?? params.lastName;
-        userData['email'] = userData['email'] ?? params.email;
-        userData['age'] = userData['age'] ?? params.age;
+        final requiresEmailVerification = data['requiresEmailVerification'] ?? false;
+        final accountStatus = data['accountStatus'] ?? '';
         
+        if (!requiresEmailVerification && accountStatus != 'pending_verification') {
+          try {
+            await _tokenManager.saveTokensFromResponse(responseData);
+            print('✅ [AUTH] Parental registration tokens saved successfully');
+          } catch (e) {
+            print('⚠️ [AUTH] Warning: Could not save parental registration tokens: $e');
+          }
+        }
+        
+        final userModel = _createUserModelFromRegistrationData(
+          data, 
+          params, 
+          needsEmailVerification: requiresEmailVerification || accountStatus == 'pending_verification'
+        );
+        
+        if (params.needsParentalConsent && params.parentalInfo != null) {
+          try {
+            await requestParentalConsent(
+              minorUserId: userModel.id,
+              parentEmail: params.parentalInfo!.guardianEmail,
+              parentName: params.parentalInfo!.guardianName,
+              relationship: params.parentalInfo!.relationship,
+            );
+            print('✅ [AUTH] Parental consent request sent successfully');
+          } catch (e) {
+            print('⚠️ [AUTH] Warning: Could not send parental consent request: $e');
+          }
+        }
+        
+        return userModel;
       } else {
-        throw ServerException('Datos de usuario no encontrados en la respuesta de registro');
+        throw ServerException('Error en registro con consentimiento parental: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
       }
-      
-      return _createUserModelFromApiData(userData, isLogin: false);
-    } else {
-      throw ServerException('Error en el registro: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
+    } catch (e) {
+      print('❌ [AUTH] Parental Register Error Details: $e');
+      if (e is ServerException) rethrow;
+      throw ServerException('Error de conexión en registro parental: $e');
     }
-  } catch (e) {
-    print('❌ [AUTH] Register Error Details: $e');
-    if (e is ServerException) rethrow;
-    throw ServerException('Error de conexión en registro: $e');
   }
-}
-
-@override
-Future<UserModel> registerWithParentalConsent(RegisterParams params) async {
-  try {
-    print('🔍 [AUTH] Starting parental consent registration for: ${params.email}');
-    
-    final requestData = {
-      'email': params.email,
-      'password': params.password,
-      'confirmPassword': params.confirmPassword,
-      'age': params.age,
-      'firstName': params.firstName,
-      'lastName': params.lastName,
-      'needsParentalConsent': true,
-    };
-
-    if (params.parentalInfo != null) {
-      requestData.addAll({
-        'guardianName': params.parentalInfo!.guardianName,
-        'relationship': params.parentalInfo!.relationship,
-        'guardianEmail': params.parentalInfo!.guardianEmail,
-      });
-    }
-
-    final response = await _apiClient.post(
-      ApiEndpoints.register,
-      data: requestData,
-    );
-
-    print('🔍 [AUTH] Parental Register Response Status: ${response.statusCode}');
-    print('🔍 [AUTH] Parental Register Response Data: ${response.data}');
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      await _tokenManager.saveTokensFromResponse(response.data);
-      
-      Map<String, dynamic> userData = {};
-      
-      if (response.data['data'] != null) {
-        final data = response.data['data'];
-        
-        if (data['user'] != null) {
-          userData = Map<String, dynamic>.from(data['user']);
-          userData['userId'] = data['userId'];
-          userData['id'] = data['userId'];
-        } else {
-          userData = Map<String, dynamic>.from(data);
-        }
-      } else {
-        userData = response.data;
-      }
-      
-      // Asegurar datos del registro
-      userData['firstName'] = userData['firstName'] ?? params.firstName;
-      userData['lastName'] = userData['lastName'] ?? params.lastName;
-      userData['email'] = userData['email'] ?? params.email;
-      userData['age'] = userData['age'] ?? params.age;
-      userData['needsParentalConsent'] = true;
-      
-      // Si hay información parental, solicitar consentimiento
-      if (params.needsParentalConsent && params.parentalInfo != null) {
-        try {
-          await requestParentalConsent(
-            minorUserId: userData['id'] ?? userData['userId'],
-            parentEmail: params.parentalInfo!.guardianEmail,
-            parentName: params.parentalInfo!.guardianName,
-            relationship: params.parentalInfo!.relationship,
-          );
-          print('✅ [AUTH] Parental consent request sent successfully');
-        } catch (e) {
-          print('⚠️ [AUTH] Warning: Could not send parental consent request: $e');
-          // No fallar el registro por esto
-        }
-      }
-      
-      return _createUserModelFromApiData(userData, isLogin: false);
-    } else {
-      throw ServerException('Error en registro con consentimiento parental: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
-    }
-  } catch (e) {
-    print('❌ [AUTH] Parental Register Error Details: $e');
-    if (e is ServerException) rethrow;
-    throw ServerException('Error de conexión en registro parental: $e');
-  }
-}
 
   @override
   Future<void> logout() async {
@@ -310,14 +292,12 @@ Future<UserModel> registerWithParentalConsent(RegisterParams params) async {
         throw ServerException('Error al cerrar sesión: ${response.data['message'] ?? 'Código: ${response.statusCode}'}');
       }
       
-      // 🆕 LIMPIAR TOKENS DESPUÉS DEL LOGOUT
       await _tokenManager.clearAllTokens();
       print('✅ [AUTH] All tokens cleared after logout');
       
     } catch (e) {
       print('❌ [AUTH] Logout Error: $e');
       
-      // Para logout, si hay error de red o servidor, limpiar tokens de todas formas
       await _tokenManager.clearAllTokens();
       print('✅ [AUTH] Tokens cleared despite logout error');
       
@@ -337,14 +317,12 @@ Future<UserModel> registerWithParentalConsent(RegisterParams params) async {
     try {
       print('🔍 [AUTH] Getting current user...');
       
-      // 🆕 VERIFICAR QUE TENGAMOS UN TOKEN VÁLIDO PRIMERO
       final hasValidToken = await _tokenManager.hasValidAccessToken();
       if (!hasValidToken) {
         print('⚠️ [AUTH] No valid access token available');
         return null;
       }
       
-      // Intentar validar token actual
       final tokenResponse = await _apiClient.post(ApiEndpoints.validateToken);
       
       print('🔍 [AUTH] Validate Token Response Status: ${tokenResponse.statusCode}');
@@ -379,8 +357,6 @@ Future<UserModel> registerWithParentalConsent(RegisterParams params) async {
     }
   }
 
-  // ==================== GESTIÓN DE TOKENS ====================
-  
   @override
   Future<Map<String, dynamic>> validateToken(String token) async {
     try {
@@ -409,7 +385,6 @@ Future<UserModel> registerWithParentalConsent(RegisterParams params) async {
       );
 
       if (response.statusCode == 200) {
-        // 🆕 GUARDAR NUEVOS TOKENS
         try {
           await _tokenManager.saveTokensFromResponse(response.data);
           print('✅ [AUTH] New tokens saved after refresh');
@@ -436,7 +411,6 @@ Future<UserModel> registerWithParentalConsent(RegisterParams params) async {
       );
 
       if (response.statusCode == 200) {
-        // 🆕 LIMPIAR TOKENS DESPUÉS DE REVOCAR
         await _tokenManager.clearAllTokens();
         print('✅ [AUTH] Tokens cleared after revocation');
       } else {
@@ -448,120 +422,6 @@ Future<UserModel> registerWithParentalConsent(RegisterParams params) async {
     }
   }
 
-  // ==================== MÉTODO HELPER PARA CREAR USER MODEL ====================
-
-  UserModel _createUserModelFromApiData(Map<String, dynamic> data, {bool isLogin = false}) {
-    try {
-      print('🔍 [AUTH] Creating UserModel from data (isLogin: $isLogin): $data');
-      
-      // IDs - manejar diferentes formatos
-      final String userId = (data['userId'] ?? data['id'] ?? 'temp_id').toString();
-      
-      // Campos básicos - siempre requeridos
-      final String email = (data['email'] ?? '').toString();
-      final String firstName = (data['firstName'] ?? data['first_name'] ?? '').toString();
-      final String lastName = (data['lastName'] ?? data['last_name'] ?? '').toString();
-      
-      // Age - manejar según contexto
-      int age;
-      if (data['age'] != null) {
-        age = int.tryParse(data['age'].toString()) ?? 18;
-      } else {
-        age = isLogin ? 25 : 18;
-      }
-      
-      // Campos opcionales
-      final String? profilePicture = data['profilePicture']?.toString() ?? 
-                                    data['profile_picture']?.toString();
-      
-      // Verificación de email
-      final bool isVerified = data['isVerified'] ?? 
-                             data['is_verified'] ?? 
-                             data['emailVerified'] ?? 
-                             data['email_verified'] ??
-                             (isLogin ? true : false);
-      
-      // Fechas con manejo de errores
-      DateTime createdAt;
-      try {
-        if (data['createdAt'] != null) {
-          createdAt = DateTime.parse(data['createdAt'].toString());
-        } else if (data['created_at'] != null) {
-          createdAt = DateTime.parse(data['created_at'].toString());
-        } else {
-          createdAt = DateTime.now();
-        }
-      } catch (e) {
-        print('⚠️ [AUTH] Error parsing createdAt: $e');
-        createdAt = DateTime.now();
-      }
-      
-      DateTime? lastLogin;
-      try {
-        if (data['lastLogin'] != null) {
-          lastLogin = DateTime.parse(data['lastLogin'].toString());
-        } else if (data['last_login'] != null) {
-          lastLogin = DateTime.parse(data['last_login'].toString());
-        } else if (isLogin) {
-          lastLogin = DateTime.now();
-        }
-      } catch (e) {
-        print('⚠️ [AUTH] Error parsing lastLogin: $e');
-        lastLogin = isLogin ? DateTime.now() : null;
-      }
-      
-      // Consentimiento parental
-      final bool needsParentalConsent = data['requiresParentalConsent'] ?? 
-                                       data['requires_parental_consent'] ?? 
-                                       data['needsParentalConsent'] ??
-                                       (age < 13);
-
-      print('🔍 [AUTH] UserModel data summary:');
-      print('  - Context: ${isLogin ? "LOGIN" : "REGISTER"}');
-      print('  - ID: $userId');
-      print('  - Email: $email');
-      print('  - Name: $firstName $lastName');
-      print('  - Age: $age');
-      print('  - Verified: $isVerified');
-      print('  - Needs parental consent: $needsParentalConsent');
-      
-      final userModel = UserModel(
-        id: userId,
-        email: email,
-        firstName: firstName,
-        lastName: lastName,
-        age: age,
-        profilePicture: profilePicture,
-        createdAt: createdAt,
-        lastLogin: lastLogin,
-        needsParentalConsent: needsParentalConsent,
-      );
-      
-      print('✅ [AUTH] UserModel created successfully');
-      return userModel;
-      
-    } catch (e) {
-      print('❌ [AUTH] Error creating UserModel: $e');
-      print('📄 [AUTH] Original data: $data');
-      
-      // Crear modelo básico para no fallar completamente
-      return UserModel(
-        id: (data['userId'] ?? data['id'] ?? 'error_id').toString(),
-        email: (data['email'] ?? 'unknown@email.com').toString(),
-        firstName: (data['firstName'] ?? 'Usuario').toString(),
-        lastName: (data['lastName'] ?? '').toString(),
-        age: isLogin ? 25 : 18,
-        profilePicture: null,
-        createdAt: DateTime.now(),
-        lastLogin: isLogin ? DateTime.now() : null,
-        needsParentalConsent: false,
-      );
-    }
-  }
-
-  // ==================== RESTO DE MÉTODOS (CONSENTIMIENTO PARENTAL Y EMAIL) ====================
-  
-  
   @override
   Future<Map<String, dynamic>> requestParentalConsent({
     required String minorUserId,
@@ -694,6 +554,179 @@ Future<UserModel> registerWithParentalConsent(RegisterParams params) async {
     } catch (e) {
       if (e is ServerException) rethrow;
       throw ServerException('Error de conexión obteniendo estado: $e');
+    }
+  }
+
+  UserModel _createUserModelFromApiData(Map<String, dynamic> data, {bool isLogin = false}) {
+    try {
+      print('🔍 [AUTH] Creating UserModel from data (isLogin: $isLogin): $data');
+      
+      final String userId = (data['userId'] ?? data['id'] ?? 'temp_id').toString();
+      final String email = (data['email'] ?? '').toString();
+      final String firstName = (data['firstName'] ?? data['first_name'] ?? '').toString();
+      final String lastName = (data['lastName'] ?? data['last_name'] ?? '').toString();
+      
+      int age;
+      if (data['age'] != null) {
+        age = int.tryParse(data['age'].toString()) ?? 18;
+      } else {
+        age = isLogin ? 25 : 18;
+      }
+      
+      final String? profilePicture = data['profilePicture']?.toString() ?? 
+                                  data['profile_picture']?.toString();
+      
+      final bool isEmailVerified = data['isVerified'] ?? 
+                                 data['is_verified'] ?? 
+                                 data['emailVerified'] ?? 
+                                 data['email_verified'] ??
+                                 data['verified'] ??
+                                 (isLogin ? true : false);
+      
+      DateTime createdAt;
+      try {
+        if (data['createdAt'] != null) {
+          createdAt = DateTime.parse(data['createdAt'].toString());
+        } else if (data['created_at'] != null) {
+          createdAt = DateTime.parse(data['created_at'].toString());
+        } else {
+          createdAt = DateTime.now();
+        }
+      } catch (e) {
+        print('⚠️ [AUTH] Error parsing createdAt: $e');
+        createdAt = DateTime.now();
+      }
+      
+      DateTime? lastLogin;
+      try {
+        if (data['lastLogin'] != null) {
+          lastLogin = DateTime.parse(data['lastLogin'].toString());
+        } else if (data['last_login'] != null) {
+          lastLogin = DateTime.parse(data['last_login'].toString());
+        } else if (isLogin) {
+          lastLogin = DateTime.now();
+        }
+      } catch (e) {
+        print('⚠️ [AUTH] Error parsing lastLogin: $e');
+        lastLogin = isLogin ? DateTime.now() : null;
+      }
+      
+      final bool needsParentalConsent = data['requiresParentalConsent'] ?? 
+                                     data['requires_parental_consent'] ?? 
+                                     data['needsParentalConsent'] ??
+                                     (age < 13);
+
+      print('🔍 [AUTH] UserModel data summary:');
+      print('  - Context: ${isLogin ? "LOGIN" : "API_DATA"}');
+      print('  - ID: $userId');
+      print('  - Email: $email');
+      print('  - Name: $firstName $lastName');
+      print('  - Age: $age');
+      print('  - Email Verified: $isEmailVerified');
+      print('  - Needs parental consent: $needsParentalConsent');
+      
+      return UserModel(
+        id: userId,
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        age: age,
+        profilePicture: profilePicture,
+        createdAt: createdAt,
+        lastLogin: lastLogin,
+        needsParentalConsent: needsParentalConsent,
+        isEmailVerified: isEmailVerified,
+      );
+      
+    } catch (e) {
+      print('❌ [AUTH] Error creating UserModel: $e');
+      print('📄 [AUTH] Original data: $data');
+      
+      return UserModel(
+        id: (data['userId'] ?? data['id'] ?? 'error_id').toString(),
+        email: (data['email'] ?? 'unknown@email.com').toString(),
+        firstName: (data['firstName'] ?? 'Usuario').toString(),
+        lastName: (data['lastName'] ?? '').toString(),
+        age: isLogin ? 25 : 18,
+        profilePicture: null,
+        createdAt: DateTime.now(),
+        lastLogin: isLogin ? DateTime.now() : null,
+        needsParentalConsent: false,
+        isEmailVerified: isLogin,
+      );
+    }
+  }
+
+  UserModel _createUserModelFromRegistrationData(
+    Map<String, dynamic> data, 
+    RegisterParams params, {
+    bool needsEmailVerification = false,
+  }) {
+    try {
+      print('🔍 [AUTH] Creating UserModel from registration data:');
+      print('   - Needs email verification: $needsEmailVerification');
+      print('   - Server data: $data');
+      print('   - Registration params: firstName=${params.firstName}, lastName=${params.lastName}, age=${params.age}');
+      
+      final String userId = (data['userId'] ?? data['id'] ?? 'temp_id').toString();
+      final String email = (data['email'] ?? params.email).toString();
+      final String firstName = params.firstName;
+      final String lastName = params.lastName;
+      final int age = params.age;
+      final bool isEmailVerified = !needsEmailVerification;
+      
+      DateTime createdAt;
+      try {
+        if (data['createdAt'] != null) {
+          createdAt = DateTime.parse(data['createdAt'].toString());
+        } else {
+          createdAt = DateTime.now();
+        }
+      } catch (e) {
+        print('⚠️ [AUTH] Error parsing createdAt, using current time: $e');
+        createdAt = DateTime.now();
+      }
+      
+      final bool needsParentalConsent = data['requiresParentalConsent'] ?? (age < 13);
+
+      print('🔍 [AUTH] UserModel data summary (REGISTRATION):');
+      print('  - ID: $userId');
+      print('  - Email: $email');
+      print('  - Name: $firstName $lastName');
+      print('  - Age: $age');
+      print('  - Email Verified: $isEmailVerified');
+      print('  - Needs email verification: $needsEmailVerification');
+      print('  - Needs parental consent: $needsParentalConsent');
+      
+      return UserModel(
+        id: userId,
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        age: age,
+        profilePicture: null,
+        createdAt: createdAt,
+        lastLogin: null,
+        needsParentalConsent: needsParentalConsent,
+        isEmailVerified: isEmailVerified,
+      );
+      
+    } catch (e) {
+      print('❌ [AUTH] Error creating UserModel from registration: $e');
+      print('📄 [AUTH] Registration data: $data');
+      
+      return UserModel(
+        id: (data['userId'] ?? data['id'] ?? 'temp_registration_id').toString(),
+        email: params.email,
+        firstName: params.firstName,
+        lastName: params.lastName,
+        age: params.age,
+        profilePicture: null,
+        createdAt: DateTime.now(),
+        lastLogin: null,
+        needsParentalConsent: params.age < 13,
+        isEmailVerified: !needsEmailVerification,
+      );
     }
   }
 }

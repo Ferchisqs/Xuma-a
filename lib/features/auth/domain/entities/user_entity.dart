@@ -1,3 +1,5 @@
+// lib/features/auth/domain/entities/user_entity.dart - ACTUALIZADO
+
 import 'package:equatable/equatable.dart';
 
 class UserEntity extends Equatable {
@@ -10,6 +12,7 @@ class UserEntity extends Equatable {
   final DateTime createdAt;
   final DateTime? lastLogin;
   final bool needsParentalConsent;
+  final bool isEmailVerified; // 🆕 AGREGADO
 
   const UserEntity({
     required this.id,
@@ -21,6 +24,7 @@ class UserEntity extends Equatable {
     required this.createdAt,
     this.lastLogin,
     this.needsParentalConsent = false,
+    this.isEmailVerified = false, // 🆕 DEFAULT FALSE
   });
 
   String get fullName => '$firstName $lastName';
@@ -37,5 +41,6 @@ class UserEntity extends Equatable {
     createdAt,
     lastLogin,
     needsParentalConsent,
+    isEmailVerified, // 🆕 AGREGADO A PROPS
   ];
 }

@@ -1,4 +1,4 @@
-// lib/features/challenges/presentation/cubit/challenge_detail_cubit.dart - ACTUALIZADO CON EVIDENCIA
+// lib/features/challenges/presentation/cubit/challenge_detail_cubit.dart - CORREGIDO CON USER ID REAL
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
@@ -7,6 +7,7 @@ import '../../domain/usecases/start_challenge_usecase.dart';
 import '../../domain/usecases/complete_challenge_usecase.dart';
 import '../../domain/usecases/update_challenge_progress_usecase.dart';
 import '../../domain/usecases/submit_evidence_usecase.dart';
+import '../../../auth/domain/services/auth_service.dart'; // 🆕 IMPORT AUTH SERVICE
 
 // ==================== STATES ACTUALIZADOS ====================
 
@@ -112,6 +113,18 @@ class ChallengePendingValidation extends ChallengeDetailState {
   List<Object> get props => [challenge, submissionDate];
 }
 
+// 🆕 NUEVO ESTADO PARA FALTA DE AUTENTICACIÓN
+class ChallengeNotAuthenticated extends ChallengeDetailState {
+  final String message;
+
+  const ChallengeNotAuthenticated({
+    this.message = 'Debes iniciar sesión para participar en desafíos',
+  });
+
+  @override
+  List<Object> get props => [message];
+}
+
 // ==================== CUBIT ACTUALIZADO ====================
 
 @injectable
@@ -120,16 +133,16 @@ class ChallengeDetailCubit extends Cubit<ChallengeDetailState> {
   final CompleteChallengeUseCase completeChallengeUseCase;
   final UpdateChallengeProgressUseCase updateChallengeProgressUseCase;
   final SubmitEvidenceUseCase submitEvidenceUseCase;
-
-  static const String _defaultUserId = 'user_123';
+  final AuthService authService; // 🆕 AUTH SERVICE
 
   ChallengeDetailCubit({
     required this.startChallengeUseCase,
     required this.completeChallengeUseCase,
     required this.updateChallengeProgressUseCase,
     required this.submitEvidenceUseCase,
+    required this.authService, // 🆕 INYECCIÓN DE AUTH SERVICE
   }) : super(ChallengeDetailInitial()) {
-    print('✅ [CHALLENGE DETAIL CUBIT] Constructor - Now with evidence submission support');
+    print('✅ [CHALLENGE DETAIL CUBIT] Constructor - Now with real user authentication');
   }
 
   void loadChallenge(ChallengeEntity challenge) {
@@ -142,6 +155,13 @@ class ChallengeDetailCubit extends Cubit<ChallengeDetailState> {
       print('🎯 [CHALLENGE DETAIL CUBIT] === JOINING CHALLENGE VIA REAL API ===');
       print('🎯 [CHALLENGE DETAIL CUBIT] Challenge: ${challenge.title}');
       
+      // 🔧 OBTENER USER ID REAL
+      final userIdResult = await _getCurrentUserId();
+      if (userIdResult == null) {
+        emit(const ChallengeNotAuthenticated());
+        return;
+      }
+
       emit(ChallengeDetailUpdating(
         challenge: challenge,
         action: 'Uniéndose al desafío...',
@@ -150,7 +170,7 @@ class ChallengeDetailCubit extends Cubit<ChallengeDetailState> {
       final result = await startChallengeUseCase(
         StartChallengeParams(
           challengeId: challenge.id,
-          userId: _defaultUserId,
+          userId: userIdResult, // 🔧 USER ID REAL
         ),
       );
 
@@ -198,6 +218,13 @@ class ChallengeDetailCubit extends Cubit<ChallengeDetailState> {
     try {
       print('🎯 [CHALLENGE DETAIL CUBIT] Updating progress: $progress/${challenge.targetProgress}');
       
+      // 🔧 OBTENER USER ID REAL
+      final userIdResult = await _getCurrentUserId();
+      if (userIdResult == null) {
+        emit(const ChallengeNotAuthenticated());
+        return;
+      }
+      
       emit(ChallengeDetailUpdating(
         challenge: challenge,
         action: 'Actualizando progreso...',
@@ -206,7 +233,7 @@ class ChallengeDetailCubit extends Cubit<ChallengeDetailState> {
       final result = await updateChallengeProgressUseCase(
         UpdateChallengeProgressParams(
           challengeId: challenge.id,
-          userId: _defaultUserId,
+          userId: userIdResult, // 🔧 USER ID REAL
           progress: progress,
         ),
       );
@@ -244,7 +271,7 @@ class ChallengeDetailCubit extends Cubit<ChallengeDetailState> {
 
           if (isCompleted) {
             // 🆕 SI SE COMPLETA, REQUERIR EVIDENCIA EN LUGAR DE COMPLETAR DIRECTAMENTE
-            final userChallengeId = '${_defaultUserId}_${challenge.id}_${DateTime.now().millisecondsSinceEpoch}';
+            final userChallengeId = '${userIdResult}_${challenge.id}_${DateTime.now().millisecondsSinceEpoch}';
             
             emit(ChallengeEvidenceRequired(
               challenge: updatedChallenge,
@@ -267,6 +294,13 @@ class ChallengeDetailCubit extends Cubit<ChallengeDetailState> {
     try {
       print('🎯 [CHALLENGE DETAIL CUBIT] === SUBMITTING EVIDENCE VIA REAL API ===');
       print('🎯 [CHALLENGE DETAIL CUBIT] User Challenge ID: ${evidenceParams.userChallengeId}');
+      
+      // 🔧 VERIFICAR AUTENTICACIÓN
+      final userIdResult = await _getCurrentUserId();
+      if (userIdResult == null) {
+        emit(const ChallengeNotAuthenticated());
+        return;
+      }
       
       final currentState = state;
       if (currentState is! ChallengeEvidenceRequired) {
@@ -336,11 +370,18 @@ class ChallengeDetailCubit extends Cubit<ChallengeDetailState> {
   }
 
   // 🆕 MÉTODO PARA MANEJAR VALIDACIÓN RECHAZADA
-  void markValidationRejected(ChallengeEntity challenge, String reason) {
+  void markValidationRejected(ChallengeEntity challenge, String reason) async {
     print('❌ [CHALLENGE DETAIL CUBIT] Challenge validation rejected: $reason');
     
+    // 🔧 OBTENER USER ID REAL PARA RETRY
+    final userIdResult = await _getCurrentUserId();
+    if (userIdResult == null) {
+      emit(const ChallengeNotAuthenticated());
+      return;
+    }
+    
     // Volver a estado que requiere evidencia
-    final userChallengeId = '${_defaultUserId}_${challenge.id}_retry_${DateTime.now().millisecondsSinceEpoch}';
+    final userChallengeId = '${userIdResult}_${challenge.id}_retry_${DateTime.now().millisecondsSinceEpoch}';
     
     emit(ChallengeEvidenceRequired(
       challenge: challenge,
@@ -405,6 +446,57 @@ class ChallengeDetailCubit extends Cubit<ChallengeDetailState> {
     }
   }
 
+  // ==================== 🔧 MÉTODO HELPER PARA OBTENER USER ID REAL ====================
+  
+  /// Obtiene el user ID del usuario autenticado actual
+  Future<String?> _getCurrentUserId() async {
+    try {
+      print('🔍 [CHALLENGE DETAIL CUBIT] Getting current user ID...');
+      
+      final userResult = await authService.getCurrentUser();
+      
+      return userResult.fold(
+        (failure) {
+          print('❌ [CHALLENGE DETAIL CUBIT] Failed to get current user: ${failure.message}');
+          return null;
+        },
+        (user) {
+          if (user != null) {
+            print('✅ [CHALLENGE DETAIL CUBIT] Current user ID: ${user.id}');
+            return user.id;
+          } else {
+            print('⚠️ [CHALLENGE DETAIL CUBIT] No authenticated user found');
+            return null;
+          }
+        },
+      );
+    } catch (e) {
+      print('❌ [CHALLENGE DETAIL CUBIT] Error getting current user ID: $e');
+      return null;
+    }
+  }
+
+  /// Verificar si el usuario está autenticado
+  Future<bool> _isUserAuthenticated() async {
+    try {
+      final isLoggedInResult = await authService.isLoggedIn();
+      
+      return isLoggedInResult.fold(
+        (failure) {
+          print('❌ [CHALLENGE DETAIL CUBIT] Error checking authentication: ${failure.message}');
+          return false;
+        },
+        (isLoggedIn) {
+          print('🔍 [CHALLENGE DETAIL CUBIT] User authenticated: $isLoggedIn');
+          return isLoggedIn;
+        },
+      );
+    } catch (e) {
+      print('❌ [CHALLENGE DETAIL CUBIT] Error checking authentication: $e');
+      return false;
+    }
+  }
+
   // ==================== GETTERS DE ESTADO ====================
 
   bool get isLoading => state is ChallengeDetailUpdating;
@@ -413,6 +505,7 @@ class ChallengeDetailCubit extends Cubit<ChallengeDetailState> {
   bool get isCompleted => state is ChallengeCompleted;
   bool get requiresEvidence => state is ChallengeEvidenceRequired;
   bool get isPendingValidation => state is ChallengePendingValidation;
+  bool get isNotAuthenticated => state is ChallengeNotAuthenticated;
 
   ChallengeEntity? get currentChallenge {
     final currentState = state;
@@ -436,8 +529,8 @@ class ChallengeDetailCubit extends Cubit<ChallengeDetailState> {
   // ==================== HELPER METHODS ====================
 
   /// Crear un ID único para el user challenge
-  String _generateUserChallengeId(String challengeId) {
-    return '${_defaultUserId}_${challengeId}_${DateTime.now().millisecondsSinceEpoch}';
+  String _generateUserChallengeId(String challengeId, String userId) {
+    return '${userId}_${challengeId}_${DateTime.now().millisecondsSinceEpoch}';
   }
 
   /// Verificar si el desafío requiere evidencia obligatoria
@@ -470,5 +563,28 @@ class ChallengeDetailCubit extends Cubit<ChallengeDetailState> {
     } else {
       return '¡Comienza tu desafío ecológico!';
     }
+  }
+
+  // 🆕 MÉTODO PARA MANEJAR REDIRECCIONAMIENTO A LOGIN
+  void redirectToLogin() {
+    print('🔐 [CHALLENGE DETAIL CUBIT] User needs to login to participate in challenges');
+    emit(const ChallengeNotAuthenticated(
+      message: 'Inicia sesión para participar en desafíos ecológicos',
+    ));
+  }
+
+  // 🆕 MÉTODO PARA VERIFICAR AUTENTICACIÓN ANTES DE ACCIONES
+  Future<bool> checkAuthenticationForAction(String action) async {
+    final isAuthenticated = await _isUserAuthenticated();
+    
+    if (!isAuthenticated) {
+      print('⚠️ [CHALLENGE DETAIL CUBIT] User not authenticated for action: $action');
+      emit(ChallengeNotAuthenticated(
+        message: 'Debes iniciar sesión para $action',
+      ));
+      return false;
+    }
+    
+    return true;
   }
 }

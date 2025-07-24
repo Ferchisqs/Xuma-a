@@ -1,3 +1,5 @@
+// lib/features/auth/domain/entities/parental_info.dart - ACTUALIZADO
+
 import 'package:equatable/equatable.dart';
 
 class ParentalInfo extends Equatable {
@@ -10,6 +12,9 @@ class ParentalInfo extends Equatable {
     required this.relationship,
     required this.guardianEmail,
   });
+
+  // 🆕 GETTER PARA COMPATIBILIDAD
+  String get parentEmail => guardianEmail;
 
   Map<String, dynamic> toJson() {
     return {

@@ -45,7 +45,7 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
   
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _showingSuccessDialog = false; // 🆕 NUEVO FLAG
+  bool _showingSuccessDialog = false;
 
   @override
   void initState() {
@@ -91,20 +91,20 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
             if (state is AuthError) {
               _showErrorSnackBar(context, state.message);
             } else if (state is AuthAuthenticated) {
-              // 🆕 ACTIVAR FLAG ANTES DE MOSTRAR EL DIÁLOGO
-              _showingSuccessDialog = true;
-              _showRegistrationSuccessDialog(context, state.user);
-            } else if (state is AuthParentalConsentPending) {
-              _showParentalConsentDialog(context, state.user, state.parentEmail);
+              if (!_showingSuccessDialog) {
+                _showingSuccessDialog = true;
+                _showRegistrationSuccessDialog(context, state.user);
+              }
             } else if (state is AuthEmailVerificationRequired) {
               _showEmailVerificationDialog(context, state.user);
             } else if (state is AuthEmailVerificationSent) {
               _showEmailSentMessage(context, state.email);
+            } else if (state is AuthParentalConsentPending) {
+              _showParentalConsentDialog(context, state.user, state.parentEmail);
             }
           },
           child: BlocBuilder<AuthCubit, AuthState>(
             builder: (context, state) {
-              // 🆕 SI SE ESTÁ MOSTRANDO EL DIÁLOGO DE ÉXITO, MOSTRAR PANTALLA DE CARGA
               if (_showingSuccessDialog || state is AuthAuthenticated) {
                 return const Center(
                   child: Column(
@@ -124,7 +124,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                 );
               }
 
-              // Mostrar formulario de información parental
               if (state is AuthParentalInfoRequired) {
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
@@ -137,7 +136,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                 );
               }
 
-              // Mostrar pantalla de verificación de email
               if (state is AuthEmailVerificationRequired) {
                 return EmailVerificationPage(
                   user: state.user,
@@ -150,7 +148,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                 );
               }
 
-              // Mostrar pantalla de email enviado
               if (state is AuthEmailVerificationSent) {
                 return EmailVerificationSentPage(
                   user: state.user,
@@ -164,7 +161,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                 );
               }
 
-              // Formulario de registro normal
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Form(
@@ -174,7 +170,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                     children: [
                       const SizedBox(height: 20),
                       
-                      // Logo y header
                       const LogoHeader(
                         title: 'Registrarse',
                         subtitle: 'Únete a la comunidad verde de XUMA\'A',
@@ -182,7 +177,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                       
                       const SizedBox(height: 40),
                       
-                      // Nombre field
                       AuthTextField(
                         controller: _firstNameController,
                         label: 'Nombre',
@@ -193,7 +187,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                       
                       const SizedBox(height: 16),
                       
-                      // Apellido field
                       AuthTextField(
                         controller: _lastNameController,
                         label: 'Apellido',
@@ -204,7 +197,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                       
                       const SizedBox(height: 16),
                       
-                      // Edad field
                       AuthTextField(
                         controller: _ageController,
                         label: 'Edad',
@@ -215,7 +207,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                       
                       const SizedBox(height: 16),
                       
-                      // Email field
                       AuthTextField(
                         controller: _emailController,
                         label: 'Correo Electrónico',
@@ -226,7 +217,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                       
                       const SizedBox(height: 16),
                       
-                      // Password field con indicador de fuerza
                       AuthTextField(
                         controller: _passwordController,
                         label: 'Contraseña',
@@ -246,13 +236,11 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                         validator: ValidationUtils.validatePassword,
                       ),
                       
-                      // Mostrar indicador de fuerza de contraseña
                       if (_passwordController.text.isNotEmpty)
                         _buildPasswordStrengthIndicator(),
                       
                       const SizedBox(height: 16),
                       
-                      // Confirm Password field
                       AuthTextField(
                         controller: _confirmPasswordController,
                         label: 'Confirmar Contraseña',
@@ -274,12 +262,10 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                       
                       const SizedBox(height: 24),
                       
-                      // Age warning for minors
                       if (_showAgeWarning()) _buildAgeWarning(),
                       
                       const SizedBox(height: 32),
                       
-                      // Register button
                       CustomButton(
                         text: 'Registrarse',
                         isLoading: state is AuthLoading,
@@ -288,7 +274,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                       
                       const SizedBox(height: 24),
                       
-                      // Login link
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -313,7 +298,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                       
                       const SizedBox(height: 32),
                       
-                      // Environment awareness section
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -356,13 +340,12 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
     );
   }
 
-  // 🆕 DIÁLOGO DE ÉXITO MEJORADO
-  void _showRegistrationSuccessDialog(BuildContext context, dynamic user) {
+  void _showEmailVerificationDialog(BuildContext context, dynamic user) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => WillPopScope(
-        onWillPop: () async => false, // 🆕 PREVENIR CIERRE CON BACK BUTTON
+        onWillPop: () async => false,
         child: Dialog(
           backgroundColor: Colors.transparent,
           child: Container(
@@ -382,7 +365,227 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Icono de éxito animado
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 800),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          gradient: AppColors.primaryGradient,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.email_outlined,
+                          color: Colors.white,
+                          size: 40,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                
+                const SizedBox(height: 20),
+                
+                Text(
+                  '📧 ¡Registro Exitoso!',
+                  style: AppTextStyles.h3.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                
+                const SizedBox(height: 16),
+                
+                Text(
+                  '¡Hola ${user.firstName}! 👋',
+                  style: AppTextStyles.h4.copyWith(
+                    color: AppColors.primary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                
+                const SizedBox(height: 12),
+                
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.info.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.mark_email_read_rounded,
+                        color: AppColors.info,
+                        size: 24,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tu cuenta ha sido creada exitosamente.',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Hemos enviado un email de verificación a:',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        user.email,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+                          context.read<AuthCubit>().sendEmailVerification(user.id);
+                        },
+                        icon: const Icon(Icons.send_rounded),
+                        label: const Text('Reenviar Email'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 12),
+                    
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+                          context.read<AuthCubit>().checkEmailVerificationStatus(user.id);
+                        },
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Ya Verifiqué'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 12),
+                    
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop();
+                        _navigateToLogin(context);
+                      },
+                      icon: const Icon(Icons.login_rounded),
+                      label: const Text('Ir al Login'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline_rounded,
+                        color: AppColors.success,
+                        size: 20,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '¡Tu cuenta está lista!',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.success,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Una vez que verifiques tu email, podrás iniciar sesión con tu email y contraseña.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showRegistrationSuccessDialog(BuildContext context, dynamic user) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => WillPopScope(
+        onWillPop: () async => false,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 TweenAnimationBuilder<double>(
                   duration: const Duration(milliseconds: 800),
                   tween: Tween(begin: 0.0, end: 1.0),
@@ -408,7 +611,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                 
                 const SizedBox(height: 20),
                 
-                // Título
                 Text(
                   '¡Registro Exitoso! 🎉',
                   style: AppTextStyles.h3.copyWith(
@@ -420,7 +622,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                 
                 const SizedBox(height: 16),
                 
-                // Mensaje de bienvenida personalizado
                 Text(
                   '¡Hola ${user.firstName}!',
                   style: AppTextStyles.h4.copyWith(
@@ -431,7 +632,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                 
                 const SizedBox(height: 12),
                 
-                // Información
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -462,13 +662,12 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                 
                 const SizedBox(height: 20),
                 
-                // Botón para ir al login
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.of(dialogContext).pop(); // Cerrar diálogo
-                      _navigateToLogin(context); // Ir al login
+                      Navigator.of(dialogContext).pop();
+                      _navigateToLogin(context);
                     },
                     icon: const Icon(Icons.login_rounded),
                     label: const Text('Iniciar Sesión'),
@@ -484,7 +683,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
                 
                 const SizedBox(height: 12),
                 
-                // Mensaje adicional
                 Text(
                   'Bienvenido a la comunidad XUMA\'A 🌱',
                   style: AppTextStyles.bodySmall.copyWith(
@@ -500,12 +698,9 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
     );
   }
 
-  // 🆕 MÉTODO PARA NAVEGAR AL LOGIN MEJORADO
   void _navigateToLogin(BuildContext context) {
-    // Limpiar el estado del AuthCubit antes de navegar
     context.read<AuthCubit>().reset();
     
-    // Navegar al login reemplazando toda la pila de navegación
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (context) => const LoginPage(),
@@ -514,7 +709,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
     );
   }
 
-  // Widget para mostrar fuerza de contraseña en tiempo real
   Widget _buildPasswordStrengthIndicator() {
     final password = _passwordController.text;
     final strength = ValidationUtils.calculatePasswordStrength(password);
@@ -544,7 +738,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Barra de fuerza
           Row(
             children: [
               Text(
@@ -587,7 +780,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
           const Divider(height: 1),
           const SizedBox(height: 8),
           
-          // Requisitos
           Text(
             'Requisitos:',
             style: AppTextStyles.bodySmall.copyWith(
@@ -713,38 +905,6 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
           context.read<AuthCubit>().acknowledgeParentalConsent();
           _navigateToLogin(context);
         },
-      ),
-    );
-  }
-
-  void _showEmailVerificationDialog(BuildContext context, dynamic user) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text('📧 Verificación de Email'),
-        content: Text(
-          'Hemos enviado un email de verificación a ${user.email}. Por favor revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.read<AuthCubit>().sendEmailVerification(user.id);
-            },
-            child: const Text('Reenviar Email'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.read<AuthCubit>().checkEmailVerificationStatus(user.id);
-            },
-            child: const Text('Ya Verifiqué'),
-          ),
-        ],
       ),
     );
   }

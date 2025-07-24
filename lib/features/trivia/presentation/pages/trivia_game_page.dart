@@ -1,4 +1,4 @@
-// lib/features/trivia/presentation/pages/trivia_game_page.dart
+// lib/features/trivia/presentation/pages/trivia_game_page.dart - CON FALLBACK
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,7 +12,7 @@ import '../cubit/trivia_game_cubit.dart';
 import '../widgets/trivia_question_widget.dart';
 import '../widgets/trivia_timer_widget.dart';
 import '../widgets/trivia_progress_widget.dart';
-import '../widgets/animated_trivia_completion_dialog.dart'; // 🔧 IMPORT CORRECTO
+import '../widgets/animated_trivia_completion_dialog.dart';
 
 class TriviaGamePage extends StatelessWidget {
   final TriviaCategoryEntity category;
@@ -93,116 +93,335 @@ class _TriviaGameContentState extends State<_TriviaGameContent> {
             _timer?.cancel();
           } else if (state is TriviaGameCompleted) {
             _timer?.cancel();
-            _showAnimatedCompletionDialog(context, state); // 🔧 USAR NUEVO DIÁLOGO
+            _showAnimatedCompletionDialog(context, state);
+          } else if (state is TriviaGameError) {
+            _timer?.cancel();
+            // Mostrar error pero permitir reintentar
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: ${state.message}'),
+                backgroundColor: AppColors.error,
+                action: SnackBarAction(
+                  label: 'Reintentar',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    context.read<TriviaGameCubit>().startTrivia(widget.category);
+                  },
+                ),
+              ),
+            );
           }
         },
         builder: (context, state) {
           if (state is TriviaGameLoading) {
-            return const Center(
-              child: EcoLoadingWidget(
-                message: 'Preparando trivia...',
-              ),
-            );
+            return _buildLoadingState();
           }
 
           if (state is TriviaGameError) {
-            return Center(
-              child: EcoErrorWidget(
-                message: state.message,
-                onRetry: () {
-                  context.read<TriviaGameCubit>().startTrivia(widget.category);
-                },
-              ),
-            );
+            return _buildErrorState(context, state.message);
           }
 
           if (state is TriviaGameReady) {
-            return Column(
-              children: [
-                // Header con progreso y puntos
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(24),
-                      bottomRight: Radius.circular(24),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      // Progreso y timer
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          TriviaProgressWidget(
-                            currentQuestion: state.currentQuestionIndex + 1,
-                            totalQuestions: state.questions.length,
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.eco,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${state.currentQuestion.points}',
-                                  style: AppTextStyles.bodyMedium.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Timer
-                      TriviaTimerWidget(
-                        timeRemaining: state.timeRemaining,
-                        totalTime: widget.category.timePerQuestion,
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Pregunta
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: TriviaQuestionWidget(
-                      question: state.currentQuestion,
-                      selectedAnswer: state.selectedAnswer,
-                      isAnswered: state.isAnswered,
-                      onAnswerSelected: (index) {
-                        context.read<TriviaGameCubit>().selectAnswer(index);
-                      },
-                      onNext: () {
-                        context.read<TriviaGameCubit>().nextQuestion();
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            );
+            return _buildGameContent(context, state);
+          }
+
+          if (state is TriviaGameCompleted) {
+            return _buildCompletedState(context, state);
           }
 
           return const SizedBox.shrink();
         },
       ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Column(
+      children: [
+        // Header decorativo
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.quiz_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Preparando Trivia',
+                    style: AppTextStyles.h4.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.category.title,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: Colors.white.withOpacity(0.9),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Loading content
+        const Expanded(
+          child: Center(
+            child: EcoLoadingWidget(
+              message: 'Cargando preguntas...',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, String errorMessage) {
+    return Column(
+      children: [
+        // Header con error
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.error,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Error al cargar',
+                    style: AppTextStyles.h4.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        
+        // Error content
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.quiz_outlined,
+                    size: 80,
+                    color: AppColors.textHint,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No se pudieron cargar las preguntas',
+                    style: AppTextStyles.h4.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Verifica tu conexión a internet',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textHint,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      context.read<TriviaGameCubit>().startTrivia(widget.category);
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Reintentar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(
+                      'Volver a categorías',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGameContent(BuildContext context, TriviaGameReady state) {
+    return Column(
+      children: [
+        // Header con progreso y puntos
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Progreso y timer
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TriviaProgressWidget(
+                    currentQuestion: state.currentQuestionIndex + 1,
+                    totalQuestions: state.questions.length,
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.eco,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${state.currentQuestion.points}',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              // Timer
+              TriviaTimerWidget(
+                timeRemaining: state.timeRemaining,
+                totalTime: widget.category.timePerQuestion,
+              ),
+            ],
+          ),
+        ),
+        
+        // Pregunta
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: TriviaQuestionWidget(
+              question: state.currentQuestion,
+              selectedAnswer: state.selectedAnswer,
+              isAnswered: state.isAnswered,
+              onAnswerSelected: (index) {
+                context.read<TriviaGameCubit>().selectAnswer(index);
+              },
+              onNext: () {
+                context.read<TriviaGameCubit>().nextQuestion();
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompletedState(BuildContext context, TriviaGameCompleted state) {
+    return Column(
+      children: [
+        // Header de completado
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: AppColors.earthGradient,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.star,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '¡Trivia Completada!',
+                    style: AppTextStyles.h4.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        
+        // Contenido de completado
+        const Expanded(
+          child: Center(
+            child: EcoLoadingWidget(
+              message: 'Procesando resultados...',
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -265,7 +484,6 @@ class _TriviaGameContentState extends State<_TriviaGameContent> {
     );
   }
 
-  // 🔧 MÉTODO CORREGIDO - usar el diálogo animado con navegación arreglada
   void _showAnimatedCompletionDialog(BuildContext context, TriviaGameCompleted state) {
     showDialog(
       context: context,
@@ -273,8 +491,6 @@ class _TriviaGameContentState extends State<_TriviaGameContent> {
       builder: (dialogContext) => AnimatedTriviaCompletionDialog(
         result: state.result,
         onContinue: () {
-          // 🔧 ESTA FUNCIÓN SE EJECUTA CUANDO EL USUARIO PRESIONA "CONTINUAR TRIVIAS"
-          // Solo cierra la página actual del juego, no navega a otra sección
           Navigator.of(context).pop(); // Cerrar la página de trivia
         },
       ),

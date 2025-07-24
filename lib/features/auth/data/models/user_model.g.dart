@@ -18,6 +18,7 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
           ? null
           : DateTime.parse(json['lastLogin'] as String),
       needsParentalConsent: json['needsParentalConsent'] as bool? ?? false,
+      isEmailVerified: json['isEmailVerified'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
@@ -30,4 +31,5 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
       'createdAt': instance.createdAt.toIso8601String(),
       'lastLogin': instance.lastLogin?.toIso8601String(),
       'needsParentalConsent': instance.needsParentalConsent,
+      'isEmailVerified': instance.isEmailVerified,
     };

@@ -1,3 +1,5 @@
+// lib/features/auth/data/models/user_model.dart - ACTUALIZADO
+
 import 'package:json_annotation/json_annotation.dart';
 import '../../domain/entities/user_entity.dart';
 
@@ -15,6 +17,7 @@ class UserModel extends UserEntity {
     required DateTime createdAt,
     DateTime? lastLogin,
     bool needsParentalConsent = false,
+    bool isEmailVerified = false, // 🆕 AGREGADO
   }) : super(
     id: id,
     email: email,
@@ -25,6 +28,7 @@ class UserModel extends UserEntity {
     createdAt: createdAt,
     lastLogin: lastLogin,
     needsParentalConsent: needsParentalConsent,
+    isEmailVerified: isEmailVerified, // 🆕 AGREGADO
   );
 
   factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
@@ -41,6 +45,7 @@ class UserModel extends UserEntity {
       createdAt: entity.createdAt,
       lastLogin: entity.lastLogin,
       needsParentalConsent: entity.needsParentalConsent,
+      isEmailVerified: entity.isEmailVerified, // 🆕 AGREGADO
     );
   }
 }

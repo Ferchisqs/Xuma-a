@@ -1,6 +1,5 @@
-// lib/features/trivia/data/datasources/quiz_remote_datasource.dart - FLUJO COMPLETO CORREGIDO
+// lib/features/trivia/data/datasources/quiz_remote_datasource.dart - ARCHIVO COMPLETO
 import 'package:injectable/injectable.dart';
-
 import '../../../../core/network/api_client.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../models/trivia_question_model.dart';
@@ -8,32 +7,28 @@ import '../models/quiz_session_model.dart';
 import '../../../learning/data/models/topic_model.dart';
 
 abstract class QuizRemoteDataSource {
-  // FLUJO COMPLETO DEL QUIZ:
-  // 1. /api/content/topics → 2. /api/quiz/by-topic/{topicId} → 3. /api/quiz/{id} → 4. /api/quiz/questions/quiz/{quizId}
-  
-  // 1. Obtener topics (este ya funciona)
+  // 1. Obtener topics (este endpoint ya funciona)
   Future<List<TopicModel>> getTopics();
   
-  // 2. Obtener quizzes por topic (NUEVO - CORREGIDO)
+  // 2. Obtener quizzes por topic usando /api/quiz/by-topic/{topicId}
   Future<List<Map<String, dynamic>>> getQuizzesByTopic(String topicId);
   
-  // 3. Obtener quiz específico por ID (NUEVO - CORREGIDO) 
+  // 3. Obtener quiz específico por ID usando /api/quiz/{id}
   Future<Map<String, dynamic>> getQuizById(String quizId);
   
-  // 4. Obtener preguntas de un quiz (CORREGIDO)
+  // 4. Obtener preguntas de un quiz usando /api/quiz/questions/quiz/{quizId}
   Future<List<TriviaQuestionModel>> getQuizQuestions(String quizId);
   
-  // 5. Obtener pregunta específica por ID (NUEVO)
+  // 5. Obtener pregunta específica por ID usando /api/quiz/questions/{questionId}
   Future<Map<String, dynamic>> getQuestionById(String questionId);
   
-  // FUNCIONALIDADES DE SESIÓN:
-  // 6. Iniciar sesión de quiz (YA EXISTÍA)
+  // 6. Iniciar sesión de quiz usando /api/quiz/start
   Future<QuizSessionModel> startQuizSession({
     required String quizId,
     required String userId,
   });
   
-  // 7. Enviar respuesta (YA EXISTÍA)
+  // 7. Enviar respuesta usando /api/quiz/submit-answer
   Future<void> submitAnswer({
     required String sessionId,
     required String questionId,
@@ -43,13 +38,13 @@ abstract class QuizRemoteDataSource {
     required int answerConfidence,
   });
   
-  // 8. Obtener resultados (YA EXISTÍA)
+  // 8. Obtener resultados usando /api/quiz/results/{sessionId}
   Future<Map<String, dynamic>> getQuizResults({
     required String sessionId,
     required String userId,
   });
   
-  // 9. Obtener progreso del usuario (NUEVO)
+  // 9. Obtener progreso del usuario usando /api/quiz/user-progress/{userId}
   Future<Map<String, dynamic>> getUserProgress(String userId);
 }
 
@@ -109,7 +104,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
-  // ==================== 2. QUIZZES BY TOPIC (NUEVO - CORREGIDO) ====================
+  // ==================== 2. QUIZZES BY TOPIC ====================
   @override
   Future<List<Map<String, dynamic>>> getQuizzesByTopic(String topicId) async {
     try {
@@ -117,6 +112,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       print('🎯 [QUIZ API] Topic ID: $topicId');
       print('🎯 [QUIZ API] Endpoint: /api/quiz/by-topic/$topicId');
       
+      // Usar el endpoint correcto del PDF
       final response = await apiClient.getQuiz('/api/quiz/by-topic/$topicId');
       print('🎯 [QUIZ API] Response Status: ${response.statusCode}');
       print('🎯 [QUIZ API] Response Data Type: ${response.data.runtimeType}');
@@ -160,7 +156,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
-  // ==================== 3. QUIZ BY ID (NUEVO - CORREGIDO) ====================
+  // ==================== 3. QUIZ BY ID ====================
   @override
   Future<Map<String, dynamic>> getQuizById(String quizId) async {
     try {
@@ -168,7 +164,8 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       print('🎯 [QUIZ API] Quiz ID: $quizId');
       print('🎯 [QUIZ API] Endpoint: /api/quiz/$quizId');
       
-      final response = await apiClient.getQuiz('/$quizId');
+      // Usar el endpoint correcto del PDF
+      final response = await apiClient.getQuiz('/api/quiz/$quizId');
       print('🎯 [QUIZ API] Response Status: ${response.statusCode}');
       print('🎯 [QUIZ API] Response Data Type: ${response.data.runtimeType}');
       
@@ -189,7 +186,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
-  // ==================== 4. QUIZ QUESTIONS (CORREGIDO) ====================
+  // ==================== 4. QUIZ QUESTIONS ====================
   @override
   Future<List<TriviaQuestionModel>> getQuizQuestions(String quizId) async {
     try {
@@ -197,7 +194,8 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       print('🎯 [QUIZ API] Quiz ID: $quizId');
       print('🎯 [QUIZ API] Endpoint: /api/quiz/questions/quiz/$quizId');
       
-      final response = await apiClient.getQuiz('/questions/quiz/$quizId');
+      // Usar el endpoint correcto del PDF
+      final response = await apiClient.getQuiz('/api/quiz/questions/quiz/$quizId');
       print('🎯 [QUIZ API] Response Status: ${response.statusCode}');
       print('🎯 [QUIZ API] Response Data Type: ${response.data.runtimeType}');
       
@@ -244,7 +242,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
-  // ==================== 5. QUESTION BY ID (NUEVO) ====================
+  // ==================== 5. QUESTION BY ID ====================
   @override
   Future<Map<String, dynamic>> getQuestionById(String questionId) async {
     try {
@@ -252,7 +250,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       print('🎯 [QUIZ API] Question ID: $questionId');
       print('🎯 [QUIZ API] Endpoint: /api/quiz/questions/$questionId');
       
-      final response = await apiClient.getQuiz('/questions/$questionId');
+      final response = await apiClient.getQuiz('/api/quiz/questions/$questionId');
       print('🎯 [QUIZ API] Response Status: ${response.statusCode}');
       
       Map<String, dynamic> questionData = _extractMapFromResponse(response.data);
@@ -270,7 +268,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
-  // ==================== 6. START QUIZ SESSION (YA EXISTÍA - VERIFICADO) ====================
+  // ==================== 6. START QUIZ SESSION ====================
   @override
   Future<QuizSessionModel> startQuizSession({
     required String quizId,
@@ -304,7 +302,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
-  // ==================== 7. SUBMIT ANSWER (YA EXISTÍA - VERIFICADO) ====================
+  // ==================== 7. SUBMIT ANSWER ====================
   @override
   Future<void> submitAnswer({
     required String sessionId,
@@ -340,7 +338,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
-  // ==================== 8. GET QUIZ RESULTS (YA EXISTÍA - VERIFICADO) ====================
+  // ==================== 8. GET QUIZ RESULTS ====================
   @override
   Future<Map<String, dynamic>> getQuizResults({
     required String sessionId,
@@ -372,7 +370,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
-  // ==================== 9. GET USER PROGRESS (NUEVO) ====================
+  // ==================== 9. GET USER PROGRESS ====================
   @override
   Future<Map<String, dynamic>> getUserProgress(String userId) async {
     try {

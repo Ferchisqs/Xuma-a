@@ -1,4 +1,4 @@
-// lib/features/challenges/presentation/cubit/challenges_cubit.dart - ACTUALIZADO PARA API REAL
+// lib/features/challenges/presentation/cubit/challenges_cubit.dart - CORREGIDO CON USER ID REAL
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
@@ -8,6 +8,7 @@ import '../../domain/usecases/get_challenges_usecase.dart';
 import '../../domain/usecases/get_user_challenge_stats_usecase.dart';
 import '../../domain/usecases/get_challenge_categories_usecase.dart';
 import '../../../learning/data/models/topic_model.dart';
+import '../../../auth/domain/services/auth_service.dart'; // 🆕 IMPORT AUTH SERVICE
 
 // ==================== STATES ACTUALIZADOS ====================
 
@@ -106,6 +107,18 @@ class ChallengesRefreshing extends ChallengesLoaded {
   );
 }
 
+// 🆕 ESTADO PARA FALTA DE AUTENTICACIÓN
+class ChallengesNotAuthenticated extends ChallengesState {
+  final String message;
+
+  const ChallengesNotAuthenticated({
+    this.message = 'Inicia sesión para ver tus estadísticas de desafíos',
+  });
+
+  @override
+  List<Object> get props => [message];
+}
+
 // ==================== CUBIT ACTUALIZADO ====================
 
 @injectable
@@ -113,15 +126,15 @@ class ChallengesCubit extends Cubit<ChallengesState> {
   final GetChallengesUseCase getChallengesUseCase;
   final GetUserChallengeStatsUseCase getUserStatsUseCase;
   final GetChallengeCategoriesUseCase getCategoriesUseCase;
-
-  static const String _defaultUserId = 'user_123';
+  final AuthService authService; // 🆕 AUTH SERVICE
 
   ChallengesCubit({
     required this.getChallengesUseCase,
     required this.getUserStatsUseCase,
     required this.getCategoriesUseCase,
+    required this.authService, // 🆕 INYECCIÓN DE AUTH SERVICE
   }) : super(ChallengesInitial()) {
-    print('✅ [CHALLENGES CUBIT] Constructor - Now using REAL API endpoints');
+    print('✅ [CHALLENGES CUBIT] Constructor - Now using REAL API endpoints with real user authentication');
   }
 
   Future<void> loadChallenges({
@@ -134,22 +147,41 @@ class ChallengesCubit extends Cubit<ChallengesState> {
 
       emit(ChallengesLoading());
 
-      // Cargar challenges
+      // 🔧 VERIFICAR SI EL USUARIO ESTÁ AUTENTICADO
+      final isAuthenticated = await _isUserAuthenticated();
+      final currentUserId = await _getCurrentUserId();
+
+      // Cargar challenges (estos son públicos, no requieren autenticación)
       final challengesResult = await getChallengesUseCase(
         GetChallengesParams(type: type, category: category)
       );
 
-      // Cargar estadísticas del usuario  
-      final statsResult = await getUserStatsUseCase(
-        const GetUserChallengeStatsParams(userId: _defaultUserId)
-      );
+      // Cargar estadísticas del usuario (solo si está autenticado)
+      UserChallengeStatsEntity stats = _createDefaultStats();
+      if (isAuthenticated && currentUserId != null) {
+        final statsResult = await getUserStatsUseCase(
+          GetUserChallengeStatsParams(userId: currentUserId) // 🔧 USER ID REAL
+        );
+        
+        statsResult.fold(
+          (failure) {
+            print('⚠️ [CHALLENGES CUBIT] Failed to load user stats: ${failure.message}');
+            stats = _createDefaultStats();
+          },
+          (loadedStats) {
+            stats = loadedStats as UserChallengeStatsEntity;
+            print('✅ [CHALLENGES CUBIT] Loaded user stats from REAL API');
+          },
+        );
+      } else {
+        print('ℹ️ [CHALLENGES CUBIT] User not authenticated, using default stats');
+      }
 
       // Cargar categorías
       final categoriesResult = await getCategoriesUseCase();
 
       // Procesar resultados
       List<ChallengeEntity> challenges = [];
-      UserChallengeStatsEntity stats = _createDefaultStats(); // Valor por defecto
       List<TopicModel> categories = [];
 
       // Manejar challenges
@@ -161,18 +193,6 @@ class ChallengesCubit extends Cubit<ChallengesState> {
         (loadedChallenges) {
           challenges = loadedChallenges as List<ChallengeEntity>;
           print('✅ [CHALLENGES CUBIT] Loaded ${challenges.length} challenges from REAL API');
-        },
-      );
-
-      // Manejar estadísticas
-      statsResult.fold(
-        (failure) {
-          print('⚠️ [CHALLENGES CUBIT] Failed to load user stats: ${failure.message}');
-          stats = _createDefaultStats();
-        },
-        (loadedStats) {
-          stats = loadedStats as UserChallengeStatsEntity;
-          print('✅ [CHALLENGES CUBIT] Loaded user stats from REAL API');
         },
       );
 
@@ -188,9 +208,12 @@ class ChallengesCubit extends Cubit<ChallengesState> {
         },
       );
 
-      // Filtrar desafíos activos
-      final activeChallenges = challenges.where((c) => 
-        c.isParticipating && c.isActive).toList();
+      // Filtrar desafíos activos (solo para usuarios autenticados)
+      List<ChallengeEntity> activeChallenges = [];
+      if (isAuthenticated) {
+        activeChallenges = challenges.where((c) => 
+          c.isParticipating && c.isActive).toList();
+      }
 
       emit(ChallengesLoaded(
         allChallenges: challenges,
@@ -284,6 +307,15 @@ class ChallengesCubit extends Cubit<ChallengesState> {
     try {
       print('🎯 [CHALLENGES CUBIT] Loading only active challenges');
       
+      // 🔧 VERIFICAR AUTENTICACIÓN
+      final isAuthenticated = await _isUserAuthenticated();
+      if (!isAuthenticated) {
+        emit(const ChallengesNotAuthenticated(
+          message: 'Inicia sesión para ver tus desafíos activos',
+        ));
+        return;
+      }
+      
       final result = await getChallengesUseCase(
         const GetChallengesParams(), // Sin filtros para obtener todos
       );
@@ -353,6 +385,100 @@ class ChallengesCubit extends Cubit<ChallengesState> {
     }
   }
 
+  // 🆕 MÉTODO PARA RECARGAR ESTADÍSTICAS DEL USUARIO
+  Future<void> refreshUserStats() async {
+    try {
+      print('🔄 [CHALLENGES CUBIT] Refreshing user stats');
+      
+      // 🔧 VERIFICAR AUTENTICACIÓN Y OBTENER USER ID REAL
+      final isAuthenticated = await _isUserAuthenticated();
+      final currentUserId = await _getCurrentUserId();
+      
+      if (!isAuthenticated || currentUserId == null) {
+        print('⚠️ [CHALLENGES CUBIT] User not authenticated for stats refresh');
+        return;
+      }
+
+      final currentState = state;
+      if (currentState is ChallengesLoaded) {
+        final statsResult = await getUserStatsUseCase(
+          GetUserChallengeStatsParams(userId: currentUserId) // 🔧 USER ID REAL
+        );
+
+        statsResult.fold(
+          (failure) {
+            print('❌ [CHALLENGES CUBIT] Failed to refresh user stats: ${failure.message}');
+          },
+          (newStats) {
+            print('✅ [CHALLENGES CUBIT] User stats refreshed successfully');
+            
+            emit(ChallengesLoaded(
+              allChallenges: currentState.allChallenges,
+              activeChallenges: currentState.activeChallenges,
+              userStats: newStats as UserChallengeStatsEntity,
+              categories: currentState.categories,
+              currentFilter: currentState.currentFilter,
+              currentCategory: currentState.currentCategory,
+            ));
+          },
+        );
+      }
+    } catch (e) {
+      print('❌ [CHALLENGES CUBIT] Error refreshing user stats: $e');
+    }
+  }
+
+  // ==================== 🔧 MÉTODOS HELPER PARA AUTENTICACIÓN ====================
+  
+  /// Obtiene el user ID del usuario autenticado actual
+  Future<String?> _getCurrentUserId() async {
+    try {
+      print('🔍 [CHALLENGES CUBIT] Getting current user ID...');
+      
+      final userResult = await authService.getCurrentUser();
+      
+      return userResult.fold(
+        (failure) {
+          print('❌ [CHALLENGES CUBIT] Failed to get current user: ${failure.message}');
+          return null;
+        },
+        (user) {
+          if (user != null) {
+            print('✅ [CHALLENGES CUBIT] Current user ID: ${user.id}');
+            return user.id;
+          } else {
+            print('⚠️ [CHALLENGES CUBIT] No authenticated user found');
+            return null;
+          }
+        },
+      );
+    } catch (e) {
+      print('❌ [CHALLENGES CUBIT] Error getting current user ID: $e');
+      return null;
+    }
+  }
+
+  /// Verificar si el usuario está autenticado
+  Future<bool> _isUserAuthenticated() async {
+    try {
+      final isLoggedInResult = await authService.isLoggedIn();
+      
+      return isLoggedInResult.fold(
+        (failure) {
+          print('❌ [CHALLENGES CUBIT] Error checking authentication: ${failure.message}');
+          return false;
+        },
+        (isLoggedIn) {
+          print('🔍 [CHALLENGES CUBIT] User authenticated: $isLoggedIn');
+          return isLoggedIn;
+        },
+      );
+    } catch (e) {
+      print('❌ [CHALLENGES CUBIT] Error checking authentication: $e');
+      return false;
+    }
+  }
+
   // ==================== HELPER METHODS ====================
 
   UserChallengeStatsEntity _createDefaultStats() {
@@ -415,4 +541,25 @@ class ChallengesCubit extends Cubit<ChallengesState> {
   bool get isRefreshing => state is ChallengesRefreshing;
   bool get hasError => state is ChallengesError;
   bool get isLoaded => state is ChallengesLoaded;
+  bool get isNotAuthenticated => state is ChallengesNotAuthenticated;
+
+  // 🆕 MÉTODO PARA MANEJAR REDIRECCIÓN A LOGIN
+  void handleNotAuthenticated() {
+    emit(const ChallengesNotAuthenticated(
+      message: 'Inicia sesión para acceder a todas las funciones de desafíos',
+    ));
+  }
+
+  // 🆕 MÉTODO PARA VERIFICAR PERMISOS ANTES DE CARGAR DATOS DE USUARIO
+  Future<void> loadWithAuthCheck() async {
+    final isAuthenticated = await _isUserAuthenticated();
+    
+    if (!isAuthenticated) {
+      // Cargar solo challenges públicos sin estadísticas de usuario
+      await loadChallenges();
+    } else {
+      // Cargar todo incluidas las estadísticas del usuario
+      await loadChallenges();
+    }
+  }
 }

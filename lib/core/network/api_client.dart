@@ -13,7 +13,7 @@ class ApiClient {
   late final Dio _userDio;     
   late final Dio _contentDio;  
   late final Dio _gamificationDio;
-  late final Dio _quizDio; // 🆕 NUEVO DIO PARA QUIZ SERVICE
+  late final Dio _quizDio;
   final NetworkInfo _networkInfo;
   final CacheService _cacheService;
   final TokenManager _tokenManager;
@@ -27,7 +27,7 @@ class ApiClient {
     _setupUserDio();
     _setupContentDio();
     _setupGamificationDio();
-    _setupQuizDio(); // 🆕 CONFIGURAR QUIZ DIO
+    _setupQuizDio();
   }
 
   void _setupAuthDio() {
@@ -78,7 +78,6 @@ class ApiClient {
     _setupInterceptors(_gamificationDio, 'GAMIFICATION');
   }
 
-  // 🆕 CONFIGURAR DIO PARA QUIZ SERVICE
   void _setupQuizDio() {
     _quizDio = Dio(BaseOptions(
       baseUrl: ApiEndpoints.quizServiceUrl,
@@ -242,7 +241,6 @@ class ApiClient {
     }
   }
 
-  // 🔧 ACTUALIZADO PARA INCLUIR QUIZ SERVICE
   Dio _getDioForPath(String path, Options? options) {
     final baseUrl = options?.extra?['baseUrl'] as String?;
     
@@ -265,7 +263,7 @@ class ApiClient {
       }
     }
 
-     if (ApiEndpoints.isQuizEndpoint(path) || 
+    if (ApiEndpoints.isQuizEndpoint(path) || 
         path.startsWith('/api/quiz/') || 
         path.contains('/api/quiz/')) {
       print('🧠 [API CLIENT] Auto-detected QUIZ service for: $path');
@@ -306,7 +304,6 @@ class ApiClient {
       } else {
         print('⚠️ [$serviceName] No access token available for: ${options.path}');
         
-        // Para quiz service, algunos endpoints pueden ser públicos
         if (serviceName == 'QUIZ' && 
             (options.path.contains('/by-topic/') || options.path.contains('/questions/'))) {
           print('ℹ️ [$serviceName] Public quiz endpoint (no token required)');
@@ -340,14 +337,6 @@ class ApiClient {
     ];
     
     return tokenSavingEndpoints.any((endpoint) => path.contains(endpoint));
-  }
-
-  Future<DioException> _handleTokenError(DioException error) async {
-    if (error.response?.statusCode == 401) {
-      print('⚠️ Token expired or invalid, clearing tokens');
-      await _tokenManager.clearAllTokens();
-    }
-    return error;
   }
 
   Future<Response?> _retryWithRefreshToken(DioException error, Dio dio) async {
@@ -386,7 +375,13 @@ class ApiClient {
     return null;
   }
 
-  // ==================== MÉTODOS HELPER ====================
+  Future<DioException> _handleTokenError(DioException error) async {
+    if (error.response?.statusCode == 401) {
+      print('⚠️ Token expired or invalid, clearing tokens');
+      await _tokenManager.clearAllTokens();
+    }
+    return error;
+  }
 
   Future<void> _checkConnection() async {
     if (!await _networkInfo.isConnected) {
@@ -394,9 +389,8 @@ class ApiClient {
     }
   }
 
-  // 🆕 MÉTODOS ESPECÍFICOS PARA QUIZ SERVICE
-  // 🆕 MÉTODOS ESPECÍFICOS PARA QUIZ SERVICE - CORREGIDOS
-  Future<Response> getQuiz(
+  // Métodos específicos para Quiz Service
+ Future<Response> getQuiz(
     String endpoint, {
     Map<String, dynamic>? queryParameters,
     bool requireAuth = true,
@@ -405,8 +399,20 @@ class ApiClient {
     print('🧠 [API CLIENT] Full URL: ${ApiEndpoints.quizServiceUrl}$endpoint');
     
     try {
+      // Asegurar que el endpoint siempre tenga el prefijo correcto
+      String correctedEndpoint = endpoint;
+      if (!endpoint.startsWith('/api/quiz/')) {
+        if (endpoint.startsWith('/')) {
+          correctedEndpoint = '/api/quiz${endpoint}';
+        } else {
+          correctedEndpoint = '/api/quiz/$endpoint';
+        }
+      }
+      
+      print('🧠 [API CLIENT] Corrected endpoint: $correctedEndpoint');
+      
       final response = await get(
-        endpoint,
+        correctedEndpoint,
         queryParameters: queryParameters,
         options: Options(
           extra: {'baseUrl': ApiEndpoints.quizServiceUrl},
@@ -425,7 +431,7 @@ class ApiClient {
     }
   }
 
-  Future<Response> postQuiz(
+ Future<Response> postQuiz(
     String endpoint, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
@@ -435,8 +441,20 @@ class ApiClient {
     print('🧠 [API CLIENT] Data: $data');
     
     try {
+      // Asegurar que el endpoint siempre tenga el prefijo correcto
+      String correctedEndpoint = endpoint;
+      if (!endpoint.startsWith('/api/quiz/')) {
+        if (endpoint.startsWith('/')) {
+          correctedEndpoint = '/api/quiz${endpoint}';
+        } else {
+          correctedEndpoint = '/api/quiz/$endpoint';
+        }
+      }
+      
+      print('🧠 [API CLIENT] Corrected endpoint: $correctedEndpoint');
+      
       final response = await post(
-        endpoint,
+        correctedEndpoint,
         data: data,
         queryParameters: queryParameters,
         options: Options(
@@ -453,7 +471,7 @@ class ApiClient {
     }
   }
 
-  // MÉTODOS ESPECÍFICOS PARA GAMIFICACIÓN
+  // Métodos específicos para Gamificación
   Future<Response> getGamification(
     String endpoint, {
     Map<String, dynamic>? queryParameters,

@@ -367,6 +367,13 @@ extension GetItInjectableX on _i174.GetIt {
           getUserProfileUseCase: gh<_i65.GetUserProfileUseCase>(),
           updateUserAvatarUseCase: gh<_i186.UpdateUserAvatarUseCase>(),
         ));
+    gh.factory<_i70.AuthCubit>(() => _i70.AuthCubit(
+          loginUseCase: gh<_i406.LoginUseCase>(),
+          registerUseCase: gh<_i819.RegisterUseCase>(),
+          authService: gh<_i88.AuthService>(),
+          profileService: gh<_i92.ProfileService>(),
+          tokenManager: gh<_i497.TokenManager>(),
+        ));
     gh.factory<_i770.CompanionRepository>(() => _i904.CompanionRepositoryImpl(
           remoteDataSource: gh<_i115.CompanionRemoteDataSource>(),
           localDataSource: gh<_i1032.CompanionLocalDataSource>(),
@@ -459,12 +466,6 @@ extension GetItInjectableX on _i174.GetIt {
           getQuizByIdUseCase: gh<_i714.GetQuizByIdUseCase>(),
           getQuizQuestionsUseCase: gh<_i806.GetQuizQuestionsUseCase>(),
         ));
-    gh.factory<_i70.AuthCubit>(() => _i70.AuthCubit(
-          loginUseCase: gh<_i406.LoginUseCase>(),
-          registerUseCase: gh<_i819.RegisterUseCase>(),
-          authService: gh<_i88.AuthService>(),
-          profileService: gh<_i92.ProfileService>(),
-        ));
     gh.factory<_i522.CompleteChallengeUseCase>(
         () => _i522.CompleteChallengeUseCase(gh<_i959.ChallengesRepository>()));
     gh.factory<_i929.GetActiveChallengesUseCase>(() =>
@@ -496,16 +497,15 @@ extension GetItInjectableX on _i174.GetIt {
           purchaseCompanionUseCase: gh<_i395.PurchaseCompanionUseCase>(),
           tokenManager: gh<_i497.TokenManager>(),
         ));
-    gh.factory<_i366.ChallengeDetailCubit>(() => _i366.ChallengeDetailCubit(
-          startChallengeUseCase: gh<_i23.StartChallengeUseCase>(),
-          completeChallengeUseCase: gh<_i522.CompleteChallengeUseCase>(),
-          updateChallengeProgressUseCase:
-              gh<_i1056.UpdateChallengeProgressUseCase>(),
-          submitEvidenceUseCase: gh<_i1042.SubmitEvidenceUseCase>(),
-        ));
     gh.factory<_i568.LessonListCubit>(() => _i568.LessonListCubit(
           getLessonsByCategoryUseCase: gh<_i194.GetLessonsByCategoryUseCase>(),
           searchLessonsUseCase: gh<_i420.SearchLessonsUseCase>(),
+        ));
+    gh.factory<_i314.ChallengesCubit>(() => _i314.ChallengesCubit(
+          getChallengesUseCase: gh<_i1010.GetChallengesUseCase>(),
+          getUserStatsUseCase: gh<_i31.GetUserChallengeStatsUseCase>(),
+          getCategoriesUseCase: gh<_i229.GetChallengeCategoriesUseCase>(),
+          authService: gh<_i88.AuthService>(),
         ));
     gh.factory<_i917.CompanionCubit>(() => _i917.CompanionCubit(
           getUserCompanionsUseCase: gh<_i574.GetUserCompanionsUseCase>(),
@@ -517,11 +517,6 @@ extension GetItInjectableX on _i174.GetIt {
           remoteDataSource: gh<_i605.ContentRemoteDataSource>(),
           localDataSource: gh<_i195.LearningLocalDataSource>(),
           networkInfo: gh<_i6.NetworkInfo>(),
-        ));
-    gh.factory<_i314.ChallengesCubit>(() => _i314.ChallengesCubit(
-          getChallengesUseCase: gh<_i1010.GetChallengesUseCase>(),
-          getUserStatsUseCase: gh<_i31.GetUserChallengeStatsUseCase>(),
-          getCategoriesUseCase: gh<_i229.GetChallengeCategoriesUseCase>(),
         ));
     gh.factory<_i0.CompanionDetailCubit>(() => _i0.CompanionDetailCubit(
           feedCompanionUseCase: gh<_i960.FeedCompanionUseCase>(),
@@ -540,6 +535,14 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i175.GetTopicsUseCase(gh<_i19.ContentRepository>()));
     gh.factory<_i64.EvidenceSubmissionCubit>(() => _i64.EvidenceSubmissionCubit(
         submitEvidenceUseCase: gh<_i1042.SubmitEvidenceUseCase>()));
+    gh.factory<_i366.ChallengeDetailCubit>(() => _i366.ChallengeDetailCubit(
+          startChallengeUseCase: gh<_i23.StartChallengeUseCase>(),
+          completeChallengeUseCase: gh<_i522.CompleteChallengeUseCase>(),
+          updateChallengeProgressUseCase:
+              gh<_i1056.UpdateChallengeProgressUseCase>(),
+          submitEvidenceUseCase: gh<_i1042.SubmitEvidenceUseCase>(),
+          authService: gh<_i88.AuthService>(),
+        ));
     gh.factory<_i992.LearningCubit>(() =>
         _i992.LearningCubit(getTopicsUseCase: gh<_i175.GetTopicsUseCase>()));
     gh.factory<_i921.ContentCubit>(() => _i921.ContentCubit(
