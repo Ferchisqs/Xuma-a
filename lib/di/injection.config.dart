@@ -67,6 +67,8 @@ import '../features/companion/data/repositories/companion_repository_impl.dart'
     as _i904;
 import '../features/companion/domain/repositories/companion_repository.dart'
     as _i770;
+import '../features/companion/domain/usecases/decrease_pet_stats_usecase.dart'
+    as _i116;
 import '../features/companion/domain/usecases/evolve_companion_usecase.dart'
     as _i108;
 import '../features/companion/domain/usecases/evolve_companion_via_api_usecase.dart'
@@ -75,16 +77,24 @@ import '../features/companion/domain/usecases/feature_companion_usecase.dart'
     as _i913;
 import '../features/companion/domain/usecases/feed_companion_usecase.dart'
     as _i960;
+import '../features/companion/domain/usecases/feed_companion_via_api_usecase.dart'
+    as _i901;
 import '../features/companion/domain/usecases/get_available_companions_usecase.dart'
     as _i720;
 import '../features/companion/domain/usecases/get_companion_shop_usecase.dart'
     as _i76;
 import '../features/companion/domain/usecases/get_user_companions_usecase.dart'
     as _i574;
+import '../features/companion/domain/usecases/increase_pet_stats_usecase.dart'
+    as _i428;
 import '../features/companion/domain/usecases/love_companion_usecase.dart'
     as _i820;
+import '../features/companion/domain/usecases/love_companion_via_api_usecase.dart'
+    as _i233;
 import '../features/companion/domain/usecases/purchase_companion_usecase.dart'
     as _i395;
+import '../features/companion/domain/usecases/simulate_time_passage_usecase.dart'
+    as _i380;
 import '../features/companion/presentation/cubit/companion_actions_cubit.dart'
     as _i238;
 import '../features/companion/presentation/cubit/companion_cubit.dart' as _i917;
@@ -414,10 +424,6 @@ extension GetItInjectableX on _i174.GetIt {
         _i22.GetRandomTipWithoutParamsUseCase(gh<_i406.TipsRepository>()));
     gh.factory<_i441.TipsCubit>(
         () => _i441.TipsCubit(gh<_i406.TipsRepository>()));
-    gh.factory<_i238.CompanionActionsCubit>(() => _i238.CompanionActionsCubit(
-          repository: gh<_i770.CompanionRepository>(),
-          tokenManager: gh<_i497.TokenManager>(),
-        ));
     gh.factory<_i605.ContentRemoteDataSource>(
         () => _i605.ContentRemoteDataSourceImpl(
               gh<_i510.ApiClient>(),
@@ -441,6 +447,16 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i820.LoveCompanionUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i395.PurchaseCompanionUseCase>(
         () => _i395.PurchaseCompanionUseCase(gh<_i770.CompanionRepository>()));
+    gh.factory<_i116.DecreasePetStatsUseCase>(
+        () => _i116.DecreasePetStatsUseCase(gh<_i770.CompanionRepository>()));
+    gh.factory<_i901.FeedCompanionViaApiUseCase>(() =>
+        _i901.FeedCompanionViaApiUseCase(gh<_i770.CompanionRepository>()));
+    gh.factory<_i428.IncreasePetStatsUseCase>(
+        () => _i428.IncreasePetStatsUseCase(gh<_i770.CompanionRepository>()));
+    gh.factory<_i233.LoveCompanionViaApiUseCase>(() =>
+        _i233.LoveCompanionViaApiUseCase(gh<_i770.CompanionRepository>()));
+    gh.factory<_i380.SimulateTimePassageUseCase>(() =>
+        _i380.SimulateTimePassageUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i1017.HomeCubit>(() => _i1017.HomeCubit(
           getDailyTipUseCase: gh<_i957.GetDailyTipUseCase>(),
           getUserStatsUseCase: gh<_i762.GetUserStatsUseCase>(),
@@ -448,6 +464,15 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i912.TriviaGameCubit>(() => _i912.TriviaGameCubit(
           getTriviaQuestionsUseCase: gh<_i9.GetTriviaQuestionsUseCase>(),
           submitTriviaResultUseCase: gh<_i157.SubmitTriviaResultUseCase>(),
+        ));
+    gh.factory<_i238.CompanionActionsCubit>(() => _i238.CompanionActionsCubit(
+          repository: gh<_i770.CompanionRepository>(),
+          tokenManager: gh<_i497.TokenManager>(),
+          feedCompanionViaApiUseCase: gh<_i901.FeedCompanionViaApiUseCase>(),
+          loveCompanionViaApiUseCase: gh<_i233.LoveCompanionViaApiUseCase>(),
+          simulateTimePassageUseCase: gh<_i380.SimulateTimePassageUseCase>(),
+          decreasePetStatsUseCase: gh<_i116.DecreasePetStatsUseCase>(),
+          increasePetStatsUseCase: gh<_i428.IncreasePetStatsUseCase>(),
         ));
     gh.factory<_i499.QuizSessionCubit>(() => _i499.QuizSessionCubit(
           startQuizSessionUseCase: gh<_i112.StartQuizSessionUseCase>(),

@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
+import 'package:xuma_a/features/companion/data/models/api_pet_response_model.dart';
 import '../../../../core/utils/either.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/network_info.dart';
@@ -109,6 +110,311 @@ class CompanionRepositoryImpl implements CompanionRepository {
     } catch (e) {
       debugPrint('❌ [REPO] Error general: $e');
       return Left(UnknownFailure('Error obteniendo compañeros: ${e.toString()}'));
+    }
+  }
+
+  // ==================== 🆕 GESTIÓN DE ESTADÍSTICAS VIA API ====================
+  @override
+  Future<Either<Failure, CompanionEntity>> decreasePetStats({
+    required String userId,
+    required String petId,
+    int? happiness,
+    int? health,
+  }) async {
+    try {
+      debugPrint('📉 [REPO] === REDUCIENDO STATS DE MASCOTA ===');
+      debugPrint('👤 [REPO] User ID: $userId');
+      debugPrint('🆔 [REPO] Pet ID: $petId');
+      debugPrint('😊 [REPO] Reducir felicidad: ${happiness ?? 0}');
+      debugPrint('❤️ [REPO] Reducir salud: ${health ?? 0}');
+
+      // Usar user ID real del token
+      final realUserId = await _getRealUserId();
+      debugPrint('👤 [REPO] Usuario ID REAL: $realUserId');
+
+      if (enableApiMode && await networkInfo.isConnected) {
+        debugPrint('🌐 [REPO] Reduciendo stats via API real...');
+
+        final hasValidToken = await tokenManager.hasValidAccessToken();
+        if (!hasValidToken) {
+          debugPrint('❌ [REPO] Sin token válido para reducir stats');
+          return Left(AuthFailure('Token de autenticación requerido'));
+        }
+
+        try {
+          final updatedCompanion = await remoteDataSource.increasePetStats(
+            petId: petId,
+            happiness: happiness,
+            health: health,
+          );
+
+          debugPrint('✅ [REPO] Reducción de stats exitosa: ${updatedCompanion.displayName}');
+
+          // Guardar en cache local
+          await localDataSource.cacheCompanion(updatedCompanion);
+          await _updateLocalCacheAfterStatsChange(realUserId, updatedCompanion);
+
+          return Right(updatedCompanion);
+        } catch (e) {
+          debugPrint('❌ [REPO] Error en API de reducir stats: $e');
+          return Left(ServerFailure(e.toString()));
+        }
+      } else {
+        debugPrint('📱 [REPO] Sin conexión, usando reducción local');
+        return await _decreaseStatsLocal(realUserId, petId, happiness, health);
+      }
+    } catch (e) {
+      debugPrint('💥 [REPO] Error general reduciendo stats: $e');
+      return Left(UnknownFailure('Error reduciendo estadísticas: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, CompanionEntity>> increasePetStats({
+    required String userId,
+    required String petId,
+    int? happiness,
+    int? health,
+  }) async {
+    try {
+      debugPrint('📈 [REPO] === AUMENTANDO STATS DE MASCOTA ===');
+      debugPrint('👤 [REPO] User ID: $userId');
+      debugPrint('🆔 [REPO] Pet ID: $petId');
+      debugPrint('😊 [REPO] Aumentar felicidad: ${happiness ?? 0}');
+      debugPrint('❤️ [REPO] Aumentar salud: ${health ?? 0}');
+
+      // Usar user ID real del token
+      final realUserId = await _getRealUserId();
+      debugPrint('👤 [REPO] Usuario ID REAL: $realUserId');
+
+      if (enableApiMode && await networkInfo.isConnected) {
+        debugPrint('🌐 [REPO] Aumentando stats via API real...');
+
+        final hasValidToken = await tokenManager.hasValidAccessToken();
+        if (!hasValidToken) {
+          debugPrint('❌ [REPO] Sin token válido para aumentar stats');
+          return Left(AuthFailure('Token de autenticación requerido'));
+        }
+
+        try {
+          final updatedCompanion = await remoteDataSource.increasePetStats(
+            petId: petId,
+            happiness: happiness,
+            health: health,
+          );
+
+          debugPrint('✅ [REPO] Aumento de stats exitoso: ${updatedCompanion.displayName}');
+
+          // Guardar en cache local
+          await localDataSource.cacheCompanion(updatedCompanion);
+          await _updateLocalCacheAfterStatsChange(realUserId, updatedCompanion);
+
+          return Right(updatedCompanion);
+        } catch (e) {
+          debugPrint('❌ [REPO] Error en API de aumentar stats: $e');
+          return Left(ServerFailure(e.toString()));
+        }
+      } else {
+        debugPrint('📱 [REPO] Sin conexión, usando aumento local');
+        return await _increaseStatsLocal(realUserId, petId, happiness, health);
+      }
+    } catch (e) {
+      debugPrint('💥 [REPO] Error general aumentando stats: $e');
+      return Left(UnknownFailure('Error aumentando estadísticas: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, CompanionEntity>> feedCompanionViaApi({
+    required String userId,
+    required String petId,
+  }) async {
+    debugPrint('🍎 [REPO] === ALIMENTANDO VIA API (INCREASE HEALTH) ===');
+    return increasePetStats(
+      userId: userId,
+      petId: petId,
+      health: 15, // Aumentar salud en 15 puntos
+    );
+  }
+
+  @override
+  Future<Either<Failure, CompanionEntity>> loveCompanionViaApi({
+    required String userId,
+    required String petId,
+  }) async {
+    debugPrint('💖 [REPO] === DANDO AMOR VIA API (INCREASE HAPPINESS) ===');
+    return increasePetStats(
+      userId: userId,
+      petId: petId,
+      happiness: 10, // Aumentar felicidad en 10 puntos
+    );
+  }
+
+  @override
+  Future<Either<Failure, CompanionEntity>> simulateTimePassage({
+    required String userId,
+    required String petId,
+  }) async {
+    debugPrint('⏰ [REPO] === SIMULANDO PASO DEL TIEMPO ===');
+    return decreasePetStats(
+      userId: userId,
+      petId: petId,
+      happiness: 5,  // Reducir felicidad en 5 puntos
+      health: 8,     // Reducir salud en 8 puntos
+    );
+  }
+
+  // ==================== 🔧 MÉTODOS HELPER PARA CACHE ====================
+  Future<void> _updateLocalCacheAfterStatsChange(String userId, CompanionModel updatedCompanion) async {
+    final companions = await localDataSource.getCachedCompanions(userId);
+
+    final updatedCompanions = companions.map((comp) {
+      if (comp.id == updatedCompanion.id) {
+        return updatedCompanion;
+      }
+      return comp;
+    }).toList();
+
+    await localDataSource.cacheCompanions(userId, updatedCompanions);
+    await localDataSource.cacheCompanion(updatedCompanion);
+
+    debugPrint('💾 [REPO] Cache local actualizado después de cambio de stats');
+  }
+
+  // ==================== 🔧 MÉTODOS LOCALES DE FALLBACK ====================
+  Future<Either<Failure, CompanionEntity>> _decreaseStatsLocal(
+      String userId, String petId, int? happiness, int? health) async {
+    try {
+      debugPrint('📉 [REPO] Reducción local de stats');
+      
+      final companions = await localDataSource.getCachedCompanions(userId);
+      final companionIndex = companions.indexWhere((c) => 
+          _extractPetIdFromCompanion(c) == petId || c.id == petId);
+      
+      if (companionIndex == -1) {
+        return Left(ValidationFailure('Mascota no encontrada'));
+      }
+      
+      final companion = companions[companionIndex];
+      
+      final newHappiness = happiness != null 
+          ? (companion.happiness - happiness).clamp(10, 100)
+          : companion.happiness;
+      final newHunger = health != null 
+          ? (companion.hunger - health).clamp(10, 100)
+          : companion.hunger;
+      
+      final updatedCompanion = CompanionModel.fromEntity(
+        CompanionEntity(
+          id: companion.id,
+          type: companion.type,
+          stage: companion.stage,
+          name: companion.name,
+          description: companion.description,
+          level: companion.level,
+          experience: companion.experience,
+          happiness: newHappiness,
+          hunger: newHunger,
+          energy: companion.energy,
+          isOwned: companion.isOwned,
+          isSelected: companion.isSelected,
+          purchasedAt: companion.purchasedAt,
+          lastFeedTime: companion.lastFeedTime,
+          lastLoveTime: companion.lastLoveTime,
+          currentMood: _determineMoodFromStats(newHappiness, newHunger),
+          purchasePrice: companion.purchasePrice,
+          evolutionPrice: companion.evolutionPrice,
+          unlockedAnimations: companion.unlockedAnimations,
+          createdAt: companion.createdAt,
+        ),
+      );
+      
+      companions[companionIndex] = updatedCompanion;
+      await localDataSource.cacheCompanions(userId, companions);
+      
+      return Right(updatedCompanion);
+    } catch (e) {
+      return Left(UnknownFailure('Error en reducción local: ${e.toString()}'));
+    }
+  }
+
+  Future<Either<Failure, CompanionEntity>> _increaseStatsLocal(
+      String userId, String petId, int? happiness, int? health) async {
+    try {
+      debugPrint('📈 [REPO] Aumento local de stats');
+      
+      final companions = await localDataSource.getCachedCompanions(userId);
+      final companionIndex = companions.indexWhere((c) => 
+          _extractPetIdFromCompanion(c) == petId || c.id == petId);
+      
+      if (companionIndex == -1) {
+        return Left(ValidationFailure('Mascota no encontrada'));
+      }
+      
+      final companion = companions[companionIndex];
+      
+      final newHappiness = happiness != null 
+          ? (companion.happiness + happiness).clamp(10, 100)
+          : companion.happiness;
+      final newHunger = health != null 
+          ? (companion.hunger + health).clamp(10, 100)
+          : companion.hunger;
+      
+      final updatedCompanion = CompanionModel.fromEntity(
+        CompanionEntity(
+          id: companion.id,
+          type: companion.type,
+          stage: companion.stage,
+          name: companion.name,
+          description: companion.description,
+          level: companion.level,
+          experience: companion.experience + 25, // Experiencia por interacción
+          happiness: newHappiness,
+          hunger: newHunger,
+          energy: companion.energy,
+          isOwned: companion.isOwned,
+          isSelected: companion.isSelected,
+          purchasedAt: companion.purchasedAt,
+          lastFeedTime: health != null ? DateTime.now() : companion.lastFeedTime,
+          lastLoveTime: happiness != null ? DateTime.now() : companion.lastLoveTime,
+          currentMood: CompanionMood.happy,
+          purchasePrice: companion.purchasePrice,
+          evolutionPrice: companion.evolutionPrice,
+          unlockedAnimations: companion.unlockedAnimations,
+          createdAt: companion.createdAt,
+        ),
+      );
+      
+      companions[companionIndex] = updatedCompanion;
+      await localDataSource.cacheCompanions(userId, companions);
+      
+      return Right(updatedCompanion);
+    } catch (e) {
+      return Left(UnknownFailure('Error en aumento local: ${e.toString()}'));
+    }
+  }
+
+  // Helper para extraer Pet ID de un companion
+  String _extractPetIdFromCompanion(CompanionModel companion) {
+    if (companion is CompanionModelWithPetId) {
+      return companion.petId;
+    }
+    // Fallback al ID local
+    return companion.id;
+  }
+
+  // Helper para determinar mood
+  CompanionMood _determineMoodFromStats(int happiness, int hunger) {
+    if (happiness >= 80 && hunger >= 80) {
+      return CompanionMood.excited;
+    } else if (happiness >= 60 && hunger >= 60) {
+      return CompanionMood.happy;
+    } else if (happiness <= 30 || hunger <= 30) {
+      return CompanionMood.sad;
+    } else if (hunger <= 40) {
+      return CompanionMood.hungry;
+    } else {
+      return CompanionMood.normal;
     }
   }
 

@@ -25,6 +25,38 @@ abstract class CompanionRepository {
     required String petId,
   });
 
+   Future<Either<Failure, CompanionEntity>> decreasePetStats({
+    required String userId,
+    required String petId,
+    int? happiness,
+    int? health,
+  });
+  
+  Future<Either<Failure, CompanionEntity>> increasePetStats({
+    required String userId,
+    required String petId,
+    int? happiness,
+    int? health,
+  });
+  
+  // Métodos de conveniencia para acciones específicas
+  Future<Either<Failure, CompanionEntity>> feedCompanionViaApi({
+    required String userId,
+    required String petId,
+  });
+  
+  Future<Either<Failure, CompanionEntity>> loveCompanionViaApi({
+    required String userId,
+    required String petId,
+  });
+  
+  // Método para simular paso del tiempo (reducir stats automáticamente)
+  Future<Either<Failure, CompanionEntity>> simulateTimePassage({
+    required String userId,
+    required String petId,
+  });
+
+
   // MÉTODOS EXISTENTES
   Future<Either<Failure, List<CompanionEntity>>> getUserCompanions(String userId);
   Future<Either<Failure, List<CompanionEntity>>> getAvailableCompanions();

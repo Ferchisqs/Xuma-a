@@ -4,7 +4,6 @@ import 'package:injectable/injectable.dart';
 import '../../../../core/services/cache_service.dart';
 import '../models/companion_model.dart';
 import '../models/companion_stats_model.dart';
-import '../../domain/entities/companion_entity.dart';
 
 abstract class CompanionLocalDataSource {
   Future<List<CompanionModel>> getCachedCompanions(String userId);
@@ -58,6 +57,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
       return [];
     }
   }
+
 
   @override
   Future<void> cacheCompanions(String userId, List<CompanionModel> companions) async {

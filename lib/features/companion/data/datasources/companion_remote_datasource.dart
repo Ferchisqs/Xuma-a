@@ -12,6 +12,7 @@ import '../models/api_pet_response_model.dart';
 import '../../domain/entities/companion_entity.dart';
 
 abstract class CompanionRemoteDataSource {
+  
   Future<List<CompanionModel>> getUserCompanions(String userId);
   Future<List<CompanionModel>> getAvailableCompanions();
   Future<List<CompanionModel>> getStoreCompanions({required String userId});
@@ -21,7 +22,7 @@ abstract class CompanionRemoteDataSource {
   Future<int> getUserPoints(String userId);
   
   // 🔥 NUEVOS MÉTODOS PARA API REAL - ACTUALIZADOS
-  Future<CompanionModel> evolvePetViaApi(
+    Future<CompanionModel> evolvePetViaApi(
       {required String userId, required String petId});
   Future<CompanionModel> featurePetViaApi(
       {required String userId, required String petId});
@@ -35,6 +36,8 @@ abstract class CompanionRemoteDataSource {
       {required String userId, required String petId});
   Future<CompanionModel> featurePet(
       {required String userId, required String petId});
+
+  increasePetStats({required String petId, int? happiness, int? health}) {}
 }
 
 @Injectable(as: CompanionRemoteDataSource)
@@ -173,6 +176,8 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
       return [];
     }
   }
+
+  
 
   // ==================== 🆕 PUNTOS REALES DEL USUARIO ====================
   @override
@@ -694,6 +699,116 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     return featurePetViaApi(userId: userId, petId: petId);
   }
 
+Future<CompanionModel> decreasePetStats({
+  required String petId,
+  int? happiness,
+  int? health,
+}) async {
+  try {
+    debugPrint('📉 [API] === REDUCIENDO STATS DE MASCOTA ===');
+    debugPrint('🆔 [API] Pet ID: $petId');
+    debugPrint('😊 [API] Reducir felicidad: ${happiness ?? 0}');
+    debugPrint('❤️ [API] Reducir salud: ${health ?? 0}');
+
+    final endpoint = '/api/gamification/pet-stats/$petId/decrease';
+    final requestBody = <String, dynamic>{};
+    
+    if (happiness != null) requestBody['happiness'] = happiness;
+    if (health != null) requestBody['health'] = health;
+
+    debugPrint('📦 [API] Request body: $requestBody');
+    debugPrint('🌐 [API] Endpoint: $endpoint');
+
+    final response = await apiClient.postGamification(
+      endpoint,
+      data: requestBody,
+    );
+
+    debugPrint('✅ [API] Decrease stats response: ${response.statusCode}');
+    debugPrint('📄 [API] Response data: ${response.data}');
+
+    if (response.statusCode == 200 || 
+        response.statusCode == 201 || 
+        response.statusCode == 204) {
+      debugPrint('🎉 [API] Reducción de stats exitosa');
+      
+      // Crear companion actualizado con nuevas estadísticas
+      final updatedCompanion = _createCompanionFromStatsResponse(petId, response.data);
+      debugPrint('✅ [API] Companion con stats reducidas: ${updatedCompanion.displayName}');
+      return updatedCompanion;
+    } else {
+      throw ServerException(
+          'Error reduciendo stats: código ${response.statusCode}, data: ${response.data}');
+    }
+  } catch (e) {
+    debugPrint('❌ [API] Error reduciendo stats: $e');
+    
+    final errorMessage = e.toString().toLowerCase();
+    if (errorMessage.contains('not found') || errorMessage.contains('404')) {
+      throw ServerException('🔍 Mascota no encontrada');
+    } else if (errorMessage.contains('minimum') || errorMessage.contains('límite')) {
+      throw ServerException('📊 Las estadísticas ya están en el mínimo permitido');
+    } else {
+      throw ServerException('❌ Error reduciendo estadísticas de la mascota');
+    }
+  }
+}
+
+/// Aumentar felicidad y/o salud de una mascota
+Future<CompanionModel> increasePetStats({
+  required String petId,
+  int? happiness,
+  int? health,
+}) async {
+  try {
+    debugPrint('📈 [API] === AUMENTANDO STATS DE MASCOTA ===');
+    debugPrint('🆔 [API] Pet ID: $petId');
+    debugPrint('😊 [API] Aumentar felicidad: ${happiness ?? 0}');
+    debugPrint('❤️ [API] Aumentar salud: ${health ?? 0}');
+
+    final endpoint = '/api/gamification/pet-stats/$petId/increase';
+    final requestBody = <String, dynamic>{};
+    
+    if (happiness != null) requestBody['happiness'] = happiness;
+    if (health != null) requestBody['health'] = health;
+
+    debugPrint('📦 [API] Request body: $requestBody');
+    debugPrint('🌐 [API] Endpoint: $endpoint');
+
+    final response = await apiClient.postGamification(
+      endpoint,
+      data: requestBody,
+    );
+
+    debugPrint('✅ [API] Increase stats response: ${response.statusCode}');
+    debugPrint('📄 [API] Response data: ${response.data}');
+
+    if (response.statusCode == 200 || 
+        response.statusCode == 201 || 
+        response.statusCode == 204) {
+      debugPrint('🎉 [API] Aumento de stats exitoso');
+      
+      // Crear companion actualizado con nuevas estadísticas
+      final updatedCompanion = _createCompanionFromStatsResponse(petId, response.data);
+      debugPrint('✅ [API] Companion con stats aumentadas: ${updatedCompanion.displayName}');
+      return updatedCompanion;
+    } else {
+      throw ServerException(
+          'Error aumentando stats: código ${response.statusCode}, data: ${response.data}');
+    }
+  } catch (e) {
+    debugPrint('❌ [API] Error aumentando stats: $e');
+    
+    final errorMessage = e.toString().toLowerCase();
+    if (errorMessage.contains('not found') || errorMessage.contains('404')) {
+      throw ServerException('🔍 Mascota no encontrada');
+    } else if (errorMessage.contains('maximum') || errorMessage.contains('máximo')) {
+      throw ServerException('📊 Las estadísticas ya están al máximo');
+    } else {
+      throw ServerException('❌ Error aumentando estadísticas de la mascota');
+    }
+  }
+}
   // ==================== 🔧 MÉTODOS HELPER MEJORADOS ====================
 
   /// 🔥 CREAR COMPANION ADOPTADO CON NOMBRE REAL DE LA RESPUESTA
@@ -952,7 +1067,75 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     debugPrint('⚠️ [MAPPING] Stage no reconocido en petId: $petId, usando baby por defecto');
     return CompanionStage.baby;
   }
+CompanionModel _createCompanionFromStatsResponse(String petId, dynamic responseData) {
+  debugPrint('🔄 [API] === CREANDO COMPANION DESDE STATS RESPONSE ===');
+  debugPrint('📄 [API] Response data: $responseData');
 
+  // Extraer datos de la respuesta
+  String realName = 'Mi Compañero';
+  int happinessLevel = 50;
+  int healthLevel = 50;
+  String lastInteractionAt = DateTime.now().toIso8601String();
+
+  if (responseData is Map<String, dynamic>) {
+    realName = responseData['name'] as String? ?? realName;
+    happinessLevel = (responseData['happiness_level'] as num?)?.toInt() ?? happinessLevel;
+    healthLevel = (responseData['health_level'] as num?)?.toInt() ?? healthLevel;
+    lastInteractionAt = responseData['last_interaction_at'] as String? ?? lastInteractionAt;
+    
+    debugPrint('✅ [API] Stats extraídas:');
+    debugPrint('📛 [API] Nombre: $realName');
+    debugPrint('😊 [API] Felicidad: $happinessLevel');
+    debugPrint('❤️ [API] Salud: $healthLevel');
+    debugPrint('⏰ [API] Última interacción: $lastInteractionAt');
+  }
+
+  // Mapear pet ID a companion type y stage
+  final companionType = _mapPetIdToCompanionType(petId);
+  final companionStage = _mapPetIdToCompanionStage(petId);
+  final localId = '${companionType.name}_${companionStage.name}';
+
+  debugPrint('🔍 [API] Mapeando Pet ID $petId -> ${companionType.name}_${companionStage.name}');
+
+  return CompanionModelWithPetId(
+    id: localId,
+    type: companionType,
+    stage: companionStage,
+    name: realName,
+    description: 'Mascota con estadísticas actualizadas',
+    level: 1,
+    experience: 0,
+    happiness: happinessLevel, // 🔥 USAR FELICIDAD REAL DE LA API
+    hunger: healthLevel,       // 🔥 MAPEAR HEALTH A HUNGER (HAMBRE)
+    energy: 100,              // Mantener energía por defecto
+    isOwned: true,
+    isSelected: false,
+    purchasedAt: DateTime.now(),
+    lastFeedTime: DateTime.tryParse(lastInteractionAt),
+    lastLoveTime: DateTime.tryParse(lastInteractionAt),
+    currentMood: _determineMoodFromStats(happinessLevel, healthLevel),
+    purchasePrice: 0,
+    evolutionPrice: 50,
+    unlockedAnimations: ['idle', 'blink', 'happy'],
+    createdAt: DateTime.now(),
+    petId: petId, // Preservar Pet ID real
+  );
+}
+
+/// Determinar mood basado en las estadísticas
+CompanionMood _determineMoodFromStats(int happiness, int health) {
+  if (happiness >= 80 && health >= 80) {
+    return CompanionMood.excited;
+  } else if (happiness >= 60 && health >= 60) {
+    return CompanionMood.happy;
+  } else if (happiness <= 30 || health <= 30) {
+    return CompanionMood.sad;
+  } else if (health <= 40) {
+    return CompanionMood.hungry;
+  } else {
+    return CompanionMood.normal;
+  }
+}
   /// 🔥 MAPEAR STRING A COMPANION STAGE (PARA RESPUESTAS DE LA API)
   CompanionStage _mapStringToCompanionStage(String stageStr) {
     final stageLower = stageStr.toLowerCase();

@@ -340,28 +340,32 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
     );
   }
 
-  void _showEmailVerificationDialog(BuildContext context, dynamic user) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => WillPopScope(
-        onWillPop: () async => false,
-        child: Dialog(
-          backgroundColor: Colors.transparent,
-          child: Container(
-            margin: const EdgeInsets.all(16),
+ void _showEmailVerificationDialog(BuildContext context, dynamic user) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => WillPopScope(
+      onWillPop: () async => false,
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.all(16),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.85, // Limitar altura máxima
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: SingleChildScrollView( // Hacer scrollable el contenido
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -558,9 +562,9 @@ class _RegisterPageContentState extends State<_RegisterPageContent> {
           ),
         ),
       ),
-    );
-  }
-
+    ),
+  );
+}
   void _showRegistrationSuccessDialog(BuildContext context, dynamic user) {
     showDialog(
       context: context,
