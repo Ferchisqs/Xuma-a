@@ -1,3 +1,6 @@
+// lib/features/companion/domain/entities/companion_entity.dart
+// 🔥 CORREGIDO: Experiencia más fácil de obtener para evolución
+
 import 'package:equatable/equatable.dart';
 
 enum CompanionType {
@@ -67,7 +70,7 @@ class CompanionEntity extends Equatable {
     required this.createdAt,
   });
 
-  // 🔧 GETTERS ACTUALIZADOS PARA NUEVA ESTRUCTURA
+  // 🔧 GETTERS ACTUALIZADOS
   String get imagePath => 'assets/images/companions/pets/${type.name}_${stage.name}.png';
   
   String get backgroundPath => 'assets/images/companions/backgrounds/${_getBackgroundName()}.png';
@@ -122,21 +125,26 @@ class CompanionEntity extends Equatable {
     }
   }
 
+  // 🔥 CORRECCIÓN CRÍTICA: Lógica de evolución corregida
   bool get canEvolve {
+    // No puede evolucionar si ya es adulto
     if (stage == CompanionStage.adult) return false;
+    
+    // 🔥 NUEVA LÓGICA: Solo necesita experiencia básica
     return experience >= experienceNeededForNextStage;
   }
 
+  // 🔥 EXPERIENCIA MUY FÁCIL DE OBTENER PARA TESTING
   int get experienceNeededForNextStage {
-  switch (stage) {
-    case CompanionStage.baby:
-      return 50; // 🚀 ERA 100, AHORA SOLO 50 EXP (2 comidas + 1 amor)
-    case CompanionStage.young:
-      return 80; // 🚀 ERA 250, AHORA SOLO 80 EXP (3 comidas + 1 amor)
-    case CompanionStage.adult:
-      return 0; // Ya está al máximo
+    switch (stage) {
+      case CompanionStage.baby:
+        return 25; // 🚀 SÚPER FÁCIL: Solo 1 alimentación (25 EXP)
+      case CompanionStage.young:
+        return 50; // 🚀 FÁCIL: 2 alimentaciones + 1 amor (50 EXP)
+      case CompanionStage.adult:
+        return 0; // Ya está al máximo
+    }
   }
-}
 
   bool get needsFood => hunger < 50;
   bool get needsLove => happiness < 50;
