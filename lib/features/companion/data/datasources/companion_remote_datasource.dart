@@ -819,62 +819,56 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
 
   // ==================== 🆕 EVOLUCIÓN DE MASCOTA POSEÍDA ====================
   @override
-  Future<CompanionModel> evolveOwnedPetViaApi({
-    required String userId, 
-    required String petId
-  }) async {
-    try {
-      debugPrint('🦋 [API] === EVOLUCIONANDO MASCOTA POSEÍDA ===');
-      debugPrint('👤 [API] User ID: $userId');
-      debugPrint('🆔 [API] Pet ID: $petId');
+Future<CompanionModel> evolveOwnedPetViaApi({
+  required String userId, 
+  required String petId // Este es idUserPet
+}) async {
+  try {
+    debugPrint('🦋 [API] === EVOLUCIONANDO MASCOTA POSEÍDA CORREGIDO ===');
+    debugPrint('👤 [API] User ID: $userId');
+    debugPrint('🔑 [API] idUserPet: $petId');
 
-      final endpoint = '/api/gamification/pets/owned/$userId/$petId/evolve';
-      final requestBody = <String, dynamic>{};
+    // ✅ ENDPOINT CORRECTO: POST /pets/owned/{userId}/{petId}/evolve
+    final endpoint = '/api/gamification/pets/owned/$userId/$petId/evolve';
+    final requestBody = <String, dynamic>{}; // Cuerpo vacío según la API
 
-      debugPrint('🌐 [API] Endpoint: $endpoint');
+    debugPrint('🌐 [API] Endpoint: $endpoint');
 
-      final response = await apiClient.postGamification(
-        endpoint,
-        data: requestBody,
-      );
+    final response = await apiClient.postGamification(
+      endpoint,
+      data: requestBody,
+    );
 
-      debugPrint('✅ [API] Evolución owned response: ${response.statusCode}');
-      debugPrint('📄 [API] Response data: ${response.data}');
+    debugPrint('✅ [API] Evolución owned response: ${response.statusCode}');
+    debugPrint('📄 [API] Response data: ${response.data}');
 
-      if (response.statusCode == 200 || 
-          response.statusCode == 201 || 
-          response.statusCode == 204) {
-        debugPrint('🎉 [API] Evolución owned exitosa');
-        
-        final evolvedCompanion = _createEvolvedCompanionFromResponse(petId, response.data);
-        debugPrint('✅ [API] Owned companion evolucionado: ${evolvedCompanion.displayName}');
-        return evolvedCompanion;
-      } else {
-        throw ServerException(
-            'Error en evolución owned: código ${response.statusCode}, data: ${response.data}');
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Error en evolución owned: $e');
+    if (response.statusCode == 200 || 
+        response.statusCode == 201 || 
+        response.statusCode == 204) {
+      debugPrint('🎉 [API] Evolución exitosa');
       
-      // 🔥 MISMO MANEJO DE ERRORES QUE EVOLUCIÓN NORMAL
-      final errorMessage = e.toString().toLowerCase();
-
-      if (errorMessage.contains('insufficient') ||
-          errorMessage.contains('puntos') ||
-          errorMessage.contains('not enough')) {
-        throw ServerException('💰 No tienes suficientes puntos para evolucionar');
-      } else if (errorMessage.contains('max level') ||
-          errorMessage.contains('maximum') ||
-          errorMessage.contains('adulto')) {
-        throw ServerException('🏆 Esta mascota ya está en su máxima evolución');
-      } else if (errorMessage.contains('not found') ||
-          errorMessage.contains('404')) {
-        throw ServerException('🔍 Mascota no encontrada en tu colección');
-      } else {
-        throw ServerException('❌ Error evolucionando mascota poseída');
-      }
+      final evolvedCompanion = _createEvolvedCompanionFromResponse(petId, response.data);
+      debugPrint('✅ [API] Companion evolucionado: ${evolvedCompanion.displayName}');
+      return evolvedCompanion;
+    } else {
+      throw ServerException(
+          'Error en evolución: código ${response.statusCode}, data: ${response.data}');
+    }
+  } catch (e) {
+    debugPrint('❌ [API] Error en evolución: $e');
+    
+    final errorMessage = e.toString().toLowerCase();
+    if (errorMessage.contains('insufficient') || errorMessage.contains('puntos')) {
+      throw ServerException('💰 No tienes suficientes puntos para evolucionar');
+    } else if (errorMessage.contains('max level') || errorMessage.contains('adulto')) {
+      throw ServerException('🏆 Esta mascota ya está en su máxima evolución');
+    } else if (errorMessage.contains('not found') || errorMessage.contains('404')) {
+      throw ServerException('🔍 Mascota no encontrada en tu colección');
+    } else {
+      throw ServerException('❌ Error evolucionando mascota');
     }
   }
+}
 
   // ==================== 🆕 SELECCIONAR ETAPA VISUALIZADA ====================
   @override

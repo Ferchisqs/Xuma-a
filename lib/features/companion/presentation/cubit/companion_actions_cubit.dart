@@ -280,117 +280,105 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
 
   // ==================== 🔥 EVOLUCIÓN CORREGIDA ====================
   Future<void> evolveCompanion(CompanionEntity companion) async {
-    try {
-      debugPrint('🦋 [ACTIONS_CUBIT] === INICIANDO EVOLUCIÓN CORREGIDA ===');
-      debugPrint(
-          '🐾 [ACTIONS_CUBIT] Mascota: ${companion.displayName} ${companion.stage.name}');
-      debugPrint(
-          '📊 [ACTIONS_CUBIT] Nivel: ${companion.level}, EXP: ${companion.experience}/${companion.experienceNeededForNextStage}');
-      debugPrint('✅ [ACTIONS_CUBIT] Puede evolucionar: ${companion.canEvolve}');
+  try {
+    debugPrint('🦋 [ACTIONS_CUBIT] === EVOLUCIÓN CON ENDPOINT CORRECTO ===');
+    debugPrint('🐾 [ACTIONS_CUBIT] Mascota: ${companion.displayName} ${companion.stage.name}');
+    debugPrint('📊 [ACTIONS_CUBIT] Nivel: ${companion.level}, EXP: ${companion.experience}');
 
-      // 🔥 VALIDACIONES MEJORADAS
-      final validationResult = _validateEvolution(companion);
-      if (!validationResult.isValid) {
-        debugPrint(
-            '❌ [ACTIONS_CUBIT] Validación fallida: ${validationResult.message}');
-        emit(CompanionActionsError(
-          message: validationResult.message,
-          action: 'evolving',
-        ));
-        return;
-      }
-
-      emit(CompanionActionsLoading(
-        action: 'evolving',
-        companion: companion,
-      ));
-
-      final userId = await tokenManager.getUserId();
-      if (userId == null) {
-        emit(CompanionActionsError(
-          message: '🔐 Usuario no autenticado',
-          action: 'evolving',
-        ));
-        return;
-      }
-
-      // 🔥 OBTENER PET ID CORRECTO
-      final petId = _extractPetId(companion);
-      debugPrint('🆔 [ACTIONS_CUBIT] Pet ID extraído: $petId');
-
-      // 🔥 LLAMAR ENDPOINT DE EVOLUCIÓN CORRECTO
-      final result = await repository.evolveCompanionViaApi(
-        userId: userId,
-        petId: petId,
-      );
-
-      result.fold(
-        (failure) {
-          debugPrint(
-              '❌ [ACTIONS_CUBIT] Error evolución API: ${failure.message}');
-          emit(CompanionActionsError(
-            message: failure.message,
-            action: 'evolving',
-          ));
-        },
-        (evolvedCompanion) {
-          debugPrint('🎉 [ACTIONS_CUBIT] === EVOLUCIÓN EXITOSA ===');
-          debugPrint(
-              '✨ [ACTIONS_CUBIT] Nueva etapa: ${evolvedCompanion.stage.name}');
-
-          final nextStageName = _getNextStageName(companion.stage);
-          final realName = evolvedCompanion.displayName.isNotEmpty
-              ? evolvedCompanion.displayName
-              : companion.displayName;
-
-          emit(CompanionActionsSuccess(
-            action: 'evolving',
-            companion: evolvedCompanion,
-            message: '🎉 ¡$realName ha evolucionado a $nextStageName!',
-          ));
-        },
-      );
-    } catch (e) {
-      debugPrint('💥 [ACTIONS_CUBIT] Error inesperado evolución: $e');
+    // 🔥 VALIDACIONES MEJORADAS
+    final validationResult = _validateEvolution(companion);
+    if (!validationResult.isValid) {
+      debugPrint('❌ [ACTIONS_CUBIT] Validación fallida: ${validationResult.message}');
       emit(CompanionActionsError(
-        message: '❌ Error inesperado evolucionando a ${companion.displayName}',
+        message: validationResult.message,
         action: 'evolving',
       ));
+      return;
     }
+
+    emit(CompanionActionsLoading(
+      action: 'evolving',
+      companion: companion,
+    ));
+
+    final userId = await tokenManager.getUserId();
+    if (userId == null) {
+      emit(CompanionActionsError(
+        message: '🔐 Usuario no autenticado',
+        action: 'evolving',
+      ));
+      return;
+    }
+
+    // 🔥 EXTRAER idUserPet CORRECTO PARA EVOLUCIÓN
+    final idUserPet = _extractIdUserPetForEvolution(companion);
+    debugPrint('🔑 [ACTIONS_CUBIT] idUserPet para evolución: $idUserPet');
+
+    // 🔥 LLAMAR AL ENDPOINT CORRECTO DE EVOLUCIÓN
+    final result = await repository.evolveCompanionViaApi(
+      userId: userId,
+      petId: idUserPet, // ✅ USAR idUserPet PARA EVOLUCIÓN
+    );
+
+    result.fold(
+      (failure) {
+        debugPrint('❌ [ACTIONS_CUBIT] Error evolución: ${failure.message}');
+        emit(CompanionActionsError(
+          message: failure.message,
+          action: 'evolving',
+        ));
+      },
+      (evolvedCompanion) {
+        debugPrint('🎉 [ACTIONS_CUBIT] === EVOLUCIÓN EXITOSA ===');
+        debugPrint('✨ [ACTIONS_CUBIT] Nueva etapa: ${evolvedCompanion.stage.name}');
+
+        final nextStageName = _getNextStageName(companion.stage);
+        final realName = evolvedCompanion.displayName.isNotEmpty
+            ? evolvedCompanion.displayName
+            : companion.displayName;
+
+        emit(CompanionActionsSuccess(
+          action: 'evolving',
+          companion: evolvedCompanion,
+          message: '🎉 ¡$realName ha evolucionado a $nextStageName!',
+        ));
+      },
+    );
+  } catch (e) {
+    debugPrint('💥 [ACTIONS_CUBIT] Error inesperado evolución: $e');
+    emit(CompanionActionsError(
+      message: '❌ Error inesperado evolucionando a ${companion.displayName}',
+      action: 'evolving',
+    ));
   }
+}
 
   // ==================== 🔥 VALIDACIÓN DE EVOLUCIÓN MEJORADA ====================
   ValidationResult _validateEvolution(CompanionEntity companion) {
-    debugPrint('🎯 [VALIDATION] === VALIDANDO EVOLUCIÓN ===');
-    debugPrint('🐾 [VALIDATION] Mascota: ${companion.displayName}');
-    debugPrint(
-        '📊 [VALIDATION] EXP: ${companion.experience}/${companion.experienceNeededForNextStage}');
-    debugPrint('🏆 [VALIDATION] Etapa actual: ${companion.stage.name}');
-    debugPrint('✅ [VALIDATION] Es poseída: ${companion.isOwned}');
-    debugPrint('🔄 [VALIDATION] Puede evolucionar: ${companion.canEvolve}');
+  debugPrint('🎯 [VALIDATION] === VALIDANDO EVOLUCIÓN ===');
+  debugPrint('🐾 [VALIDATION] Mascota: ${companion.displayName}');
+  debugPrint('🏆 [VALIDATION] Etapa actual: ${companion.stage.name}');
+  debugPrint('✅ [VALIDATION] Es poseída: ${companion.isOwned}');
 
-    if (!companion.isOwned) {
-      return ValidationResult(false,
-          '🔒 No puedes evolucionar a ${companion.displayName} porque no es tuyo');
-    }
-
-    if (companion.stage == CompanionStage.adult) {
-      return ValidationResult(
-          false, '🏆 ${companion.displayName} ya está en su máxima evolución');
-    }
-
-    // 🔥 VERIFICACIÓN CORREGIDA: Usar canEvolve del entity
-    if (!companion.canEvolve) {
-      final needed =
-          companion.experienceNeededForNextStage - companion.experience;
-      debugPrint('📉 [VALIDATION] Faltan $needed puntos de experiencia');
-      return ValidationResult(false,
-          '📊 ${companion.displayName} necesita $needed puntos más de experiencia');
-    }
-
-    debugPrint('✅ [VALIDATION] Validación exitosa - puede evolucionar');
-    return ValidationResult(true, '');
+  if (!companion.isOwned) {
+    return ValidationResult(false,
+        '🔒 No puedes evolucionar a ${companion.displayName} porque no es tuyo');
   }
+
+  if (companion.stage == CompanionStage.adult) {
+    return ValidationResult(
+        false, '🏆 ${companion.displayName} ya está en su máxima evolución');
+  }
+
+  // 🔥 SIMPLIFICAR: Solo verificar que pueda evolucionar
+  if (!companion.canEvolve) {
+    return ValidationResult(false,
+        '📊 ${companion.displayName} necesita más experiencia para evolucionar');
+  }
+
+  debugPrint('✅ [VALIDATION] Validación exitosa - puede evolucionar');
+  return ValidationResult(true, '');
+}
 
   // ==================== 🔥 EXTRACCIÓN DE PET ID MEJORADA ====================
   String _extractPetId(CompanionEntity companion) {
@@ -740,6 +728,45 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         return 'Máximo';
     }
   }
+
+  String _extractIdUserPetForEvolution(CompanionEntity companion) {
+  debugPrint('🔍 [EVOLUTION_ID] === EXTRAYENDO idUserPet PARA EVOLUCIÓN ===');
+  debugPrint('🐾 [EVOLUTION_ID] Companion: ${companion.displayName}');
+
+  // 1. 🔥 SI ES CompanionModelWithBothIds, USAR idUserPet
+  if (companion is CompanionModelWithBothIds) {
+    final idUserPet = companion.idUserPet;
+    debugPrint('✅ [EVOLUTION_ID] idUserPet encontrado: "$idUserPet"');
+
+    if (idUserPet.isNotEmpty && idUserPet != 'unknown' && idUserPet != 'pending') {
+      debugPrint('✅ [EVOLUTION_ID] idUserPet válido para evolución: $idUserPet');
+      return idUserPet;
+    }
+  }
+
+  // 2. 🔥 FALLBACK: Buscar en JSON
+  if (companion is CompanionModel) {
+    try {
+      final json = companion.toJson();
+      if (json.containsKey('idUserPet') && json['idUserPet'] != null) {
+        final idUserPet = json['idUserPet'] as String;
+        if (idUserPet.isNotEmpty && idUserPet != 'unknown') {
+          debugPrint('✅ [EVOLUTION_ID] idUserPet del JSON: $idUserPet');
+          return idUserPet;
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ [EVOLUTION_ID] Error accediendo JSON: $e');
+    }
+  }
+
+  // 3. 🆘 ERROR CRÍTICO
+  debugPrint('🆘 [EVOLUTION_ID] === ERROR: NO SE ENCONTRÓ idUserPet ===');
+  throw Exception(
+    '❌ No se encontró idUserPet válido para evolucionar ${companion.displayName}. '
+    'Asegúrate de que la mascota esté correctamente adoptada.');
+}
+
 
   void resetState() {
     emit(CompanionActionsInitial());

@@ -595,58 +595,56 @@ Future<Either<Failure, CompanionEntity>> simulateTimePassage({
   }
 
   // ==================== 🔥 EVOLUCIÓN VIA API REAL ====================
-  @override
-  Future<Either<Failure, CompanionEntity>> evolveCompanionViaApi({
-    required String userId,
-    required String petId,
-  }) async {
-    try {
-      debugPrint('🦋 [REPO] === EVOLUCIONANDO VIA API REAL ===');
-      debugPrint('👤 [REPO] User ID: $userId');
-      debugPrint('🆔 [REPO] Pet ID: $petId');
+ @override
+Future<Either<Failure, CompanionEntity>> evolveCompanionViaApi({
+  required String userId,
+  required String petId, // Este es idUserPet
+}) async {
+  try {
+    debugPrint('🦋 [REPO] === EVOLUCIÓN CON ENDPOINT CORRECTO ===');
+    debugPrint('👤 [REPO] User ID: $userId');
+    debugPrint('🔑 [REPO] idUserPet: $petId');
 
-      // 🔥 USAR USER ID REAL
-      final realUserId = await _getRealUserId();
-      debugPrint('👤 [REPO] Usuario ID REAL: $realUserId');
+    final realUserId = await _getRealUserId();
+    debugPrint('👤 [REPO] Usuario ID REAL: $realUserId');
 
-      if (enableApiMode && await networkInfo.isConnected) {
-        debugPrint('🌐 [REPO] Evolucionando via API real...');
+    if (enableApiMode && await networkInfo.isConnected) {
+      debugPrint('🌐 [REPO] Evolucionando via API real...');
 
-        final hasValidToken = await tokenManager.hasValidAccessToken();
-        if (!hasValidToken) {
-          debugPrint('❌ [REPO] Sin token válido para evolución');
-          return Left(AuthFailure('Token de autenticación requerido'));
-        }
-
-        try {
-          // 🔥 LLAMAR AL ENDPOINT REAL DE EVOLUCIÓN
-          final evolvedCompanion = await remoteDataSource.evolvePetViaApi(
-            userId: realUserId,
-            petId: petId,
-          );
-
-          debugPrint('✅ [REPO] Evolución exitosa desde API: ${evolvedCompanion.displayName}');
-
-          // 💾 GUARDAR EN CACHE LOCAL
-          await localDataSource.cacheCompanion(evolvedCompanion);
-          await _updateLocalCacheAfterEvolution(realUserId, evolvedCompanion);
-
-          return Right(evolvedCompanion);
-        } catch (e) {
-          debugPrint('❌ [REPO] Error en API de evolución: $e');
-          
-          // 🔥 LOS ERRORES YA VIENEN FORMATEADOS DEL DATASOURCE
-          return Left(ServerFailure(e.toString()));
-        }
-      } else {
-        debugPrint('📱 [REPO] Sin conexión, usando evolución local');
-        return await _evolveCompanionLocal(realUserId, petId);
+      final hasValidToken = await tokenManager.hasValidAccessToken();
+      if (!hasValidToken) {
+        debugPrint('❌ [REPO] Sin token válido para evolución');
+        return Left(AuthFailure('Token de autenticación requerido'));
       }
-    } catch (e) {
-      debugPrint('💥 [REPO] Error general en evolución: $e');
-      return Left(UnknownFailure('Error en evolución: ${e.toString()}'));
+
+      try {
+        // 🔥 LLAMAR AL ENDPOINT CORRECTO: POST /pets/owned/{userId}/{petId}/evolve
+        debugPrint('🔄 [REPO] Llamando evolveOwnedPetViaApi...');
+        final evolvedCompanion = await remoteDataSource.evolveOwnedPetViaApi(
+          userId: realUserId,
+          petId: petId, // ✅ USAR idUserPet
+        );
+
+        debugPrint('✅ [REPO] Evolución exitosa desde API: ${evolvedCompanion.displayName}');
+
+        // 💾 GUARDAR EN CACHE LOCAL
+        await localDataSource.cacheCompanion(evolvedCompanion);
+        await _updateLocalCacheAfterEvolution(realUserId, evolvedCompanion);
+
+        return Right(evolvedCompanion);
+      } catch (e) {
+        debugPrint('❌ [REPO] Error en API de evolución: $e');
+        return Left(ServerFailure(e.toString()));
+      }
+    } else {
+      debugPrint('📱 [REPO] Sin conexión, usando evolución local');
+      return await _evolveCompanionLocal(realUserId, petId);
     }
+  } catch (e) {
+    debugPrint('💥 [REPO] Error general en evolución: $e');
+    return Left(UnknownFailure('Error en evolución: ${e.toString()}'));
   }
+}
 
   // ==================== 🔥 DESTACAR MASCOTA VIA API REAL ====================
   @override
