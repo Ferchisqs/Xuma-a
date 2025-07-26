@@ -272,6 +272,32 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
     }
   }
 
+  Future<ContentModel> _resolveContentMediaEnhanced(ContentModel content) async {
+  try {
+    print('🎬 [CONTENT API] === RESOLVING CONTENT MEDIA WITH NEW API ===');
+    print('🎬 [CONTENT API] Content: ${content.title}');
+    
+    if (!content.hasAnyMedia) {
+      print('ℹ️ [CONTENT API] No media to resolve');
+      return content;
+    }
+    
+    // Usar el nuevo método del ContentModel
+    final resolvedContent = await content.resolveMediaWithNewApi(mediaDataSource);
+    
+    print('🎬 [CONTENT API] Media resolution complete');
+    print('🎬 [CONTENT API] Main URL resolved: ${resolvedContent.mediaUrl != null ? "✅" : "❌"}');
+    print('🎬 [CONTENT API] Thumbnail URL resolved: ${resolvedContent.thumbnailUrl != null ? "✅" : "❌"}');
+    
+    return resolvedContent;
+    
+  } catch (e, stackTrace) {
+    print('❌ [CONTENT API] Error in enhanced media resolution: $e');
+    print('❌ [CONTENT API] Stack trace: $stackTrace');
+    return content;
+  }
+}
+
   /// Resolver media optimizado para listas (solo thumbnails por defecto)
   Future<ContentModel> _resolveContentMediaOptimized(ContentModel content, {bool isList = false}) async {
     try {

@@ -29,9 +29,10 @@ import '../features/learning/domain/usecases/search_lessons_usecase.dart';
 import '../features/learning/presentation/cubit/learning_cubit.dart';
 import '../features/learning/presentation/cubit/lesson_list_cubit.dart';
 import '../features/learning/presentation/cubit/lesson_content_cubit.dart';
+import '../features/learning/data/datasources/media_remote_datasource.dart'; // Importación existente
+
 
 // Media imports
-import '../features/learning/data/datasources/media_remote_datasource.dart';
 
 // Companion imports
 import '../features/companion/data/datasources/companion_remote_datasource.dart';
@@ -161,7 +162,7 @@ void _registerContentDependencies() {
       getIt.registerLazySingleton<ContentRemoteDataSource>(
         () => ContentRemoteDataSourceImpl(
           getIt<ApiClient>(),
-          getIt<MediaRemoteDataSource>(),
+          getIt<MediaRemoteDataSource>(), // Inyección del MediaDataSource
         ),
       );
       print('✅ [INJECTION] ContentRemoteDataSource registered WITH MEDIA');

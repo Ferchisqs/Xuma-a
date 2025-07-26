@@ -1,6 +1,7 @@
-// lib/features/learning/data/models/content_model.dart - MEJORADO CON SOPORTE COMPLETO PARA MEDIA
+// lib/features/learning/data/models/content_model.dart - CORREGIDO CON ESTRUCTURA CORRECTA
 import 'package:json_annotation/json_annotation.dart';
 import '../../domain/entities/content_entity.dart';
+import '../datasources/media_remote_datasource.dart'; // 🔧 IMPORT NECESARIO
 
 part 'content_model.g.dart';
 
@@ -152,6 +153,88 @@ class ContentModel extends ContentEntity {
     );
   }
 
+  // 🆕 MÉTODO PARA RESOLVER MEDIA CON NUEVA API
+  Future<ContentModel> resolveMediaWithNewApi(MediaRemoteDataSource mediaDataSource) async {
+    if (!hasAnyMedia) return this;
+    
+    print('🔄 [CONTENT MODEL] Resolving media with new API...');
+    
+    String? resolvedMediaUrl;
+    String? resolvedThumbnailUrl;
+    Map<String, dynamic> enhancedMetadata = {};
+    
+    try {
+      // Resolver main media
+      if (mainMediaId != null && mainMediaId!.isNotEmpty) {
+        print('🔄 [CONTENT MODEL] Resolving main media: $mainMediaId');
+        final mainResponse = await mediaDataSource.getFileMediaResponse(mainMediaId!);
+        
+        if (mainResponse?.isValid == true) {
+          resolvedMediaUrl = mainResponse!.finalUrl;
+          enhancedMetadata['main_media'] = {
+            'url': mainResponse.finalUrl,
+            'publicUrl': mainResponse.publicUrl,
+            'type': mainResponse.type.toString(),
+            'category': mainResponse.category,
+            'fileName': mainResponse.finalName,
+            'fileSize': mainResponse.finalSize,
+            'isProcessed': mainResponse.isProcessed,
+            'virusScanStatus': mainResponse.virusScanStatus,
+            'mimeType': mainResponse.mimeType,
+          };
+          
+          print('✅ [CONTENT MODEL] Main media resolved: ${mainResponse.finalUrl}');
+        } else {
+          print('❌ [CONTENT MODEL] Failed to resolve main media');
+        }
+      }
+      
+      // Resolver thumbnail media
+      if (thumbnailMediaId != null && thumbnailMediaId!.isNotEmpty) {
+        print('🔄 [CONTENT MODEL] Resolving thumbnail media: $thumbnailMediaId');
+        final thumbResponse = await mediaDataSource.getFileMediaResponse(thumbnailMediaId!);
+        
+        if (thumbResponse?.isValid == true) {
+          resolvedThumbnailUrl = thumbResponse!.finalUrl;
+          enhancedMetadata['thumbnail_media'] = {
+            'url': thumbResponse.finalUrl,
+            'publicUrl': thumbResponse.publicUrl,
+            'type': thumbResponse.type.toString(),
+            'category': thumbResponse.category,
+            'fileName': thumbResponse.finalName,
+            'fileSize': thumbResponse.finalSize,
+            'isProcessed': thumbResponse.isProcessed,
+            'mimeType': thumbResponse.mimeType,
+          };
+          
+          print('✅ [CONTENT MODEL] Thumbnail media resolved: ${thumbResponse.finalUrl}');
+        } else {
+          print('❌ [CONTENT MODEL] Failed to resolve thumbnail media');
+        }
+      }
+      
+      // Crear content con media resuelta
+      return ContentModel.withResolvedMedia(
+        originalContent: this,
+        resolvedMediaUrl: resolvedMediaUrl,
+        resolvedThumbnailUrl: resolvedThumbnailUrl,
+        mediaMetadata: {
+          ...(mediaMetadata ?? {}),
+          ...enhancedMetadata,
+          'resolution_timestamp': DateTime.now().toIso8601String(),
+          'api_version': 'files_api_v2',
+        },
+      );
+      
+    } catch (e, stackTrace) {
+      print('❌ [CONTENT MODEL] Error resolving media: $e');
+      print('❌ [CONTENT MODEL] Stack trace: $stackTrace');
+      
+      // Retornar el contenido original si hay error
+      return this;
+    }
+  }
+
   // 🆕 GETTERS MEJORADOS PARA VERIFICAR MEDIA
   bool get hasMainMedia => mainMediaId != null && mainMediaId!.isNotEmpty;
   bool get hasThumbnailMedia => thumbnailMediaId != null && thumbnailMediaId!.isNotEmpty;
@@ -170,20 +253,24 @@ class ContentModel extends ContentEntity {
   // 🆕 GETTERS PARA INFORMACIÓN DE MEDIA DESDE METADATA
   bool get isMainMediaVideo {
     return mediaMetadata?['main_is_video'] == true ||
-           mediaMetadata?['main_media_type']?.toString().contains('video') == true;
+           mediaMetadata?['main_media_type']?.toString().contains('video') == true ||
+           mediaMetadata?['main_media']?['type']?.toString().contains('video') == true;
   }
 
   bool get isThumbnailImage {
     return mediaMetadata?['thumbnail_is_image'] == true ||
-           mediaMetadata?['thumbnail_media_type']?.toString().contains('image') == true;
+           mediaMetadata?['thumbnail_media_type']?.toString().contains('image') == true ||
+           mediaMetadata?['thumbnail_media']?['type']?.toString().contains('image') == true;
   }
 
   String? get mainMediaType {
-    return mediaMetadata?['main_media_type']?.toString();
+    return mediaMetadata?['main_media_type']?.toString() ??
+           mediaMetadata?['main_media']?['type']?.toString();
   }
 
   String? get thumbnailMediaType {
-    return mediaMetadata?['thumbnail_media_type']?.toString();
+    return mediaMetadata?['thumbnail_media_type']?.toString() ??
+           mediaMetadata?['thumbnail_media']?['type']?.toString();
   }
 
   // 🆕 MÉTODO PARA OBTENER INFORMACIÓN COMPLETA DE MEDIA
@@ -206,6 +293,38 @@ class ContentModel extends ContentEntity {
       'thumbnailMediaType': thumbnailMediaType,
       'metadata': mediaMetadata,
     };
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    final json = _$ContentModelToJson(this);
+    // Agregar campos personalizados que no están en el generador
+    json['mainMediaId'] = mainMediaId;
+    json['thumbnailMediaId'] = thumbnailMediaId;
+    json['mediaUrl'] = mediaUrl;
+    json['thumbnailUrl'] = thumbnailUrl;
+    json['mediaMetadata'] = mediaMetadata;
+    return json;
+  }
+
+  factory ContentModel.fromEntity(ContentEntity entity) {
+    return ContentModel(
+      id: entity.id,
+      title: entity.title,
+      description: entity.description,
+      content: entity.content,
+      imageUrl: entity.imageUrl,
+      category: entity.category,
+      isActive: entity.isActive,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+      // Sin media IDs cuando se crea desde entity
+      mainMediaId: null,
+      thumbnailMediaId: null,
+      mediaUrl: null,
+      thumbnailUrl: null,
+      mediaMetadata: null,
+    );
   }
 
   // ==================== MÉTODOS HELPER PARA EXTRACCIÓN ====================
@@ -383,38 +502,6 @@ class ContentModel extends ContentEntity {
       print('❌ [CONTENT MODEL] Even fallback failed: $fallbackError');
       rethrow;
     }
-  }
-
-  @override
-  Map<String, dynamic> toJson() {
-    final json = _$ContentModelToJson(this);
-    // Agregar campos personalizados que no están en el generador
-    json['mainMediaId'] = mainMediaId;
-    json['thumbnailMediaId'] = thumbnailMediaId;
-    json['mediaUrl'] = mediaUrl;
-    json['thumbnailUrl'] = thumbnailUrl;
-    json['mediaMetadata'] = mediaMetadata;
-    return json;
-  }
-
-  factory ContentModel.fromEntity(ContentEntity entity) {
-    return ContentModel(
-      id: entity.id,
-      title: entity.title,
-      description: entity.description,
-      content: entity.content,
-      imageUrl: entity.imageUrl,
-      category: entity.category,
-      isActive: entity.isActive,
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt,
-      // Sin media IDs cuando se crea desde entity
-      mainMediaId: null,
-      thumbnailMediaId: null,
-      mediaUrl: null,
-      thumbnailUrl: null,
-      mediaMetadata: null,
-    );
   }
 
   // ==================== MÉTODOS HELPER REUTILIZADOS ====================

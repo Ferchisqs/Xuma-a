@@ -1,4 +1,4 @@
-// lib/features/learning/data/datasources/media_remote_datasource.dart - CORREGIDO PARA API DE ARCHIVOS
+// lib/features/learning/data/datasources/media_remote_datasource.dart - MEJORADO PARA FILES API
 import 'package:injectable/injectable.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -12,45 +12,87 @@ enum MediaType {
   unknown
 }
 
-// 🆕 CLASE PARA RESPUESTA DE MEDIA MEJORADA
+// 🆕 CLASE PARA RESPUESTA DE MEDIA MEJORADA CON NUEVA ESTRUCTURA
 class MediaResponse {
   final String? url;
+  final String? publicUrl; // 🆕 NUEVO CAMPO
   final String? filename;
+  final String? originalName; // 🆕 NUEVO CAMPO
   final int? size;
+  final int? fileSize; // 🆕 NUEVO CAMPO
   final MediaType type;
   final String? mimeType;
   final String? fileType;
+  final String? category; // 🆕 NUEVO CAMPO
+  final bool? isPublic; // 🆕 NUEVO CAMPO
+  final bool? isProcessed; // 🆕 NUEVO CAMPO
+  final String? virusScanStatus; // 🆕 NUEVO CAMPO
   final DateTime? createdAt;
+  final DateTime? updatedAt;
   final Map<String, dynamic>? metadata;
   final bool isValid;
 
   MediaResponse({
     this.url,
+    this.publicUrl,
     this.filename,
+    this.originalName,
     this.size,
+    this.fileSize,
     this.type = MediaType.unknown,
     this.mimeType,
     this.fileType,
+    this.category,
+    this.isPublic,
+    this.isProcessed,
+    this.virusScanStatus,
     this.createdAt,
+    this.updatedAt,
     this.metadata,
-  }) : isValid = url != null && url!.isNotEmpty;
+  }) : isValid = (url != null && url!.isNotEmpty) || (publicUrl != null && publicUrl!.isNotEmpty);
+
+  // 🆕 GETTER PARA URL FINAL (prioriza publicUrl)
+  String? get finalUrl => publicUrl ?? url;
 
   bool get isImage => type == MediaType.image || 
                      (mimeType?.startsWith('image/') ?? false) ||
-                     (fileType?.startsWith('image/') ?? false);
+                     (fileType?.startsWith('image/') ?? false) ||
+                     category == 'image';
   
   bool get isVideo => type == MediaType.video || 
                      (mimeType?.startsWith('video/') ?? false) ||
-                     (fileType?.startsWith('video/') ?? false);
+                     (fileType?.startsWith('video/') ?? false) ||
+                     category == 'video';
   
   bool get isAudio => type == MediaType.audio || 
                      (mimeType?.startsWith('audio/') ?? false) ||
-                     (fileType?.startsWith('audio/') ?? false);
+                     (fileType?.startsWith('audio/') ?? false) ||
+                     category == 'audio';
 
-  // 🆕 MÉTODO PARA DEBUG
+  bool get isDocument => type == MediaType.document || 
+                        (mimeType?.contains('pdf') ?? false) ||
+                        (fileType?.contains('document') ?? false) ||
+                        category == 'document';
+
+  // 🆕 GETTER PARA TAMAÑO FINAL
+  int? get finalSize => fileSize ?? size;
+
+  // 🆕 GETTER PARA NOMBRE FINAL
+  String? get finalName => originalName ?? filename;
+
+  // 🆕 MÉTODO PARA DEBUG MEJORADO
   @override
   String toString() {
-    return 'MediaResponse(url: $url, type: $type, mimeType: $mimeType, fileType: $fileType, isValid: $isValid)';
+    return 'MediaResponse('
+        'finalUrl: $finalUrl, '
+        'type: $type, '
+        'category: $category, '
+        'mimeType: $mimeType, '
+        'fileType: $fileType, '
+        'isValid: $isValid, '
+        'isPublic: $isPublic, '
+        'isProcessed: $isProcessed'
+        ')';
   }
 }
 
@@ -65,7 +107,7 @@ abstract class MediaRemoteDataSource {
   Future<List<MediaResponse>> getMultipleMediaResponses(List<String> mediaIds);
   Future<MediaResponse?> getOptimizedMediaUrl(String mediaId, {String? quality});
   
-  // 🆕 MÉTODO ESPECÍFICO PARA FILES API
+  // 🆕 MÉTODO ESPECÍFICO PARA FILES API MEJORADO
   Future<MediaResponse?> getFileMediaResponse(String fileId);
 }
 
@@ -78,13 +120,13 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
   @override
   Future<String?> getMediaUrl(String mediaId) async {
     final response = await getMediaResponse(mediaId);
-    return response?.url;
+    return response?.finalUrl;
   }
 
   @override
   Future<String?> getMediaFileUrl(String fileId) async {
     final response = await getFileMediaResponse(fileId);
-    return response?.url;
+    return response?.finalUrl;
   }
 
   // 🔧 MÉTODO PRINCIPAL MEJORADO PARA DETECTAR TIPO DE ID
@@ -110,7 +152,7 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
     }
   }
 
-  // 🆕 MÉTODO ESPECÍFICO PARA FILES API
+  // 🆕 MÉTODO ESPECÍFICO PARA FILES API MEJORADO CON NUEVA ESTRUCTURA
   @override
   Future<MediaResponse?> getFileMediaResponse(String fileId) async {
     try {
@@ -129,18 +171,33 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
       if (response.statusCode == 200 && response.data != null) {
         
         if (response.data is Map<String, dynamic>) {
-          final data = response.data as Map<String, dynamic>;
-          print('📁 [MEDIA API] Response keys: ${data.keys.toList()}');
-          print('📁 [MEDIA API] Sample data: ${_getSafeDataSample(data)}');
+          final responseMap = response.data as Map<String, dynamic>;
+          print('📁 [MEDIA API] Response keys: ${responseMap.keys.toList()}');
           
-          return _buildFileMediaResponse(data, fileId);
+          // 🔧 VERIFICAR ESTRUCTURA DE RESPUESTA
+          if (responseMap.containsKey('success') && responseMap['success'] == true) {
+            final data = responseMap['data'] as Map<String, dynamic>?;
+            if (data != null) {
+              print('📁 [MEDIA API] Data keys: ${data.keys.toList()}');
+              print('📁 [MEDIA API] Sample data: ${_getSafeDataSample(data)}');
+              
+              return _buildFileMediaResponseFromNewStructure(data, fileId);
+            } else {
+              print('⚠️ [MEDIA API] No data field in successful response');
+              return null;
+            }
+          } else {
+            // Estructura antigua o directa
+            print('📁 [MEDIA API] Using legacy structure');
+            return _buildFileMediaResponse(responseMap, fileId);
+          }
         } else if (response.data is String) {
           // Si la respuesta es directamente una URL
           final urlString = response.data.toString().trim();
           if (urlString.isNotEmpty && _isValidUrl(urlString)) {
             print('✅ [MEDIA API] Direct URL response: $urlString');
             return MediaResponse(
-              url: urlString,
+              publicUrl: urlString,
               type: _determineTypeFromUrl(urlString),
               metadata: {'id': fileId, 'source': 'direct_url'},
             );
@@ -160,39 +217,91 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
     }
   }
 
-  // 🔧 MÉTODO PARA MEDIA REGULAR (NO FILES)
-  Future<MediaResponse?> _getRegularMediaResponse(String mediaId) async {
-    try {
-      print('🎬 [MEDIA API] === FETCHING REGULAR MEDIA ===');
-      print('🎬 [MEDIA API] Media ID: $mediaId');
-      
-      final endpoint = '/api/media/$mediaId';
-      final response = await apiClient.get(endpoint);
-      
-      print('🎬 [MEDIA API] Response Status: ${response.statusCode}');
-      
-      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        return _buildRegularMediaResponse(data, mediaId);
+  // 🆕 CONSTRUIR RESPUESTA DESDE NUEVA ESTRUCTURA DE API
+  MediaResponse _buildFileMediaResponseFromNewStructure(Map<String, dynamic> data, String fileId) {
+    print('🔧 [MEDIA API] Building file media response from new structure...');
+    
+    // 🔍 EXTRAER CAMPOS DE LA NUEVA ESTRUCTURA
+    final id = _extractStringFromData(data, 'id');
+    final originalName = _extractStringFromData(data, 'originalName');
+    final fileType = _extractStringFromData(data, 'fileType');
+    final mimeType = _extractStringFromData(data, 'mimeType');
+    final fileSize = _extractIntFromData(data, 'fileSize');
+    final category = _extractStringFromData(data, 'category');
+    final publicUrl = _extractStringFromData(data, 'publicUrl'); // 🔥 CAMPO PRINCIPAL
+    final isPublic = _extractBoolFromData(data, 'isPublic');
+    final isProcessed = _extractBoolFromData(data, 'isProcessed');
+    final virusScanStatus = _extractStringFromData(data, 'virusScanStatus');
+    final userId = _extractStringFromData(data, 'userId');
+    
+    // 🔍 PARSEAR FECHAS
+    DateTime? createdAt;
+    DateTime? updatedAt;
+    
+    final createdAtStr = _extractStringFromData(data, 'createdAt');
+    if (createdAtStr != null) {
+      try {
+        createdAt = DateTime.parse(createdAtStr);
+      } catch (e) {
+        print('⚠️ [MEDIA API] Failed to parse createdAt: $createdAtStr');
       }
-      
-      return null;
-      
-    } catch (e) {
-      print('❌ [MEDIA API] Error fetching regular media: $e');
-      return null;
     }
+    
+    final updatedAtStr = _extractStringFromData(data, 'updatedAt');
+    if (updatedAtStr != null) {
+      try {
+        updatedAt = DateTime.parse(updatedAtStr);
+      } catch (e) {
+        print('⚠️ [MEDIA API] Failed to parse updatedAt: $updatedAtStr');
+      }
+    }
+    
+    // 🔍 EXTRAER METADATA
+    Map<String, dynamic>? metadata;
+    if (data.containsKey('metadata') && data['metadata'] is Map<String, dynamic>) {
+      metadata = data['metadata'] as Map<String, dynamic>;
+    }
+    
+    // 🔍 DETERMINAR TIPO DE MEDIA
+    final type = _determineMediaType(mimeType: mimeType, fileType: fileType, filename: originalName, category: category);
+    
+    final response = MediaResponse(
+      url: publicUrl, // Para compatibilidad
+      publicUrl: publicUrl, // 🔥 NUEVO CAMPO PRINCIPAL
+      filename: originalName,
+      originalName: originalName,
+      size: fileSize,
+      fileSize: fileSize,
+      type: type,
+      mimeType: mimeType,
+      fileType: fileType,
+      category: category,
+      isPublic: isPublic,
+      isProcessed: isProcessed,
+      virusScanStatus: virusScanStatus,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      metadata: {
+        'id': id ?? fileId,
+        'userId': userId,
+        'source': 'files_api_new_structure',
+        'raw_data': data,
+        ...?metadata,
+      },
+    );
+    
+    print('🔧 [MEDIA API] Built file response from new structure: $response');
+    return response;
   }
 
-  // 🔧 CONSTRUIR RESPUESTA PARA FILES API
+  // 🔧 CONSTRUIR RESPUESTA PARA ESTRUCTURA LEGACY
   MediaResponse _buildFileMediaResponse(Map<String, dynamic> data, String fileId) {
-    print('🔧 [MEDIA API] Building file media response...');
+    print('🔧 [MEDIA API] Building file media response from legacy structure...');
     
     // 🔍 BUSCAR URL EN MÚLTIPLES CAMPOS POSIBLES
     final urlFields = [
-      'url', 'fileUrl', 'file_url', 'downloadUrl', 'download_url',
-      'publicUrl', 'public_url', 'accessUrl', 'access_url',
-      'src', 'source', 'path', 'location', 'link'
+      'publicUrl', 'url', 'fileUrl', 'file_url', 'downloadUrl', 'download_url',
+      'accessUrl', 'access_url', 'src', 'source', 'path', 'location', 'link'
     ];
     
     String? url;
@@ -239,11 +348,13 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
     final fileType = _extractStringFromData(data, 'fileType') ?? 
                     _extractStringFromData(data, 'type');
     
+    final category = _extractStringFromData(data, 'category');
+    
     final createdAtStr = _extractStringFromData(data, 'createdAt') ?? 
                         _extractStringFromData(data, 'created_at');
     
     // 🔍 DETERMINAR TIPO DE MEDIA
-    final type = _determineMediaType(mimeType: mimeType, fileType: fileType, filename: filename);
+    final type = _determineMediaType(mimeType: mimeType, fileType: fileType, filename: filename, category: category);
     
     // 🔍 PARSEAR FECHA
     DateTime? createdAt;
@@ -257,21 +368,49 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
     
     final response = MediaResponse(
       url: url,
+      publicUrl: url, // Usar la misma URL como publicUrl
       filename: filename,
+      originalName: filename,
       size: size,
+      fileSize: size,
       type: type,
       mimeType: mimeType,
       fileType: fileType,
+      category: category,
       createdAt: createdAt,
       metadata: {
         'id': fileId,
-        'source': 'files_api',
+        'source': 'files_api_legacy',
         'raw_data': data,
       },
     );
     
-    print('🔧 [MEDIA API] Built file response: $response');
+    print('🔧 [MEDIA API] Built file response from legacy structure: $response');
     return response;
+  }
+
+  // 🔧 MÉTODO PARA MEDIA REGULAR (NO FILES)
+  Future<MediaResponse?> _getRegularMediaResponse(String mediaId) async {
+    try {
+      print('🎬 [MEDIA API] === FETCHING REGULAR MEDIA ===');
+      print('🎬 [MEDIA API] Media ID: $mediaId');
+      
+      final endpoint = '/api/media/$mediaId';
+      final response = await apiClient.get(endpoint);
+      
+      print('🎬 [MEDIA API] Response Status: ${response.statusCode}');
+      
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        final data = response.data as Map<String, dynamic>;
+        return _buildRegularMediaResponse(data, mediaId);
+      }
+      
+      return null;
+      
+    } catch (e) {
+      print('❌ [MEDIA API] Error fetching regular media: $e');
+      return null;
+    }
   }
 
   // 🔧 CONSTRUIR RESPUESTA PARA MEDIA REGULAR
@@ -287,8 +426,11 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
     
     return MediaResponse(
       url: url,
+      publicUrl: url, // Usar la misma URL como publicUrl
       filename: filename,
+      originalName: filename,
       size: size,
+      fileSize: size,
       type: type,
       mimeType: mimeType,
       metadata: {
@@ -300,8 +442,16 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
   }
 
   // 🔧 MÉTODO MEJORADO PARA DETERMINAR TIPO DE MEDIA
-  MediaType _determineMediaType({String? mimeType, String? fileType, String? filename}) {
-    // Prioridad: mimeType > fileType > filename
+  MediaType _determineMediaType({String? mimeType, String? fileType, String? filename, String? category}) {
+    // Prioridad: category > mimeType > fileType > filename
+    if (category != null) {
+      final lowerCategory = category.toLowerCase();
+      if (lowerCategory == 'image') return MediaType.image;
+      if (lowerCategory == 'video') return MediaType.video;
+      if (lowerCategory == 'audio') return MediaType.audio;
+      if (lowerCategory == 'document') return MediaType.document;
+    }
+    
     final typeToCheck = mimeType ?? fileType;
     
     if (typeToCheck != null) {
@@ -403,10 +553,32 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
     return null;
   }
 
+  // 🆕 EXTRAER INT DE DATA
+  int? _extractIntFromData(Map<String, dynamic> data, String key) {
+    final value = data[key];
+    if (value != null) {
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value);
+      if (value is double) return value.toInt();
+    }
+    return null;
+  }
+
+  // 🆕 EXTRAER BOOL DE DATA
+  bool? _extractBoolFromData(Map<String, dynamic> data, String key) {
+    final value = data[key];
+    if (value != null) {
+      if (value is bool) return value;
+      if (value is String) return value.toLowerCase() == 'true';
+      if (value is int) return value == 1;
+    }
+    return null;
+  }
+
   // 🔧 EXTRAER URL DE DATA (MÉTODO EXISTENTE MEJORADO)
   String? _extractUrlFromData(Map<String, dynamic> data, String context) {
     final urlFields = [
-      'url', 'media_url', 'file_url', 'download_url', 'public_url',
+      'publicUrl', 'url', 'media_url', 'file_url', 'download_url', 'public_url',
       'src', 'source', 'path', 'location', 'link'
     ];
     
@@ -437,7 +609,7 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
       final sample = <String, dynamic>{};
       
       // Solo incluir campos importantes para debug
-      final importantFields = ['url', 'fileUrl', 'filename', 'mimeType', 'fileType', 'size'];
+      final importantFields = ['publicUrl', 'url', 'fileUrl', 'originalName', 'mimeType', 'fileType', 'fileSize', 'category'];
       
       for (final field in importantFields) {
         if (data.containsKey(field)) {
@@ -514,7 +686,7 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
       final response = responses.where((r) => r.metadata?['id'] == mediaId).firstOrNull;
       
       if (response?.isValid == true) {
-        urlMap[mediaId] = response!.url!;
+        urlMap[mediaId] = response!.finalUrl!;
       }
     }
     
@@ -528,17 +700,26 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
     
     return {
       'id': fileId,
-      'url': response.url,
-      'filename': response.filename,
-      'size': response.size,
+      'url': response.finalUrl,
+      'publicUrl': response.publicUrl,
+      'filename': response.finalName,
+      'originalName': response.originalName,
+      'size': response.finalSize,
+      'fileSize': response.fileSize,
       'type': response.type.toString(),
       'mime_type': response.mimeType,
       'file_type': response.fileType,
+      'category': response.category,
+      'is_public': response.isPublic,
+      'is_processed': response.isProcessed,
+      'virus_scan_status': response.virusScanStatus,
       'created_at': response.createdAt?.toIso8601String(),
+      'updated_at': response.updatedAt?.toIso8601String(),
       'metadata': response.metadata,
       'is_image': response.isImage,
       'is_video': response.isVideo,
       'is_audio': response.isAudio,
+      'is_document': response.isDocument,
     };
   }
 }
