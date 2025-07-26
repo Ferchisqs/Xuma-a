@@ -1,4 +1,4 @@
-package com.example.xuma_a
+package com.novacode.xumaa
 
 import io.flutter.embedding.android.FlutterActivity
 

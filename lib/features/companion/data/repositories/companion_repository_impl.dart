@@ -844,13 +844,13 @@ Future<Either<Failure, CompanionEntity>> simulateTimePassage({
     final now = DateTime.now();
 
     return [
-      // Dexter (gratuito inicial)
+      // 🔥 DEXTER BABY CON PRECIO (NO GRATIS)
       CompanionModel(
-        id: 'dexter_young',
+        id: 'dexter_baby',
         type: CompanionType.dexter,
-        stage: CompanionStage.young,
+        stage: CompanionStage.baby,
         name: 'Dexter',
-        description: 'Tu primer compañero gratuito',
+        description: 'Un pequeño chihuahua mexicano',
         level: 1,
         experience: 0,
         happiness: 100,
@@ -860,13 +860,13 @@ Future<Either<Failure, CompanionEntity>> simulateTimePassage({
         isSelected: false,
         purchasedAt: null,
         currentMood: CompanionMood.happy,
-        purchasePrice: 0,
+        purchasePrice: 100, // 🔥 CON PRECIO
         evolutionPrice: 50,
         unlockedAnimations: ['idle', 'blink', 'happy'],
         createdAt: now,
       ),
 
-      // Elly (compra)
+      // Elly Baby (precio actualizado)
       CompanionModel(
         id: 'elly_baby',
         type: CompanionType.elly,
@@ -882,13 +882,13 @@ Future<Either<Failure, CompanionEntity>> simulateTimePassage({
         isSelected: false,
         purchasedAt: null,
         currentMood: CompanionMood.normal,
-        purchasePrice: 200, // 🔥 PRECIO REALISTA PARA TU API
+        purchasePrice: 200,
         evolutionPrice: 75,
         unlockedAnimations: ['idle', 'blink', 'eating'],
         createdAt: now,
       ),
 
-      // Paxolotl (compra premium)
+      // Paxolotl Baby (precio actualizado)
       CompanionModel(
         id: 'paxolotl_baby',
         type: CompanionType.paxolotl,
@@ -904,13 +904,13 @@ Future<Either<Failure, CompanionEntity>> simulateTimePassage({
         isSelected: false,
         purchasedAt: null,
         currentMood: CompanionMood.normal,
-        purchasePrice: 300, // 🔥 PRECIO PREMIUM
+        purchasePrice: 600,
         evolutionPrice: 100,
         unlockedAnimations: ['idle', 'blink', 'swimming'],
         createdAt: now,
       ),
 
-      // Yami (muy premium)
+      // Yami Baby (precio actualizado)
       CompanionModel(
         id: 'yami_baby',
         type: CompanionType.yami,
@@ -926,7 +926,7 @@ Future<Either<Failure, CompanionEntity>> simulateTimePassage({
         isSelected: false,
         purchasedAt: null,
         currentMood: CompanionMood.normal,
-        purchasePrice: 500, // 🔥 PRECIO MUY PREMIUM
+        purchasePrice: 2500,
         evolutionPrice: 150,
         unlockedAnimations: ['idle', 'blink', 'prowling'],
         createdAt: now,
@@ -1277,21 +1277,21 @@ Future<Either<Failure, CompanionEntity>> simulateTimePassage({
     }
   }
 
-  int _getDefaultPrice(CompanionType type, CompanionStage stage) {
+   int _getDefaultPrice(CompanionType type, CompanionStage stage) {
     int basePrice = 100;
 
     switch (type) {
       case CompanionType.dexter:
-        basePrice = 0;
-        break; // Gratis
+        basePrice = 100; // 🔥 YA NO ES GRATIS
+        break;
       case CompanionType.elly:
         basePrice = 200;
         break;
       case CompanionType.paxolotl:
-        basePrice = 300;
+        basePrice = 600;
         break;
       case CompanionType.yami:
-        basePrice = 500;
+        basePrice = 2500;
         break;
     }
 
@@ -1299,9 +1299,9 @@ Future<Either<Failure, CompanionEntity>> simulateTimePassage({
       case CompanionStage.baby:
         return basePrice;
       case CompanionStage.young:
-        return basePrice + 50;
+        return (basePrice * 1.5).round();
       case CompanionStage.adult:
-        return basePrice + 100;
+        return (basePrice * 2.0).round();
     }
   }
 

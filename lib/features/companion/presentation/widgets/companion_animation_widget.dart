@@ -141,8 +141,9 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     super.didUpdateWidget(oldWidget);
     
     if (widget.isInteracting && !oldWidget.isInteracting) {
-      _handleInteraction();
-    }
+    debugPrint('🎬 [ANIMATION] Iniciando animación: ${widget.currentAction}');
+    _handleInteraction();
+  }
   }
   
   void _handleInteraction() {

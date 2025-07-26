@@ -1,4 +1,6 @@
-// lib/features/companion/domain/usecases/get_companion_shop_usecase.dart - CORREGIDO
+// lib/features/companion/domain/usecases/get_companion_shop_usecase.dart
+// 🔥 CORREGIDO: Sin Dexter gratis, todas las mascotas se compran
+
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/usecases/usecase.dart';
@@ -34,7 +36,7 @@ class GetCompanionShopUseCase implements UseCase<CompanionShopData, GetCompanion
   @override
   Future<Either<Failure, CompanionShopData>> call(GetCompanionShopParams params) async {
     try {
-      debugPrint('🏪 [SHOP_USECASE] === OBTENIENDO TIENDA ===');
+      debugPrint('🏪 [SHOP_USECASE] === OBTENIENDO TIENDA SIN DEXTER GRATIS ===');
       debugPrint('👤 [SHOP_USECASE] User ID: ${params.userId}');
 
       // 🔥 1. OBTENER MASCOTAS YA ADOPTADAS DEL USUARIO
@@ -53,7 +55,7 @@ class GetCompanionShopUseCase implements UseCase<CompanionShopData, GetCompanion
         }
       );
 
-      // 🔥 2. OBTENER TODAS LAS MASCOTAS DISPONIBLES
+      // 🔥 2. OBTENER TODAS LAS MASCOTAS DISPONIBLES DESDE LA API
       debugPrint('📡 [SHOP_USECASE] Obteniendo mascotas disponibles...');
       final allCompanionsResult = await repository.getAvailableCompanions();
       
@@ -69,7 +71,7 @@ class GetCompanionShopUseCase implements UseCase<CompanionShopData, GetCompanion
           return statsResult.fold(
             (failure) => Left(failure),
             (stats) {
-              // 🔥 4. MARCAR MASCOTAS YA ADOPTADAS Y FILTRAR PARA TIENDA
+              // 🔥 4. MARCAR MASCOTAS YA ADOPTADAS
               final adoptedIds = userCompanions.map((c) => c.id).toSet();
               debugPrint('🔍 [SHOP_USECASE] IDs adoptados: $adoptedIds');
               
@@ -84,37 +86,16 @@ class GetCompanionShopUseCase implements UseCase<CompanionShopData, GetCompanion
                 return companion;
               }).toList();
               
-              // 🔥 5. FILTRAR SOLO MASCOTAS NO ADOPTADAS PARA LA TIENDA
-              final storeCompanions = updatedCompanions.where((c) => !c.isOwned).toList();
+              // 🔥 5. LA TIENDA MOSTRARÁ SOLO LAS MASCOTAS NO ADOPTADAS
+              // (La lógica de filtrado se hace en el cubit con la nueva lógica progresiva)
               
-              // 🔧 AGREGAR DEXTER JOVEN GRATIS SI NO LO TIENE
-              final hasDexterYoung = userCompanions.any((c) => 
-                c.type == CompanionType.dexter && c.stage == CompanionStage.young
-              );
-              
-              if (!hasDexterYoung) {
-                debugPrint('🎁 [SHOP_USECASE] Agregando Dexter joven gratis');
-                // Crear o encontrar Dexter joven y marcarlo como disponible
-                var dexterYoung = storeCompanions.firstWhere(
-                  (c) => c.type == CompanionType.dexter && c.stage == CompanionStage.young,
-                  orElse: () => _createDexterYoung(),
-                );
-                
-                if (!storeCompanions.contains(dexterYoung)) {
-                  storeCompanions.insert(0, dexterYoung);
-                }
-              }
-              
-              // 🔧 ORDENAR POR PRECIO
-              storeCompanions.sort((a, b) => a.purchasePrice.compareTo(b.purchasePrice));
-              
-              debugPrint('🛍️ [SHOP_USECASE] === RESULTADO FINAL ===');
+              debugPrint('🛍️ [SHOP_USECASE] === RESULTADO FINAL SIN DEXTER GRATIS ===');
               debugPrint('🏠 [SHOP_USECASE] Mascotas del usuario: ${userCompanions.length}');
-              debugPrint('🛒 [SHOP_USECASE] Mascotas en tienda: ${storeCompanions.length}');
+              debugPrint('🛒 [SHOP_USECASE] Total mascotas disponibles: ${updatedCompanions.length}');
               debugPrint('💰 [SHOP_USECASE] Puntos disponibles: ${stats.availablePoints}');
               
               return Right(CompanionShopData(
-                availableCompanions: storeCompanions, // 🔥 SOLO MASCOTAS NO ADOPTADAS
+                availableCompanions: updatedCompanions, // 🔥 TODAS LAS MASCOTAS MARCADAS
                 userStats: stats,
               ));
             },
@@ -126,29 +107,5 @@ class GetCompanionShopUseCase implements UseCase<CompanionShopData, GetCompanion
       debugPrint('❌ [SHOP_USECASE] Error inesperado: $e');
       return Left(UnknownFailure('Error obteniendo tienda: ${e.toString()}'));
     }
-  }
-  
-  // 🔧 CREAR DEXTER JOVEN POR DEFECTO
-  CompanionEntity _createDexterYoung() {
-    return CompanionModel(
-      id: 'dexter_young',
-      type: CompanionType.dexter,
-      stage: CompanionStage.young,
-      name: 'Dexter',
-      description: 'Tu primer compañero gratuito',
-      level: 1,
-      experience: 0,
-      happiness: 100,
-      hunger: 100,
-      energy: 100,
-      isOwned: false,
-      isSelected: false,
-      purchasedAt: null,
-      currentMood: CompanionMood.happy,
-      purchasePrice: 0, // GRATIS
-      evolutionPrice: 50,
-      unlockedAnimations: ['idle', 'blink', 'happy'],
-      createdAt: DateTime.now(),
-    );
   }
 }

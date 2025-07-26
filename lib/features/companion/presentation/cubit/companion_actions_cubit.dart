@@ -29,12 +29,12 @@ class CompanionActionsInitial extends CompanionActionsState {}
 class CompanionActionsLoading extends CompanionActionsState {
   final String action;
   final CompanionEntity companion;
-  
+
   const CompanionActionsLoading({
     required this.action,
     required this.companion,
   });
-  
+
   @override
   List<Object> get props => [action, companion];
 }
@@ -43,13 +43,13 @@ class CompanionActionsSuccess extends CompanionActionsState {
   final String action;
   final CompanionEntity companion;
   final String message;
-  
+
   const CompanionActionsSuccess({
     required this.action,
     required this.companion,
     required this.message,
   });
-  
+
   @override
   List<Object> get props => [action, companion, message];
 }
@@ -57,12 +57,12 @@ class CompanionActionsSuccess extends CompanionActionsState {
 class CompanionActionsError extends CompanionActionsState {
   final String message;
   final String? action;
-  
+
   const CompanionActionsError({
     required this.message,
     this.action,
   });
-  
+
   @override
   List<Object?> get props => [message, action];
 }
@@ -76,7 +76,7 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
   final SimulateTimePassageUseCase simulateTimePassageUseCase;
   final DecreasePetStatsUseCase decreasePetStatsUseCase;
   final IncreasePetStatsUseCase increasePetStatsUseCase;
-  
+
   CompanionActionsCubit({
     required this.repository,
     required this.tokenManager,
@@ -90,40 +90,43 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
   // ==================== 🔥 ALIMENTAR VIA API CON STATS REALES ====================
   Future<void> feedCompanionViaApi(CompanionEntity companion) async {
     try {
-      debugPrint('🍎 [ACTIONS_CUBIT] === ALIMENTANDO CON idUserPet CORRECTO ===');
-      
+      debugPrint(
+          '🍎 [ACTIONS_CUBIT] === ALIMENTANDO CON idUserPet CORRECTO ===');
+
       // 🔥 VALIDACIÓN CRÍTICA
       if (!_hasValidUserPetId(companion)) {
         debugPrint('❌ [ACTIONS_CUBIT] No se encontró idUserPet válido');
         emit(CompanionActionsError(
           message: '🔧 Error: Esta mascota necesita ser re-adoptada. '
-                   'Visita la tienda para obtener el idUserPet correcto.',
+              'Visita la tienda para obtener el idUserPet correcto.',
           action: 'feeding',
         ));
         return;
       }
-      
+
       if (!companion.isOwned) {
         emit(CompanionActionsError(
-          message: '🔒 No puedes alimentar a ${companion.displayName} porque no es tuyo',
+          message:
+              '🔒 No puedes alimentar a ${companion.displayName} porque no es tuyo',
           action: 'feeding',
         ));
         return;
       }
-      
+
       if (companion.hunger >= 98) {
         emit(CompanionActionsError(
-          message: '🍽️ ${companion.displayName} está muy bien alimentado (${companion.hunger}/100)',
+          message:
+              '🍽️ ${companion.displayName} está muy bien alimentado (${companion.hunger}/100)',
           action: 'feeding',
         ));
         return;
       }
-      
+
       emit(CompanionActionsLoading(
         action: 'feeding',
         companion: companion,
       ));
-      
+
       final userId = await tokenManager.getUserId();
       if (userId == null) {
         emit(CompanionActionsError(
@@ -132,19 +135,19 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         ));
         return;
       }
-      
+
       // 🔥 EXTRAER idUserPet CORRECTO
       final idUserPet = _extractPetId(companion);
       debugPrint('🎯 [ACTIONS_CUBIT] idUserPet para alimentar: $idUserPet');
-      
+
       // 🔥 USAR MÉTODO CORREGIDO QUE ESPERA idUserPet
       final result = await feedCompanionViaApiUseCase(
         FeedCompanionViaApiParams(
           userId: userId,
-          petId: idUserPet,  // ✅ AHORA ES idUserPet
+          petId: idUserPet, // ✅ AHORA ES idUserPet
         ),
       );
-      
+
       result.fold(
         (failure) {
           debugPrint('❌ [ACTIONS_CUBIT] Error alimentando: ${failure.message}');
@@ -155,15 +158,16 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         },
         (fedCompanion) {
           debugPrint('✅ [ACTIONS_CUBIT] === ALIMENTACIÓN EXITOSA ===');
-          
+
           // 🔥 ACTUALIZAR COMPANION ORIGINAL CON NUEVAS STATS
-          final updatedCompanion = _updateCompanionStats(companion, fedCompanion);
-          
+          final updatedCompanion =
+              _updateCompanionStats(companion, fedCompanion);
+
           final healthGain = updatedCompanion.hunger - companion.hunger;
-          final message = healthGain > 0 
+          final message = healthGain > 0
               ? '🍎 ¡${updatedCompanion.displayName} ha sido alimentado! +$healthGain salud (${updatedCompanion.hunger}/100)'
               : '🍎 ¡${updatedCompanion.displayName} ha sido alimentado! (${updatedCompanion.hunger}/100)';
-          
+
           emit(CompanionActionsSuccess(
             action: 'feeding',
             companion: updatedCompanion,
@@ -171,47 +175,51 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
           ));
         },
       );
-      
     } catch (e) {
       debugPrint('💥 [ACTIONS_CUBIT] Error inesperado: $e');
       emit(CompanionActionsError(
-        message: e.toString().contains('idUserPet') 
+        message: e.toString().contains('idUserPet')
             ? '🔧 ${e.toString()}'
             : '❌ Error inesperado alimentando a ${companion.displayName}',
         action: 'feeding',
       ));
     }
   }
-  
+
   // ==================== 🔥 DAR AMOR VIA API CON STATS REALES ====================
   Future<void> loveCompanionViaApi(CompanionEntity companion) async {
     try {
-      debugPrint('💖 [ACTIONS_CUBIT] === DANDO AMOR VIA API CON STATS REALES ===');
+      debugPrint(
+          '💖 [ACTIONS_CUBIT] === DANDO AMOR VIA API CON STATS REALES ===');
       debugPrint('🐾 [ACTIONS_CUBIT] Mascota: ${companion.displayName}');
-      debugPrint('❤️ [ACTIONS_CUBIT] Felicidad actual: ${companion.happiness}/100');
-      
+      debugPrint(
+          '❤️ [ACTIONS_CUBIT] Felicidad actual: ${companion.happiness}/100');
+
       if (!companion.isOwned) {
         emit(CompanionActionsError(
-          message: '🔒 No puedes dar amor a ${companion.displayName} porque no es tuyo',
+          message:
+              '🔒 No puedes dar amor a ${companion.displayName} porque no es tuyo',
           action: 'loving',
         ));
         return;
       }
-      
+
       // 🔥 VALIDACIÓN CORREGIDA: Permitir amar hasta 98 (no 95)
-      if (companion.happiness >= 98) {  // ✅ CAMBIAR DE 95 A 98 PARA SER MÁS PERMISIVO
+      if (companion.happiness >= 98) {
+        // ✅ CAMBIAR DE 95 A 98 PARA SER MÁS PERMISIVO
         emit(CompanionActionsError(
-          message: '❤️ ${companion.displayName} ya está muy feliz (${companion.happiness}/100)',
+          message:
+              '❤️ ${companion.displayName} ya está muy feliz (${companion.happiness}/100)',
           action: 'loving',
         ));
         return;
       }
-      
+
       emit(CompanionActionsLoading(
         action: 'loving',
         companion: companion,
       ));
-      
+
       final userId = await tokenManager.getUserId();
       if (userId == null) {
         emit(CompanionActionsError(
@@ -220,11 +228,12 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         ));
         return;
       }
-      
+
       final petId = _extractPetId(companion);
       debugPrint('🆔 [ACTIONS_CUBIT] Pet ID para dar amor: $petId');
-      debugPrint('🔄 [ACTIONS_CUBIT] Llamando a repository.loveCompanionViaApi...');
-      
+      debugPrint(
+          '🔄 [ACTIONS_CUBIT] Llamando a repository.loveCompanionViaApi...');
+
       // 🔥 USAR EL NUEVO MÉTODO QUE OBTIENE STATS REALES
       final result = await loveCompanionViaApiUseCase(
         LoveCompanionViaApiParams(
@@ -232,7 +241,7 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
           petId: petId,
         ),
       );
-      
+
       result.fold(
         (failure) {
           debugPrint('❌ [ACTIONS_CUBIT] Error dando amor: ${failure.message}');
@@ -243,14 +252,16 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         },
         (lovedCompanion) {
           debugPrint('✅ [ACTIONS_CUBIT] === AMOR EXITOSO CON STATS REALES ===');
-          debugPrint('❤️ [ACTIONS_CUBIT] Felicidad anterior: ${companion.happiness} → Nueva: ${lovedCompanion.happiness}');
-          debugPrint('📈 [ACTIONS_CUBIT] Ganancia de felicidad: +${lovedCompanion.happiness - companion.happiness}');
-          
+          debugPrint(
+              '❤️ [ACTIONS_CUBIT] Felicidad anterior: ${companion.happiness} → Nueva: ${lovedCompanion.happiness}');
+          debugPrint(
+              '📈 [ACTIONS_CUBIT] Ganancia de felicidad: +${lovedCompanion.happiness - companion.happiness}');
+
           final happinessGain = lovedCompanion.happiness - companion.happiness;
-          final message = happinessGain > 0 
+          final message = happinessGain > 0
               ? '💖 ¡${lovedCompanion.displayName} se siente amado! +$happinessGain felicidad (${lovedCompanion.happiness}/100)'
               : '💖 ¡${lovedCompanion.displayName} se siente amado! (${lovedCompanion.happiness}/100)';
-          
+
           emit(CompanionActionsSuccess(
             action: 'loving',
             companion: lovedCompanion,
@@ -258,7 +269,6 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
           ));
         },
       );
-      
     } catch (e) {
       debugPrint('💥 [ACTIONS_CUBIT] Error inesperado dando amor: $e');
       emit(CompanionActionsError(
@@ -267,32 +277,34 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
       ));
     }
   }
- 
 
   // ==================== 🔥 EVOLUCIÓN CORREGIDA ====================
   Future<void> evolveCompanion(CompanionEntity companion) async {
     try {
       debugPrint('🦋 [ACTIONS_CUBIT] === INICIANDO EVOLUCIÓN CORREGIDA ===');
-      debugPrint('🐾 [ACTIONS_CUBIT] Mascota: ${companion.displayName} ${companion.stage.name}');
-      debugPrint('📊 [ACTIONS_CUBIT] Nivel: ${companion.level}, EXP: ${companion.experience}/${companion.experienceNeededForNextStage}');
+      debugPrint(
+          '🐾 [ACTIONS_CUBIT] Mascota: ${companion.displayName} ${companion.stage.name}');
+      debugPrint(
+          '📊 [ACTIONS_CUBIT] Nivel: ${companion.level}, EXP: ${companion.experience}/${companion.experienceNeededForNextStage}');
       debugPrint('✅ [ACTIONS_CUBIT] Puede evolucionar: ${companion.canEvolve}');
-      
+
       // 🔥 VALIDACIONES MEJORADAS
       final validationResult = _validateEvolution(companion);
       if (!validationResult.isValid) {
-        debugPrint('❌ [ACTIONS_CUBIT] Validación fallida: ${validationResult.message}');
+        debugPrint(
+            '❌ [ACTIONS_CUBIT] Validación fallida: ${validationResult.message}');
         emit(CompanionActionsError(
           message: validationResult.message,
           action: 'evolving',
         ));
         return;
       }
-      
+
       emit(CompanionActionsLoading(
         action: 'evolving',
         companion: companion,
       ));
-      
+
       final userId = await tokenManager.getUserId();
       if (userId == null) {
         emit(CompanionActionsError(
@@ -305,16 +317,17 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
       // 🔥 OBTENER PET ID CORRECTO
       final petId = _extractPetId(companion);
       debugPrint('🆔 [ACTIONS_CUBIT] Pet ID extraído: $petId');
-      
+
       // 🔥 LLAMAR ENDPOINT DE EVOLUCIÓN CORRECTO
       final result = await repository.evolveCompanionViaApi(
         userId: userId,
         petId: petId,
       );
-      
+
       result.fold(
         (failure) {
-          debugPrint('❌ [ACTIONS_CUBIT] Error evolución API: ${failure.message}');
+          debugPrint(
+              '❌ [ACTIONS_CUBIT] Error evolución API: ${failure.message}');
           emit(CompanionActionsError(
             message: failure.message,
             action: 'evolving',
@@ -322,13 +335,14 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         },
         (evolvedCompanion) {
           debugPrint('🎉 [ACTIONS_CUBIT] === EVOLUCIÓN EXITOSA ===');
-          debugPrint('✨ [ACTIONS_CUBIT] Nueva etapa: ${evolvedCompanion.stage.name}');
-          
+          debugPrint(
+              '✨ [ACTIONS_CUBIT] Nueva etapa: ${evolvedCompanion.stage.name}');
+
           final nextStageName = _getNextStageName(companion.stage);
-          final realName = evolvedCompanion.displayName.isNotEmpty 
-              ? evolvedCompanion.displayName 
+          final realName = evolvedCompanion.displayName.isNotEmpty
+              ? evolvedCompanion.displayName
               : companion.displayName;
-              
+
           emit(CompanionActionsSuccess(
             action: 'evolving',
             companion: evolvedCompanion,
@@ -336,7 +350,6 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
           ));
         },
       );
-      
     } catch (e) {
       debugPrint('💥 [ACTIONS_CUBIT] Error inesperado evolución: $e');
       emit(CompanionActionsError(
@@ -350,26 +363,31 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
   ValidationResult _validateEvolution(CompanionEntity companion) {
     debugPrint('🎯 [VALIDATION] === VALIDANDO EVOLUCIÓN ===');
     debugPrint('🐾 [VALIDATION] Mascota: ${companion.displayName}');
-    debugPrint('📊 [VALIDATION] EXP: ${companion.experience}/${companion.experienceNeededForNextStage}');
+    debugPrint(
+        '📊 [VALIDATION] EXP: ${companion.experience}/${companion.experienceNeededForNextStage}');
     debugPrint('🏆 [VALIDATION] Etapa actual: ${companion.stage.name}');
     debugPrint('✅ [VALIDATION] Es poseída: ${companion.isOwned}');
     debugPrint('🔄 [VALIDATION] Puede evolucionar: ${companion.canEvolve}');
-    
+
     if (!companion.isOwned) {
-      return ValidationResult(false, '🔒 No puedes evolucionar a ${companion.displayName} porque no es tuyo');
+      return ValidationResult(false,
+          '🔒 No puedes evolucionar a ${companion.displayName} porque no es tuyo');
     }
-    
+
     if (companion.stage == CompanionStage.adult) {
-      return ValidationResult(false, '🏆 ${companion.displayName} ya está en su máxima evolución');
+      return ValidationResult(
+          false, '🏆 ${companion.displayName} ya está en su máxima evolución');
     }
-    
+
     // 🔥 VERIFICACIÓN CORREGIDA: Usar canEvolve del entity
     if (!companion.canEvolve) {
-      final needed = companion.experienceNeededForNextStage - companion.experience;
+      final needed =
+          companion.experienceNeededForNextStage - companion.experience;
       debugPrint('📉 [VALIDATION] Faltan $needed puntos de experiencia');
-      return ValidationResult(false, '📊 ${companion.displayName} necesita $needed puntos más de experiencia');
+      return ValidationResult(false,
+          '📊 ${companion.displayName} necesita $needed puntos más de experiencia');
     }
-    
+
     debugPrint('✅ [VALIDATION] Validación exitosa - puede evolucionar');
     return ValidationResult(true, '');
   }
@@ -380,68 +398,68 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
     debugPrint('🐾 [PET_ID] Companion: ${companion.displayName}');
     debugPrint('🆔 [PET_ID] Local ID: ${companion.id}');
     debugPrint('🔧 [PET_ID] Tipo: ${companion.runtimeType}');
-    
+
     // 1. 🔥 SI ES CompanionModelWithBothIds, USAR idUserPet
     if (companion is CompanionModelWithBothIds) {
       final idUserPet = companion.idUserPet;
       debugPrint('✅ [PET_ID] Es CompanionModelWithBothIds');
       debugPrint('🎯 [PET_ID] idUserPet encontrado: "$idUserPet"');
-      
-      if (idUserPet.isNotEmpty && 
-          idUserPet != 'unknown' && 
-          idUserPet != '' && 
+
+      if (idUserPet.isNotEmpty &&
+          idUserPet != 'unknown' &&
+          idUserPet != '' &&
           !idUserPet.startsWith('FALLBACK_')) {
         debugPrint('✅ [PET_ID] idUserPet válido para stats: $idUserPet');
-        return idUserPet;  // ✅ RETORNAR idUserPet PARA ESTADÍSTICAS
+        return idUserPet; // ✅ RETORNAR idUserPet PARA ESTADÍSTICAS
       } else {
         debugPrint('⚠️ [PET_ID] idUserPet inválido: "$idUserPet"');
       }
     }
-    
+
     // 2. 🔥 SI ES CompanionModelWithPetId (legacy), INTENTAR EXTRAER
     if (companion is CompanionModelWithPetId) {
       final petId = companion.petId;
       debugPrint('✅ [PET_ID] Es CompanionModelWithPetId (legacy)');
       debugPrint('🎯 [PET_ID] Pet ID legacy: "$petId"');
-      
-      if (petId.isNotEmpty && 
-          petId != 'unknown' && 
-          petId != '' && 
+
+      if (petId.isNotEmpty &&
+          petId != 'unknown' &&
+          petId != '' &&
           !petId.startsWith('FALLBACK_')) {
         debugPrint('⚠️ [PET_ID] Usando Pet ID legacy como idUserPet: $petId');
-        return petId;  // ⚠️ PUEDE FUNCIONAR SI ES EL MISMO
+        return petId; // ⚠️ PUEDE FUNCIONAR SI ES EL MISMO
       }
     }
-    
+
     // 3. 🔥 INTENTAR EXTRAER DEL JSON
     if (companion is CompanionModel) {
       try {
         final json = companion.toJson();
         debugPrint('📄 [PET_ID] Buscando idUserPet en JSON...');
         debugPrint('🗝️ [PET_ID] Keys disponibles: ${json.keys.toList()}');
-        
+
         // 🔥 BUSCAR ESPECÍFICAMENTE idUserPet
         if (json.containsKey('idUserPet') && json['idUserPet'] != null) {
           final idUserPet = json['idUserPet'] as String;
           debugPrint('🎯 [PET_ID] idUserPet del JSON: "$idUserPet"');
-          
-          if (idUserPet.isNotEmpty && 
-              idUserPet != 'unknown' && 
+
+          if (idUserPet.isNotEmpty &&
+              idUserPet != 'unknown' &&
               !idUserPet.startsWith('FALLBACK_')) {
             debugPrint('✅ [PET_ID] idUserPet del JSON válido: $idUserPet');
             return idUserPet;
           }
         }
-        
+
         // 🔥 FALLBACK: Buscar otros campos
         final possibleKeys = ['petId', 'userPetId', 'user_pet_id'];
         for (final key in possibleKeys) {
           if (json.containsKey(key) && json[key] != null) {
             final fallbackId = json[key] as String;
             debugPrint('⚠️ [PET_ID] Fallback encontrado $key: "$fallbackId"');
-            
-            if (fallbackId.isNotEmpty && 
-                fallbackId != 'unknown' && 
+
+            if (fallbackId.isNotEmpty &&
+                fallbackId != 'unknown' &&
                 !fallbackId.startsWith('FALLBACK_')) {
               debugPrint('⚠️ [PET_ID] Usando fallback: $fallbackId');
               return fallbackId;
@@ -452,27 +470,28 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         debugPrint('❌ [PET_ID] Error accediendo JSON: $e');
       }
     }
-    
+
     // 4. 🆘 ERROR CRÍTICO - NO SE ENCONTRÓ idUserPet
     debugPrint('🆘 [PET_ID] === ERROR CRÍTICO: NO SE ENCONTRÓ idUserPet ===');
     debugPrint('❌ [PET_ID] Esto significa que:');
     debugPrint('   1. El companion no se creó con CompanionModelWithBothIds');
     debugPrint('   2. No se obtuvo el idUserPet del endpoint de detalles');
     debugPrint('   3. La mascota no está correctamente adoptada');
-    
+
     // 🚨 LANZAR EXCEPCIÓN EN LUGAR DE RETORNAR ID INVÁLIDO
-    throw Exception('❌ No se encontró idUserPet válido para ${companion.displayName}. '
-                    'Asegúrate de que la mascota esté adoptada y tenga idUserPet.');
+    throw Exception(
+        '❌ No se encontró idUserPet válido para ${companion.displayName}. '
+        'Asegúrate de que la mascota esté adoptada y tenga idUserPet.');
   }
 
   // 🔥 MÉTODO HELPER MEJORADO PARA VALIDAR idUserPet
   bool _hasValidUserPetId(CompanionEntity companion) {
     try {
       final idUserPet = _extractPetId(companion);
-      return idUserPet.isNotEmpty && 
-             idUserPet != 'unknown' && 
-             !idUserPet.startsWith('ERROR_') &&
-             !idUserPet.startsWith('FALLBACK_');
+      return idUserPet.isNotEmpty &&
+          idUserPet != 'unknown' &&
+          !idUserPet.startsWith('ERROR_') &&
+          !idUserPet.startsWith('FALLBACK_');
     } catch (e) {
       debugPrint('❌ [VALIDATION] Error validando idUserPet: $e');
       return false;
@@ -480,7 +499,8 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
   }
 
   // 🔥 MÉTODO HELPER PARA ACTUALIZAR STATS PRESERVANDO DATOS ORIGINALES
-  CompanionEntity _updateCompanionStats(CompanionEntity original, CompanionEntity updated) {
+  CompanionEntity _updateCompanionStats(
+      CompanionEntity original, CompanionEntity updated) {
     if (original is CompanionModelWithBothIds) {
       return original.copyWith(
         happiness: updated.happiness,
@@ -498,7 +518,7 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         lastFeedTime: DateTime.now(),
       );
     }
-    
+
     // Fallback
     return updated;
   }
@@ -507,7 +527,7 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
   Future<void> featureCompanion(CompanionEntity companion) async {
     try {
       debugPrint('⭐ [ACTIONS_CUBIT] === DESTACANDO MASCOTA ===');
-      
+
       if (companion.isSelected) {
         emit(CompanionActionsError(
           message: '⭐ ${companion.displayName} ya es tu compañero activo',
@@ -515,20 +535,21 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         ));
         return;
       }
-      
+
       if (!companion.isOwned) {
         emit(CompanionActionsError(
-          message: '🔒 No puedes destacar a ${companion.displayName} porque no es tuyo',
+          message:
+              '🔒 No puedes destacar a ${companion.displayName} porque no es tuyo',
           action: 'featuring',
         ));
         return;
       }
-      
+
       emit(CompanionActionsLoading(
         action: 'featuring',
         companion: companion,
       ));
-      
+
       final userId = await tokenManager.getUserId();
       if (userId == null) {
         emit(CompanionActionsError(
@@ -537,14 +558,14 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         ));
         return;
       }
-      
+
       final petId = _extractPetId(companion);
-      
+
       final result = await repository.featureCompanion(
         userId: userId,
         petId: petId,
       );
-      
+
       result.fold(
         (failure) {
           emit(CompanionActionsError(
@@ -553,10 +574,10 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
           ));
         },
         (featuredCompanion) {
-          final realName = featuredCompanion.displayName.isNotEmpty 
-              ? featuredCompanion.displayName 
+          final realName = featuredCompanion.displayName.isNotEmpty
+              ? featuredCompanion.displayName
               : companion.displayName;
-              
+
           emit(CompanionActionsSuccess(
             action: 'featuring',
             companion: featuredCompanion,
@@ -564,7 +585,6 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
           ));
         },
       );
-      
     } catch (e) {
       emit(CompanionActionsError(
         message: '❌ Error inesperado destacando a ${companion.displayName}',
@@ -584,12 +604,12 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
       debugPrint('🐾 [ACTIONS_CUBIT] Mascota: ${companion.displayName}');
       debugPrint('😢 [ACTIONS_CUBIT] Reducir felicidad: ${happiness ?? 0}');
       debugPrint('🩹 [ACTIONS_CUBIT] Reducir salud: ${health ?? 0}');
-      
+
       emit(CompanionActionsLoading(
         action: 'decreasing',
         companion: companion,
       ));
-      
+
       final userId = await tokenManager.getUserId();
       if (userId == null) {
         emit(CompanionActionsError(
@@ -598,9 +618,9 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         ));
         return;
       }
-      
+
       final petId = _extractPetId(companion);
-      
+
       final result = await decreasePetStatsUseCase(
         DecreasePetStatsParams(
           userId: userId,
@@ -609,7 +629,7 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
           health: health,
         ),
       );
-      
+
       result.fold(
         (failure) {
           emit(CompanionActionsError(
@@ -619,8 +639,9 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         },
         (updatedCompanion) {
           debugPrint('✅ [ACTIONS_CUBIT] Stats reducidas exitosamente');
-          debugPrint('📊 [ACTIONS_CUBIT] Nuevas stats - H:${updatedCompanion.happiness}, S:${updatedCompanion.hunger}');
-          
+          debugPrint(
+              '📊 [ACTIONS_CUBIT] Nuevas stats - H:${updatedCompanion.happiness}, S:${updatedCompanion.hunger}');
+
           emit(CompanionActionsSuccess(
             action: 'decreasing',
             companion: updatedCompanion,
@@ -628,7 +649,6 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
           ));
         },
       );
-      
     } catch (e) {
       emit(CompanionActionsError(
         message: '❌ Error reduciendo stats de ${companion.displayName}',
@@ -636,7 +656,7 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
       ));
     }
   }
-  
+
   Future<void> increaseCompanionStats(
     CompanionEntity companion, {
     int? happiness,
@@ -647,12 +667,12 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
       debugPrint('🐾 [ACTIONS_CUBIT] Mascota: ${companion.displayName}');
       debugPrint('😊 [ACTIONS_CUBIT] Aumentar felicidad: ${happiness ?? 0}');
       debugPrint('❤️ [ACTIONS_CUBIT] Aumentar salud: ${health ?? 0}');
-      
+
       emit(CompanionActionsLoading(
         action: 'increasing',
         companion: companion,
       ));
-      
+
       final userId = await tokenManager.getUserId();
       if (userId == null) {
         emit(CompanionActionsError(
@@ -661,9 +681,9 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         ));
         return;
       }
-      
+
       final petId = _extractPetId(companion);
-      
+
       final result = await increasePetStatsUseCase(
         IncreasePetStatsParams(
           userId: userId,
@@ -672,7 +692,7 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
           health: health,
         ),
       );
-      
+
       result.fold(
         (failure) {
           emit(CompanionActionsError(
@@ -682,8 +702,9 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         },
         (updatedCompanion) {
           debugPrint('✅ [ACTIONS_CUBIT] Stats aumentadas exitosamente');
-          debugPrint('📊 [ACTIONS_CUBIT] Nuevas stats - H:${updatedCompanion.happiness}, S:${updatedCompanion.hunger}');
-          
+          debugPrint(
+              '📊 [ACTIONS_CUBIT] Nuevas stats - H:${updatedCompanion.happiness}, S:${updatedCompanion.hunger}');
+
           emit(CompanionActionsSuccess(
             action: 'increasing',
             companion: updatedCompanion,
@@ -691,7 +712,6 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
           ));
         },
       );
-      
     } catch (e) {
       emit(CompanionActionsError(
         message: '❌ Error aumentando stats de ${companion.displayName}',
@@ -704,11 +724,11 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
   Future<void> feedCompanion(CompanionEntity companion) async {
     await feedCompanionViaApi(companion);
   }
-  
+
   Future<void> loveCompanion(CompanionEntity companion) async {
     await loveCompanionViaApi(companion);
   }
-  
+
   // ==================== MÉTODOS HELPER ====================
   String _getNextStageName(CompanionStage currentStage) {
     switch (currentStage) {
@@ -720,13 +740,13 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         return 'Máximo';
     }
   }
-  
+
   void resetState() {
     emit(CompanionActionsInitial());
   }
-  
+
   bool get isLoading => state is CompanionActionsLoading;
-  
+
   String? get currentAction {
     final currentState = state;
     if (currentState is CompanionActionsLoading) {
@@ -739,6 +759,6 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
 class ValidationResult {
   final bool isValid;
   final String message;
-  
+
   ValidationResult(this.isValid, this.message);
 }

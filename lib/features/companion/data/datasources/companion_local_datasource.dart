@@ -1,4 +1,6 @@
-// lib/features/companion/data/datasources/companion_local_datasource.dart - SIN DEXTER FORZADO
+// lib/features/companion/data/datasources/companion_local_datasource.dart
+// 🔥 CORREGIDO: Sin Dexter gratis, cache limpio
+
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/services/cache_service.dart';
@@ -28,7 +30,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
   @override
   Future<List<CompanionModel>> getCachedCompanions(String userId) async {
     try {
-      debugPrint('🐾 [LOCAL_DS] === OBTENIENDO COMPAÑEROS LOCALES (SIN DEXTER FORZADO) ===');
+      debugPrint('🐾 [LOCAL_DS] === OBTENIENDO COMPAÑEROS LOCALES (SIN DEXTER GRATIS) ===');
       debugPrint('👤 [LOCAL_DS] Usuario: $userId');
       
       // Intentar cargar desde cache
@@ -45,7 +47,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         return companions;
       }
       
-      // 🔥 SI NO HAY CACHE, RETORNAR LISTA VACÍA (NO CREAR DEXTER)
+      // 🔥 SI NO HAY CACHE, RETORNAR LISTA VACÍA (SIN CREAR NADA)
       debugPrint('📭 [LOCAL_DS] No cached companions found - returning empty list');
       return [];
       
@@ -57,7 +59,6 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
       return [];
     }
   }
-
 
   @override
   Future<void> cacheCompanions(String userId, List<CompanionModel> companions) async {
@@ -143,7 +144,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
         return stats;
       }
       
-      // 🔥 SI NO HAY STATS, GENERAR VACÍAS (NO BASADAS EN COMPANIONS INEXISTENTES)
+      // 🔥 SI NO HAY STATS, GENERAR VACÍAS
       debugPrint('🔧 [LOCAL_DS] No cached stats, generating empty stats');
       final emptyStats = _getEmptyStats(userId);
       await cacheStats(emptyStats);
@@ -195,7 +196,7 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
     }
   }
 
-  // ==================== 🔧 MÉTODOS HELPER SIMPLIFICADOS ====================
+  // ==================== 🔧 MÉTODOS HELPER ACTUALIZADOS ====================
 
   /// Calcular stats desde la lista de companions (REALES)
   CompanionStatsModel _calculateStatsFromCompanions(String userId, List<CompanionModel> companions) {
@@ -228,9 +229,9 @@ class CompanionLocalDataSourceImpl implements CompanionLocalDataSource {
   CompanionStatsModel _getEmptyStats(String userId) {
     return CompanionStatsModel(
       userId: userId,
-      totalCompanions: 12, // Meta del juego
-      ownedCompanions: 0, // 🔥 CERO mascotas
-      totalPoints: 1000, // Puntos iniciales
+      totalCompanions: 12, // Meta del juego: 4 tipos x 3 etapas
+      ownedCompanions: 0, // 🔥 CERO mascotas (sin Dexter gratis)
+      totalPoints: 1000, // Puntos iniciales generosos para testing
       spentPoints: 0,
       activeCompanionId: '', // 🔥 SIN MASCOTA ACTIVA
       totalFeedCount: 0,

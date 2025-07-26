@@ -1,4 +1,4 @@
-package com.example.xuma_a
+package com.novacode.xumaa
 
 import android.app.NotificationChannel
 import android.app.NotificationManager

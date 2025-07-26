@@ -1,3 +1,6 @@
+import java.util.*
+import java.io.*
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,15 +8,44 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    FileInputStream(keystorePropertiesFile).use { fis ->
+        keystoreProperties.load(fis)
+    }
+}
+
 android {
-    namespace = "com.example.xuma_a"
+    namespace = "com.novacode.xumaa"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
+
+   signingConfigs {
+    create("release") {
+        val alias = keystoreProperties["keyAlias"]?.toString()
+        val keyPass = keystoreProperties["keyPassword"]?.toString()
+        val storePass = keystoreProperties["storePassword"]?.toString()
+        val storeFilePath = keystoreProperties["storeFile"]?.toString()
+
+
+
+        if (alias != null && keyPass != null && storePass != null && storeFilePath != null) {
+            keyAlias = alias
+            keyPassword = keyPass
+            storeFile = file(storeFilePath)
+            storePassword = storePass
+        } else {
+            throw GradleException("❌ Falta una propiedad en el archivo key.properties")
+        }
+    }
+}
+
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        isCoreLibraryDesugaringEnabled = true  // ✅ ESTO ES LO QUE FALTABA
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -21,7 +53,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.xuma_a"
+        applicationId = "com.novacode.xumaa"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -30,7 +62,13 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
+            isShrinkResources = true
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
@@ -40,11 +78,9 @@ flutter {
 }
 
 dependencies {
-    // Firebase BOM
     implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-messaging")
-    
-    // ✅ DESUGARING - ESTO ES LO QUE NECESITAS AGREGAR
+
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

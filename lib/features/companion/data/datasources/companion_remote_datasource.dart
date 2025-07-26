@@ -530,10 +530,10 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
   }
 
   // ==================== TIENDA (MASCOTAS DISPONIBLES - NO ADOPTADAS) ====================
-  @override
+    @override
   Future<List<CompanionModel>> getStoreCompanions({required String userId}) async {
     try {
-      debugPrint('🏪 [API] === OBTENIENDO TIENDA CON USER ID REAL ===');
+      debugPrint('🏪 [API] === OBTENIENDO TIENDA SIN DEXTER GRATIS ===');
       debugPrint('👤 [API] Usuario: $userId');
 
       if (userId.isEmpty) {
@@ -573,27 +573,10 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
         }
       }
 
-      // Agregar Dexter joven gratis si no lo tiene
-      final hasDexterYoung = userCompanions.any((c) =>
-          c.type == CompanionType.dexter && c.stage == CompanionStage.young);
-
-      if (!hasDexterYoung) {
-        debugPrint('🎁 [API] Usuario no tiene Dexter joven, agregándolo gratis a la tienda');
-        
-        final existingDexterYoung = storeCompanions.firstWhere(
-          (c) => c.type == CompanionType.dexter && c.stage == CompanionStage.young,
-          orElse: () => _createDexterYoungForStore(),
-        );
-        
-        if (!storeCompanions.any((c) => c.type == CompanionType.dexter && c.stage == CompanionStage.young)) {
-          storeCompanions.insert(0, existingDexterYoung);
-        }
-      }
-
-      // Ordenar por precio (más baratos primero)
+      // 🔥 SIN DEXTER GRATIS - Ordenar solo por precio
       storeCompanions.sort((a, b) => a.purchasePrice.compareTo(b.purchasePrice));
 
-      debugPrint('🛍️ [API] === TIENDA FINAL ===');
+      debugPrint('🛍️ [API] === TIENDA FINAL SIN DEXTER GRATIS ===');
       debugPrint('🛒 [API] Mascotas en tienda: ${storeCompanions.length}');
 
       for (final companion in storeCompanions) {
@@ -1643,7 +1626,7 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
       isSelected: false,
       purchasedAt: null,
       currentMood: CompanionMood.happy,
-      purchasePrice: 0, // GRATIS
+      purchasePrice: 100, // GRATIS
       evolutionPrice: 50,
       unlockedAnimations: ['idle', 'blink', 'happy'],
       createdAt: now,

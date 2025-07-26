@@ -405,215 +405,210 @@ class _LoadedView extends StatelessWidget {
   }
 
   Widget _buildActiveCompanionCard(BuildContext context, dynamic companion) {
-  return GestureDetector(
-    onTap: () => _navigateToDetail(context, companion),
-    child: Container(
-      height: 320, // Aumentar altura para acomodar más contenido
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary.withOpacity(0.8),
-            AppColors.primary,
+    return GestureDetector(
+      onTap: () => _navigateToDetail(context, companion),
+      child: Container(
+        height: 320, // Aumentar altura para acomodar más contenido
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.primary.withOpacity(0.8),
+              AppColors.primary,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
           ],
         ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Header con nombre
-          Positioned(
-            top: 0,
-            left: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Text(
-                companion.displayName ?? 'Compañero',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+        child: Stack(
+          children: [
+            // Header con nombre
+            Positioned(
+              top: 0,
+              left: 0,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(15),
                 ),
-              ),
-            ),
-          ),
-
-          // Info y nivel
-          Positioned(
-            top: 0,
-            right: 0,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '${companion.typeDescription ?? 'Mascota'} ${companion.stageDisplayName ?? ''}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
+                child: Text(
+                  companion.displayName ?? 'Compañero',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Nivel ${companion.level ?? 1} • ${companion.experience ?? 0}/${companion.experienceNeededForNextStage ?? 100} EXP',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // 🆕 ESTADÍSTICAS DETALLADAS
-          Positioned(
-            top: 45,
-            left: 0,
-            right: 0,
-            child: _buildStatsRow(companion),
-          ),
-
-          // MASCOTA CON FONDO
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 80, bottom: 80), // Ajustar espacios
-              child: CompanionAnimationWidget(
-                companion: companion,
-                size: MediaQuery.of(context).size.width * 0.6, // Reducir tamaño
-                showBackground: true,
               ),
             ),
-          ),
 
-          // ACCIONES RÁPIDAS EN LA PARTE INFERIOR - ACTUALIZADA
-          Positioned(
-            bottom: 10,
-            left: 10,
-            right: 10,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-  children: [
-    // 🍎 Alimentar CORREGIDO
-    _buildQuickActionButton(
-      icon: Icons.restaurant,
-      color: Colors.orange,
-      onPressed: (companion.hunger < 95)  // ✅ CAMBIAR DE 90 A 95
-          ? () {
-              debugPrint('🍎 [MAIN] Alimentando desde tarjeta principal - Salud: ${companion.hunger}');
-              _feedCompanion(context, companion);
-            }
-          : null,
-      needsAttention: companion.hunger < 50,  // ✅ MANTENER PARA INDICADOR VISUAL
-      label: 'Alimentar',
-    ),
-    
-    // 💖 Amor CORREGIDO
-    _buildQuickActionButton(
-      icon: Icons.favorite,
-      color: Colors.pink,
-      onPressed: (companion.happiness < 95)  // ✅ CAMBIAR DE 90 A 95
-          ? () {
-              debugPrint('💖 [MAIN] Dando amor desde tarjeta principal - Felicidad: ${companion.happiness}');
-              _loveCompanion(context, companion);
-            }
-          : null,
-      needsAttention: companion.happiness < 50,  // ✅ MANTENER PARA INDICADOR VISUAL
-      label: 'Amor',
-    ),
-    
-    // 🦋 Evolucionar (mantener igual)
-    _buildQuickActionButton(
-      icon: Icons.auto_awesome,
-      color: Colors.purple,
-      onPressed: (companion.canEvolve ?? false)
-          ? () => _evolveCompanion(context, companion)
-          : null,
-      needsAttention: companion.canEvolve ?? false,
-      label: 'Evolucionar',
-    ),
-    
-    // ⏰ Simular Tiempo (mantener igual)
-    _buildQuickActionButton(
-      icon: Icons.schedule,
-      color: Colors.blue,
-      onPressed: () => _showTimeSimulationDialog(context, companion),
-      needsAttention: false,
-      label: 'Tiempo',
-    ),
-    
-    // 👁️ Ver Detalle (mantener igual)
-    _buildQuickActionButton(
-      icon: Icons.visibility,
-      color: Colors.grey[600]!,
-      onPressed: () => _navigateToDetail(context, companion),
-      needsAttention: false,
-      label: 'Detalle',
-    ),
-  ],
+            // Info y nivel
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${companion.typeDescription ?? 'Mascota'} ${companion.stageDisplayName ?? ''}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.8),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Nivel ${companion.level ?? 1} • ${companion.experience ?? 0}/${companion.experienceNeededForNextStage ?? 100} EXP',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            // 🆕 ESTADÍSTICAS DETALLADAS
+            Positioned(
+              top: 45,
+              left: 0,
+              right: 0,
+              child: _buildStatsRow(companion),
+            ),
+
+            // MASCOTA CON FONDO
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    top: 80, bottom: 80), // Ajustar espacios
+                child: CompanionAnimationWidget(
+                  companion: companion,
+                  size:
+                      MediaQuery.of(context).size.width * 0.6, // Reducir tamaño
+                  showBackground: true,
+                ),
+              ),
+            ),
+
+            // ACCIONES RÁPIDAS EN LA PARTE INFERIOR - ACTUALIZADA
+            Positioned(
+              bottom: 10,
+              left: 10,
+              right: 10,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildQuickActionButton(
+                    icon: Icons.restaurant,
+                    color: Colors.orange,
+                    onPressed: (companion.hunger < 95)
+                        ? () {
+                            debugPrint(
+                                '🍎 [MAIN] Alimentando desde tarjeta principal');
+                            _feedCompanion(context, companion);
+                          }
+                        : null,
+                    needsAttention: companion.hunger < 50,
+                    label: 'Alimentar',
+                  ),
+
+                  // 💖 Amor CORREGIDO
+                  _buildQuickActionButton(
+                    icon: Icons.favorite,
+                    color: Colors.pink,
+                    onPressed: (companion.happiness < 95)
+                        ? () {
+                            debugPrint(
+                                '💖 [MAIN] Dando amor desde tarjeta principal');
+                            _loveCompanion(context, companion);
+                          }
+                        : null,
+                    needsAttention: companion.happiness < 50,
+                    label: 'Amor',
+                  ),
+
+                  // 🦋 Evolucionar (mantener igual)
+                  _buildQuickActionButton(
+                    icon: Icons.auto_awesome,
+                    color: Colors.purple,
+                    onPressed: (companion.canEvolve ?? false)
+                        ? () => _evolveCompanion(context, companion)
+                        : null,
+                    needsAttention: companion.canEvolve ?? false,
+                    label: 'Evolucionar',
+                  ),
+
+                  // 👁️ Ver Detalle (mantener igual)
+                  _buildQuickActionButton(
+                    icon: Icons.visibility,
+                    color: Colors.grey[600]!,
+                    onPressed: () => _navigateToDetail(context, companion),
+                    needsAttention: false,
+                    label: 'Detalle',
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
-  
+    );
+  }
 
   // BOTÓN DE ACCIÓN RÁPIDA
   Widget _buildQuickActionButton({
-  required IconData icon,
-  required Color color,
-  required VoidCallback? onPressed,
-  required bool needsAttention,
-  required String label,
-}) {
-  return Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(
-        width: 40, // Reducir tamaño para que quepan 5 botones
-        height: 40,
-        decoration: BoxDecoration(
-          color: onPressed != null
-              ? (needsAttention ? color : color.withOpacity(0.7))
-              : Colors.grey.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(20),
-          border:
-              needsAttention ? Border.all(color: Colors.white, width: 2) : null,
-        ),
-        child: IconButton(
-          onPressed: onPressed,
-          icon: Icon(
-            icon,
-            color: Colors.white,
-            size: 18, // Reducir tamaño del ícono
+    required IconData icon,
+    required Color color,
+    required VoidCallback? onPressed,
+    required bool needsAttention,
+    required String label,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 40, // Reducir tamaño para que quepan 5 botones
+          height: 40,
+          decoration: BoxDecoration(
+            color: onPressed != null
+                ? (needsAttention ? color : color.withOpacity(0.7))
+                : Colors.grey.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(20),
+            border: needsAttention
+                ? Border.all(color: Colors.white, width: 2)
+                : null,
+          ),
+          child: IconButton(
+            onPressed: onPressed,
+            icon: Icon(
+              icon,
+              color: Colors.white,
+              size: 18, // Reducir tamaño del ícono
+            ),
           ),
         ),
-      ),
-      const SizedBox(height: 4),
-      Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          color: onPressed != null ? color : Colors.grey,
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: onPressed != null ? color : Colors.grey,
+          ),
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 
   // GRID DE MASCOTAS ADOPTADAS
   Widget _buildOwnedCompanionsGrid(
@@ -692,96 +687,7 @@ class _LoadedView extends StatelessWidget {
       ),
     );
   }
-void _showTimeSimulationDialog(BuildContext context, dynamic companion) {
-  showDialog(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Row(
-        children: [
-          Icon(Icons.schedule, color: Colors.orange),
-          const SizedBox(width: 8),
-          const Text('Simular Tiempo'),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Esto reducirá las estadísticas de ${companion.displayName} para simular el paso del tiempo.',
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange[200]!),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Cambios que ocurrirán:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.favorite, color: Colors.red, size: 16),
-                    const SizedBox(width: 4),
-                    Text('Felicidad: ${companion.happiness} → ${(companion.happiness - 5).clamp(10, 100)}'),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.restaurant, color: Colors.orange, size: 16),
-                    const SizedBox(width: 4),
-                    Text('Salud: ${companion.hunger} → ${(companion.hunger - 8).clamp(10, 100)}'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.blue[600], size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Después podrás alimentar y dar amor para restaurar las estadísticas.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.blue[600],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('Cancelar'),
-        ),
-      
-      ],
-    ),
-  );
-}
+
   // DIÁLOGO PARA SELECCIONAR COMPAÑERO ACTIVO
   void _showSelectActiveCompanionDialog(
       BuildContext context, List<dynamic> companions) {
@@ -827,104 +733,105 @@ void _showTimeSimulationDialog(BuildContext context, dynamic companion) {
       ),
     );
   }
-Widget _buildStatsRow(dynamic companion) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-    decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.15),
-      borderRadius: BorderRadius.circular(15),
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        // Felicidad
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.favorite,
-              color: _getStatColor(companion.happiness),
-              size: 16,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '${companion.happiness}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+
+  Widget _buildStatsRow(dynamic companion) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          // Felicidad
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.favorite,
+                color: _getStatColor(companion.happiness),
+                size: 16,
               ),
-            ),
-          ],
-        ),
-        
-        // Separador
-        Container(
-          width: 1,
-          height: 16,
-          color: Colors.white.withOpacity(0.3),
-        ),
-        
-        // Salud/Hambre
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.restaurant,
-              color: _getStatColor(companion.hunger),
-              size: 16,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '${companion.hunger}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+              const SizedBox(width: 4),
+              Text(
+                '${companion.happiness}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-          ],
-        ),
-        
-        // Separador
-        Container(
-          width: 1,
-          height: 16,
-          color: Colors.white.withOpacity(0.3),
-        ),
-        
-        // Nivel y experiencia
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.star,
-              color: Colors.yellow[300],
-              size: 16,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              'Nv${companion.level}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+            ],
+          ),
+
+          // Separador
+          Container(
+            width: 1,
+            height: 16,
+            color: Colors.white.withOpacity(0.3),
+          ),
+
+          // Salud/Hambre
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.restaurant,
+                color: _getStatColor(companion.hunger),
+                size: 16,
               ),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
+              const SizedBox(width: 4),
+              Text(
+                '${companion.hunger}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+
+          // Separador
+          Container(
+            width: 1,
+            height: 16,
+            color: Colors.white.withOpacity(0.3),
+          ),
+
+          // Nivel y experiencia
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.star,
+                color: Colors.yellow[300],
+                size: 16,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Nv${companion.level}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
 // Helper para obtener color según estadística
-Color _getStatColor(int value) {
-  if (value >= 80) return Colors.green[300]!;
-  if (value >= 60) return Colors.yellow[300]!;
-  if (value >= 40) return Colors.orange[300]!;
-  return Colors.red[300]!;
-}
+  Color _getStatColor(int value) {
+    if (value >= 80) return Colors.green[300]!;
+    if (value >= 60) return Colors.yellow[300]!;
+    if (value >= 40) return Colors.orange[300]!;
+    return Colors.red[300]!;
+  }
 
   // ACCIONES DE COMPAÑEROS CON BlocProvider
   void _feedCompanion(BuildContext context, dynamic companion) {
