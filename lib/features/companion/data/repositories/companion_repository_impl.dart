@@ -126,95 +126,155 @@ class CompanionRepositoryImpl implements CompanionRepository {
     }
   }
   // ==================== OBTENER MASCOTAS DEL USUARIO ====================
-  @override
-  Future<Either<Failure, List<CompanionEntity>>> getUserCompanions(String userId) async {
-    try {
-      // 🔥 USAR USER ID REAL DEL TOKEN
-      final realUserId = await _getRealUserId();
+ @override
+Future<Either<Failure, List<CompanionEntity>>> getUserCompanions(String userId) async {
+  try {
+    // 🔥 USAR USER ID REAL DEL TOKEN
+    final realUserId = await _getRealUserId();
 
-      if (enableApiMode && await networkInfo.isConnected) {
-        try {
-          final hasValidToken = await tokenManager.hasValidAccessToken();
-          if (!hasValidToken) {
-            return await _getLocalCompanions(realUserId);
-          }
+    if (enableApiMode && await networkInfo.isConnected) {
+      try {
+        final hasValidToken = await tokenManager.hasValidAccessToken();
+        if (!hasValidToken) {
+          return await _getLocalCompanions(realUserId);
+        }
 
-          // 🔥 OBTENER MASCOTAS CON ESTADÍSTICAS REALES DESDE LA API
-          final remoteCompanions = await remoteDataSource.getUserCompanions(realUserId);
+        // 🔥 OBTENER MASCOTAS CON ESTADÍSTICAS REALES DESDE LA API
+        final remoteCompanions = await remoteDataSource.getUserCompanions(realUserId);
 
-          List<CompanionModel> finalCompanions = [];
-          for (int i = 0; i < remoteCompanions.length; i++) {
-            finalCompanions.add(remoteCompanions[i].copyWith(
+        List<CompanionModel> finalCompanions = [];
+        
+        // 🔥 PROCESAR CADA MASCOTA PARA OBTENER SUS idUserPet
+        for (int i = 0; i < remoteCompanions.length; i++) {
+          final companion = remoteCompanions[i];
+          
+          try {
+            // 🔥 OBTENER DETALLES COMPLETOS CON AMBOS IDs
+            if (companion is CompanionModelWithPetId) {
+              final originalPetId = companion.petId;
+              debugPrint('🔄 [REPO] Obteniendo detalles para pet_id: $originalPetId');
+              
+              // 🔥 LLAMAR A getPetDetails CON EL pet_id ORIGINAL
+              final detailedCompanion = await remoteDataSource.getPetDetails(
+                petId: originalPetId,  // ✅ pet_id PARA DETALLES
+                userId: realUserId,
+              );
+              
+              // 🔥 VERIFICAR QUE SEA CompanionModelWithBothIds
+              if (detailedCompanion is CompanionModelWithBothIds) {
+                debugPrint('✅ [REPO] Companion con ambos IDs:');
+                debugPrint('   pet_id: ${detailedCompanion.originalPetId}');
+                debugPrint('   idUserPet: ${detailedCompanion.idUserPet}');
+                
+                finalCompanions.add(detailedCompanion.copyWith(
+                  isOwned: true,
+                  isSelected: i == 0,
+                ));
+              } else {
+                debugPrint('⚠️ [REPO] Companion sin ambos IDs, usando básico');
+                finalCompanions.add(companion.copyWith(
+                  isOwned: true,
+                  isSelected: i == 0,
+                ));
+              }
+            } else {
+              finalCompanions.add(companion.copyWith(
+                isOwned: true,
+                isSelected: i == 0,
+              ));
+            }
+          } catch (detailsError) {
+            debugPrint('⚠️ [REPO] Error obteniendo detalles: $detailsError');
+            // Usar companion básico como fallback
+            finalCompanions.add(companion.copyWith(
               isOwned: true,
               isSelected: i == 0,
             ));
           }
-
-          // 🔧 ASEGURAR QUE AL MENOS UNA ESTÉ ACTIVA
-          if (finalCompanions.isNotEmpty && !finalCompanions.any((c) => c.isSelected)) {
-            finalCompanions[0] = finalCompanions[0].copyWith(isSelected: true);
-          }
-
-          // Guardar en cache
-          await localDataSource.cacheCompanions(realUserId, finalCompanions);
-          return Right(finalCompanions);
-        } catch (e) {
-          return await _getLocalCompanions(realUserId);
         }
-      } else {
+
+        // 🔧 ASEGURAR QUE AL MENOS UNA ESTÉ ACTIVA
+        if (finalCompanions.isNotEmpty && !finalCompanions.any((c) => c.isSelected)) {
+          finalCompanions[0] = finalCompanions[0].copyWith(isSelected: true);
+        }
+
+        // Guardar en cache
+        await localDataSource.cacheCompanions(realUserId, finalCompanions);
+        
+        debugPrint('✅ [REPO] === MASCOTAS CON AMBOS IDs PROCESADAS ===');
+        for (int i = 0; i < finalCompanions.length; i++) {
+          final companion = finalCompanions[i];
+          if (companion is CompanionModelWithBothIds) {
+            debugPrint('[$i] ${companion.displayName}:');
+            debugPrint('    pet_id: ${companion.originalPetId}');
+            debugPrint('    idUserPet: ${companion.idUserPet}');
+          } else {
+            debugPrint('[$i] ${companion.displayName}: Sin ambos IDs');
+          }
+        }
+        
+        return Right(finalCompanions);
+      } catch (e) {
         return await _getLocalCompanions(realUserId);
       }
-    } catch (e) {
-      return Left(UnknownFailure('Error obteniendo compañeros: ${e.toString()}'));
+    } else {
+      return await _getLocalCompanions(realUserId);
     }
+  } catch (e) {
+    return Left(UnknownFailure('Error obteniendo compañeros: ${e.toString()}'));
   }
+}
 
-  @override
+ @override
 Future<Either<Failure, CompanionEntity>> feedCompanionViaApi({
   required String userId,
-  required String petId,
+  required String petId,  // ✅ AHORA RECIBE idUserPet
 }) async {
-  debugPrint('🍎 [REPO] === ALIMENTANDO VIA API CON STATS REALES ===');
+  debugPrint('🍎 [REPO] === ALIMENTANDO VIA API CON idUserPet ===');
+  debugPrint('👤 [REPO] User ID: $userId');
+  debugPrint('🔑 [REPO] idUserPet (para stats): $petId');
   
   // 🔥 ENVIAR TANTO HAPPINESS COMO HEALTH SEGÚN TU API
   return increasePetStats(
     userId: userId,
-    petId: petId,
-    happiness: 5,  // 🔥 AGREGAR 5 DE FELICIDAD
-    health: 15,    // 🔥 AGREGAR 15 DE SALUD
+    petId: petId,        // ✅ ESTE ES EL idUserPet
+    happiness: 5,        // 🔥 AGREGAR 5 DE FELICIDAD
+    health: 15,          // 🔥 AGREGAR 15 DE SALUD
   );
 }
 
 @override
 Future<Either<Failure, CompanionEntity>> loveCompanionViaApi({
   required String userId,
-  required String petId,
+  required String petId,  // ✅ AHORA RECIBE idUserPet
 }) async {
-  debugPrint('💖 [REPO] === DANDO AMOR VIA API CON STATS REALES ===');
+  debugPrint('💖 [REPO] === DANDO AMOR VIA API CON idUserPet ===');
+  debugPrint('👤 [REPO] User ID: $userId');
+  debugPrint('🔑 [REPO] idUserPet (para stats): $petId');
   
   // 🔥 ENVIAR TANTO HAPPINESS COMO HEALTH SEGÚN TU API  
   return increasePetStats(
     userId: userId,
-    petId: petId,
-    happiness: 10, // 🔥 AGREGAR 10 DE FELICIDAD
-    health: 5,     // 🔥 AGREGAR 5 DE SALUD
+    petId: petId,        // ✅ ESTE ES EL idUserPet
+    happiness: 10,       // 🔥 AGREGAR 10 DE FELICIDAD
+    health: 5,           // 🔥 AGREGAR 5 DE SALUD
   );
 }
 
-// 🔥 MÉTODO SIMULACIÓN DE TIEMPO CORREGIDO
 @override
 Future<Either<Failure, CompanionEntity>> simulateTimePassage({
   required String userId,
-  required String petId,
+  required String petId,  // ✅ AHORA RECIBE idUserPet
 }) async {
   debugPrint('⏰ [REPO] === SIMULANDO PASO DEL TIEMPO ===');
+  debugPrint('🔑 [REPO] idUserPet (para reducir stats): $petId');
   
   // 🔥 REDUCIR AMBAS ESTADÍSTICAS
   return decreasePetStats(
     userId: userId,
-    petId: petId,
-    happiness: 5,  // 🔥 REDUCIR 5 DE FELICIDAD
-    health: 8,     // 🔥 REDUCIR 8 DE SALUD
+    petId: petId,        // ✅ ESTE ES EL idUserPet
+    happiness: 5,        // 🔥 REDUCIR 5 DE FELICIDAD
+    health: 8,           // 🔥 REDUCIR 8 DE SALUD
   );
 }
 

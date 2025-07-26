@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/network/api_client.dart';
@@ -61,70 +60,7 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
 
   CompanionRemoteDataSourceImpl(this.apiClient, this.tokenManager);
 
-// ==================== 🆕 OBTENER DETALLES COMPLETOS DE MASCOTA ====================
- 
-  // ==================== 🔥 AUMENTAR ESTADÍSTICAS VIA API ====================
-  @override
-  Future<CompanionModel> increasePetStats({
-    required String petId,
-    int? happiness,
-    int? health,
-  }) async {
-    try {
-      debugPrint('📈 [API] === AUMENTANDO STATS VIA API REAL ===');
-      debugPrint('🆔 [API] Pet ID: $petId');
-      debugPrint('😊 [API] Aumentar felicidad: ${happiness ?? 0}');
-      debugPrint('❤️ [API] Aumentar salud: ${health ?? 0}');
-
-      final endpoint = '/api/gamification/pet-stats/$petId/increase';
-      final requestBody = <String, dynamic>{};
-      
-      if (happiness != null) requestBody['happiness'] = happiness;
-      if (health != null) requestBody['health'] = health;
-
-      debugPrint('📦 [API] Request body: $requestBody');
-      debugPrint('🌐 [API] Endpoint: $endpoint');
-
-      final response = await apiClient.postGamification(
-        endpoint,
-        data: requestBody,
-      );
-
-      debugPrint('✅ [API] Increase stats response: ${response.statusCode}');
-      debugPrint('📄 [API] Response data: ${response.data}');
-
-      if (response.statusCode == 200 || 
-          response.statusCode == 201 || 
-          response.statusCode == 204) {
-        debugPrint('🎉 [API] Aumento de stats exitoso');
-        
-        // 🔥 OBTENER ESTADÍSTICAS ACTUALIZADAS DESDE EL ENDPOINT DE DETALLES
-        final userId = await tokenManager.getUserId();
-        if (userId != null) {
-          debugPrint('🔄 [API] Obteniendo stats actualizadas desde pet details...');
-          return await getPetDetails(petId: petId, userId: userId);
-        } else {
-          // Fallback: crear companion desde respuesta
-          return _createCompanionFromStatsResponse(petId, response.data);
-        }
-      } else {
-        throw ServerException(
-            'Error aumentando stats: código ${response.statusCode}, data: ${response.data}');
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Error aumentando stats: $e');
-      
-      final errorMessage = e.toString().toLowerCase();
-      if (errorMessage.contains('not found') || errorMessage.contains('404')) {
-        throw ServerException('🔍 Mascota no encontrada');
-      } else if (errorMessage.contains('maximum') || errorMessage.contains('máximo')) {
-        throw ServerException('📊 Las estadísticas ya están al máximo');
-      } else {
-        throw ServerException('❌ Error aumentando estadísticas de la mascota');
-      }
-    }
-  }
- @override
+// ==================== 🆕 OBTENER DETALLES COMPLETOS DE MASCOTA - CORREGIDO ====================
 @override
 Future<CompanionModel> getPetDetails({
   required String petId, 
@@ -132,10 +68,10 @@ Future<CompanionModel> getPetDetails({
 }) async {
   try {
     debugPrint('🔍 [API] === OBTENIENDO DETALLES DE MASCOTA ===');
-    debugPrint('🆔 [API] Pet ID: $petId');
+    debugPrint('🆔 [API] Pet ID (ORIGINAL): $petId');
     debugPrint('👤 [API] User ID: $userId');
 
-    final endpoint = '/api/gamification/pets/$petId/details';
+    final endpoint = '/api/gamification/pets/$petId/details';  // ✅ USAR petId ORIGINAL
     final queryParams = {'userId': userId};
 
     debugPrint('🌐 [API] Endpoint: $endpoint');
@@ -157,7 +93,7 @@ Future<CompanionModel> getPetDetails({
     final petData = response.data as Map<String, dynamic>;
     
     // 🔥 EXTRAER INFORMACIÓN BÁSICA
-    final responsePetId = petData['pet_id'] as String;
+    final responsePetId = petData['pet_id'] as String? ?? petId;  // ✅ PRESERVAR ORIGINAL
     final name = petData['name'] as String? ?? 'Mascota';
     final description = petData['description'] as String? ?? 'Una mascota especial';
     final speciesType = petData['species_type'] as String? ?? 'mammal';
@@ -182,7 +118,7 @@ Future<CompanionModel> getPetDetails({
     // 🔥 EXTRAER USER PET INFO - AQUÍ ESTÁ EL idUserPet CRÍTICO
     final userPetInfo = userInfo['user_pet_info'] as Map<String, dynamic>? ?? {};
     
-    // 🔥 ¡ESTE ES EL ID QUE NECESITAMOS!
+    // 🔥 ¡ESTE ES EL ID QUE NECESITAMOS PARA LAS ESTADÍSTICAS!
     final idUserPet = userPetInfo['idUserPet'] as String? ?? '';
     
     final currentHappiness = (userPetInfo['happiness_level'] as num?)?.toInt() ?? baseHappiness;
@@ -194,7 +130,8 @@ Future<CompanionModel> getPetDetails({
     final nickname = userPetInfo['nickname'] as String? ?? name;
     
     debugPrint('📈 [API] === STATS REALES DE LA MASCOTA ===');
-    debugPrint('🆔 [API] ID USUARIO MASCOTA (CRÍTICO): $idUserPet');
+    debugPrint('🆔 [API] Pet ID (para detalles): $responsePetId');
+    debugPrint('🔑 [API] idUserPet (para stats): $idUserPet');  // ✅ ESTE PARA ESTADÍSTICAS
     debugPrint('❤️ [API] Felicidad actual: $currentHappiness/100');
     debugPrint('🏥 [API] Salud actual: $currentHealth/100');
     debugPrint('🎯 [API] Nivel: $level, Etapa: $evolutionStage, EXP: $experiencePoints');
@@ -204,8 +141,8 @@ Future<CompanionModel> getPetDetails({
     final companionType = _mapSpeciesTypeToCompanionType(speciesType);
     final companionStage = _mapEvolutionStageToCompanionStage(evolutionStage);
     
-    // 🔥 CREAR COMPANION MODEL CON EL idUserPet COMO PET ID
-    final companion = CompanionModelWithPetId(
+    // 🔥 CREAR COMPANION MODEL CON AMBOS IDs
+    final companion = CompanionModelWithBothIds(
       id: '${companionType.name}_${companionStage.name}',
       type: companionType,
       stage: companionStage,
@@ -224,11 +161,14 @@ Future<CompanionModel> getPetDetails({
       evolutionPrice: _getEvolutionPriceForStage(evolutionStage),
       unlockedAnimations: _getAnimationsForStage(companionStage),
       createdAt: DateTime.now(),
-      petId: idUserPet, // 🔥 USAR idUserPet EN LUGAR DE pet_id
+      originalPetId: responsePetId,  // ✅ PARA DETALLES
+      idUserPet: idUserPet,          // ✅ PARA ESTADÍSTICAS
     );
 
-    debugPrint('✅ [API] === COMPANION CREADO CON idUserPet ===');
-    debugPrint('🐾 [API] ${companion.displayName} - Pet ID: ${companion.petId}');
+    debugPrint('✅ [API] === COMPANION CREADO CON AMBOS IDs ===');
+    debugPrint('🐾 [API] ${companion.displayName}');
+    debugPrint('🆔 [API] Pet ID: ${companion.originalPetId} (para getPetDetails)');
+    debugPrint('🔑 [API] idUserPet: ${companion.idUserPet} (para increase/decrease stats)');
     debugPrint('📊 [API] Stats: Felicidad: ${companion.happiness}, Salud: ${companion.hunger}');
     
     return companion;
@@ -239,6 +179,99 @@ Future<CompanionModel> getPetDetails({
   }
 }
 
+// ==================== 🔥 AUMENTAR ESTADÍSTICAS VIA API - CORREGIDO ====================
+@override
+Future<CompanionModel> increasePetStats({
+  required String petId,
+  int? happiness,
+  int? health,
+}) async {
+  try {
+    debugPrint('📈 [API] === AUMENTANDO STATS VIA API REAL ===');
+    debugPrint('🔑 [API] idUserPet recibido: $petId');  // ✅ AHORA ES idUserPet
+    debugPrint('😊 [API] Aumentar felicidad: ${happiness ?? 0}');
+    debugPrint('❤️ [API] Aumentar salud: ${health ?? 0}');
+
+    final endpoint = '/api/gamification/pet-stats/$petId/increase';  // ✅ USAR idUserPet
+    final requestBody = <String, dynamic>{};
+    
+    if (happiness != null) requestBody['happiness'] = happiness;
+    if (health != null) requestBody['health'] = health;
+
+    debugPrint('📦 [API] Request body: $requestBody');
+    debugPrint('🌐 [API] Endpoint: $endpoint');
+
+    final response = await apiClient.postGamification(
+      endpoint,
+      data: requestBody,
+    );
+
+    debugPrint('✅ [API] Increase stats response: ${response.statusCode}');
+    debugPrint('📄 [API] Response data: ${response.data}');
+
+    if (response.statusCode == 200 || 
+        response.statusCode == 201 || 
+        response.statusCode == 204) {
+      debugPrint('🎉 [API] Aumento de stats exitoso');
+      
+      // 🔥 CREAR COMPANION ACTUALIZADO DESDE LA RESPUESTA
+      return _createCompanionFromStatsResponse(petId, response.data);
+    } else {
+      throw ServerException(
+          'Error aumentando stats: código ${response.statusCode}, data: ${response.data}');
+    }
+  } catch (e) {
+    debugPrint('❌ [API] Error aumentando stats: $e');
+    throw ServerException('❌ Error aumentando estadísticas de la mascota');
+  }
+}
+
+// ==================== 🔥 REDUCIR ESTADÍSTICAS VIA API - CORREGIDO ====================
+@override
+Future<CompanionModel> decreasePetStats({
+  required String petId,
+  int? happiness,
+  int? health,
+}) async {
+  try {
+    debugPrint('📉 [API] === REDUCIENDO STATS VIA API REAL ===');
+    debugPrint('🔑 [API] idUserPet recibido: $petId');  // ✅ AHORA ES idUserPet
+    debugPrint('😢 [API] Reducir felicidad: ${happiness ?? 0}');
+    debugPrint('🩹 [API] Reducir salud: ${health ?? 0}');
+
+    final endpoint = '/api/gamification/pet-stats/$petId/decrease';  // ✅ USAR idUserPet
+    final requestBody = <String, dynamic>{};
+    
+    if (happiness != null) requestBody['happiness'] = happiness;
+    if (health != null) requestBody['health'] = health;
+
+    debugPrint('📦 [API] Request body: $requestBody');
+    debugPrint('🌐 [API] Endpoint: $endpoint');
+
+    final response = await apiClient.postGamification(
+      endpoint,
+      data: requestBody,
+    );
+
+    debugPrint('✅ [API] Decrease stats response: ${response.statusCode}');
+    debugPrint('📄 [API] Response data: ${response.data}');
+
+    if (response.statusCode == 200 || 
+        response.statusCode == 201 || 
+        response.statusCode == 204) {
+      debugPrint('🎉 [API] Reducción de stats exitosa');
+      
+      // 🔥 CREAR COMPANION ACTUALIZADO DESDE LA RESPUESTA
+      return _createCompanionFromStatsResponse(petId, response.data);
+    } else {
+      throw ServerException(
+          'Error reduciendo stats: código ${response.statusCode}, data: ${response.data}');
+    }
+  } catch (e) {
+    debugPrint('❌ [API] Error reduciendo stats: $e');
+    throw ServerException('❌ Error reduciendo estadísticas de la mascota');
+  }
+}
 
 @override
 Future<List<CompanionModel>> getUserCompanions(String userId) async {
@@ -293,8 +326,8 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
             final companionWithRealStats = await getPetDetails(petId: petId, userId: userId);
             
             // 🔥 VERIFICAR QUE TENGA idUserPet
-            if (companionWithRealStats is CompanionModelWithPetId) {
-              final idUserPet = companionWithRealStats.petId;
+            if (companionWithRealStats is CompanionModelWithBothIds) {
+              final idUserPet = companionWithRealStats.idUserPet;
               debugPrint('✅ [API] Mascota con idUserPet: ${companionWithRealStats.displayName} -> $idUserPet');
               
               if (idUserPet.isNotEmpty && idUserPet != 'unknown') {
@@ -303,7 +336,7 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
                 debugPrint('⚠️ [API] idUserPet vacío para ${companionWithRealStats.displayName}');
               }
             } else {
-              debugPrint('⚠️ [API] Companion no es CompanionModelWithPetId');
+              debugPrint('⚠️ [API] Companion no es CompanionModelWithBothIds');
             }
             
           } catch (detailsError) {
@@ -326,8 +359,8 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
     // Debug de todos los idUserPet
     for (int i = 0; i < adoptedCompanions.length; i++) {
       final companion = adoptedCompanions[i];
-      if (companion is CompanionModelWithPetId) {
-        debugPrint('[$i] ${companion.displayName} -> idUserPet: ${companion.petId}');
+      if (companion is CompanionModelWithBothIds) {
+        debugPrint('[$i] ${companion.displayName} -> idUserPet: ${companion.idUserPet}');
       }
     }
 
@@ -364,7 +397,7 @@ CompanionModel? _createBasicCompanionFromUserPet(Map<String, dynamic> petData) {
     
     debugPrint('🔧 [API] Creando companion básico con idUserPet: $idUserPet');
     
-    return CompanionModelWithPetId(
+    return CompanionModelWithBothIds(
       id: '${speciesType}_basic',
       type: _mapSpeciesTypeToCompanionType(speciesType),
       stage: CompanionStage.young,
@@ -372,7 +405,7 @@ CompanionModel? _createBasicCompanionFromUserPet(Map<String, dynamic> petData) {
       description: 'Mascota básica',
       level: 1,
       experience: 0,
-      happiness: 75, // Stats por defecto
+      happiness: 75,
       hunger: 80,
       energy: 100,
       isOwned: true,
@@ -383,7 +416,8 @@ CompanionModel? _createBasicCompanionFromUserPet(Map<String, dynamic> petData) {
       evolutionPrice: 50,
       unlockedAnimations: ['idle', 'blink', 'happy'],
       createdAt: DateTime.now(),
-      petId: idUserPet, // 🔥 EL idUserPet CRÍTICO
+      originalPetId: 'unknown',
+      idUserPet: idUserPet, // 🔥 EL idUserPet CRÍTICO
     );
   } catch (e) {
     debugPrint('❌ [API] Error creando companion básico: $e');
@@ -393,8 +427,8 @@ CompanionModel? _createBasicCompanionFromUserPet(Map<String, dynamic> petData) {
 
 // 🔥 MÉTODO HELPER PARA EXTRAER PET ID
 String? _extractApiPetIdFromCompanion(CompanionModel companion) {
-  if (companion is CompanionModelWithPetId) {
-    return companion.petId;
+  if (companion is CompanionModelWithBothIds) {
+    return companion.idUserPet;
   }
   if (companion is CompanionModel) {
     try {
@@ -406,68 +440,6 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
   }
   return null;
 }
-  // ==================== 🔥 REDUCIR ESTADÍSTICAS VIA API ====================
-  @override
-  Future<CompanionModel> decreasePetStats({
-    required String petId,
-    int? happiness,
-    int? health,
-  }) async {
-    try {
-      debugPrint('📉 [API] === REDUCIENDO STATS VIA API REAL ===');
-      debugPrint('🆔 [API] Pet ID: $petId');
-      debugPrint('😢 [API] Reducir felicidad: ${happiness ?? 0}');
-      debugPrint('🩹 [API] Reducir salud: ${health ?? 0}');
-
-      final endpoint = '/api/gamification/pet-stats/$petId/decrease';
-      final requestBody = <String, dynamic>{};
-      
-      if (happiness != null) requestBody['happiness'] = happiness;
-      if (health != null) requestBody['health'] = health;
-
-      debugPrint('📦 [API] Request body: $requestBody');
-      debugPrint('🌐 [API] Endpoint: $endpoint');
-
-      final response = await apiClient.postGamification(
-        endpoint,
-        data: requestBody,
-      );
-
-      debugPrint('✅ [API] Decrease stats response: ${response.statusCode}');
-      debugPrint('📄 [API] Response data: ${response.data}');
-
-      if (response.statusCode == 200 || 
-          response.statusCode == 201 || 
-          response.statusCode == 204) {
-        debugPrint('🎉 [API] Reducción de stats exitosa');
-        
-        // 🔥 OBTENER ESTADÍSTICAS ACTUALIZADAS DESDE EL ENDPOINT DE DETALLES
-        final userId = await tokenManager.getUserId();
-        if (userId != null) {
-          debugPrint('🔄 [API] Obteniendo stats actualizadas desde pet details...');
-          return await getPetDetails(petId: petId, userId: userId);
-        } else {
-          // Fallback: crear companion desde respuesta
-          return _createCompanionFromStatsResponse(petId, response.data);
-        }
-      } else {
-        throw ServerException(
-            'Error reduciendo stats: código ${response.statusCode}, data: ${response.data}');
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Error reduciendo stats: $e');
-      
-      final errorMessage = e.toString().toLowerCase();
-      if (errorMessage.contains('not found') || errorMessage.contains('404')) {
-        throw ServerException('🔍 Mascota no encontrada');
-      } else if (errorMessage.contains('minimum') || errorMessage.contains('límite')) {
-        throw ServerException('📊 Las estadísticas ya están en el mínimo permitido');
-      } else {
-        throw ServerException('❌ Error reduciendo estadísticas de la mascota');
-      }
-    }
-  }
-
 
   // ==================== MASCOTAS DISPONIBLES PARA ADOPTAR ====================
     @override
@@ -1031,9 +1003,6 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
     return featurePetViaApi(userId: userId, petId: petId);
   }
 
-
-
-/// Aumentar felicidad y/o salud de una mascota
   // ==================== 🔧 MÉTODOS HELPER MEJORADOS ====================
 
   /// 🔥 CREAR COMPANION ADOPTADO CON NOMBRE REAL DE LA RESPUESTA
@@ -1067,7 +1036,7 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
     final localId = '${companionType.name}_${companionStage.name}';
     debugPrint('🆔 [ADOPTION] Local ID generado: $localId, Pet ID preservado: $petId');
 
-    return CompanionModelWithPetId(
+    return CompanionModelWithBothIds(
       id: localId,
       type: companionType,
       stage: companionStage,
@@ -1086,11 +1055,12 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
       evolutionPrice: _getEvolutionPrice(companionStage),
       unlockedAnimations: ['idle', 'blink', 'happy'],
       createdAt: DateTime.now(),
-      petId: petId, // Preservar Pet ID original
+      originalPetId: petId, // Preservar Pet ID original para detalles
+      idUserPet: 'pending', // Se actualizará con el idUserPet real
     );
   }
 
-    CompanionType _mapSpeciesTypeToCompanionType(String speciesType) {
+  CompanionType _mapSpeciesTypeToCompanionType(String speciesType) {
     switch (speciesType.toLowerCase()) {
       case 'dog':
       case 'chihuahua':
@@ -1168,6 +1138,47 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
     }
   }
 
+  // 🔥 HELPER CORREGIDO PARA CREAR COMPANION DESDE RESPUESTA DE STATS
+  CompanionModel _createCompanionFromStatsResponse(String idUserPet, dynamic responseData) {
+    debugPrint('🔄 [API] === CREANDO COMPANION DESDE STATS RESPONSE ===');
+    debugPrint('🔑 [API] idUserPet: $idUserPet');
+    
+    String realName = 'Mi Compañero';
+    int happinessLevel = 50;
+    int healthLevel = 50;
+    
+    if (responseData is Map<String, dynamic>) {
+      realName = responseData['name'] as String? ?? realName;
+      happinessLevel = (responseData['happiness_level'] as num?)?.toInt() ?? happinessLevel;
+      healthLevel = (responseData['health_level'] as num?)?.toInt() ?? healthLevel;
+      
+      debugPrint('📊 [API] Stats desde respuesta: H:$happinessLevel, S:$healthLevel');
+    }
+
+    // 🔥 CREAR COMPANION BÁSICO CON LAS STATS ACTUALIZADAS
+    return CompanionModelWithBothIds(
+      id: 'updated_companion',
+      type: CompanionType.dexter,  // Por defecto
+      stage: CompanionStage.young,
+      name: realName,
+      description: 'Mascota con estadísticas actualizadas',
+      level: 1,
+      experience: 0,
+      happiness: happinessLevel,  // ✅ STAT REAL ACTUALIZADA
+      hunger: healthLevel,        // ✅ STAT REAL ACTUALIZADA
+      energy: 100,
+      isOwned: true,
+      isSelected: false,
+      purchasedAt: DateTime.now(),
+      currentMood: _determineMoodFromStats(happinessLevel, healthLevel),
+      purchasePrice: 0,
+      evolutionPrice: 50,
+      unlockedAnimations: ['idle', 'blink', 'happy'],
+      createdAt: DateTime.now(),
+      originalPetId: 'unknown',   // No lo necesitamos para stats
+      idUserPet: idUserPet,       // ✅ PRESERVAR idUserPet
+    );
+  }
 
   CompanionModel _createEvolvedCompanionFromResponse(String petId, dynamic responseData) {
     debugPrint('🦋 [EVOLUTION] Creando companion evolucionado para petId: $petId');
@@ -1218,7 +1229,7 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
     final localId = '${companionType.name}_${companionStage.name}';
     debugPrint('🆔 [EVOLUTION] New local ID: $localId, preserving petId: $petId');
 
-    return CompanionModelWithPetId(
+    return CompanionModelWithBothIds(
       id: localId,
       type: companionType,
       stage: companionStage,
@@ -1237,7 +1248,8 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
       evolutionPrice: _getEvolutionPrice(companionStage),
       unlockedAnimations: ['idle', 'blink', 'happy', 'excited'],
       createdAt: DateTime.now(),
-      petId: petId, // Preservar Pet ID original
+      originalPetId: petId, // Preservar Pet ID original
+      idUserPet: 'pending', // Se actualizará después
     );
   }
 
@@ -1262,7 +1274,7 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
     final localId = '${companionType.name}_${companionStage.name}';
     debugPrint('🆔 [FEATURE] Local ID: $localId, preserving petId: $petId');
 
-    return CompanionModelWithPetId(
+    return CompanionModelWithBothIds(
       id: localId,
       type: companionType,
       stage: companionStage,
@@ -1281,7 +1293,8 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
       evolutionPrice: _getEvolutionPrice(companionStage),
       unlockedAnimations: ['idle', 'blink', 'happy'],
       createdAt: DateTime.now(),
-      petId: petId, // Preservar Pet ID original
+      originalPetId: petId, // Preservar Pet ID original
+      idUserPet: 'pending', // Se actualizará después
     );
   }
 
@@ -1305,7 +1318,7 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
     final localId = '${companionType.name}_${companionStage.name}';
     debugPrint('🆔 [STAGE] Local ID: $localId, stage: ${companionStage.name}');
 
-    return CompanionModelWithPetId(
+    return CompanionModelWithBothIds(
       id: localId,
       type: companionType,
       stage: companionStage,
@@ -1324,7 +1337,8 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
       evolutionPrice: _getEvolutionPrice(companionStage),
       unlockedAnimations: _getAnimationsForStage(companionStage),
       createdAt: DateTime.now(),
-      petId: petId,
+      originalPetId: petId,
+      idUserPet: 'pending', // Se actualizará después
     );
   }
 
@@ -1371,48 +1385,6 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
     debugPrint('⚠️ [MAPPING] Stage no reconocido en petId: $petId, usando baby por defecto');
     return CompanionStage.baby;
   }
- CompanionModel _createCompanionFromStatsResponse(String petId, dynamic responseData) {
-    // [El método existente se mantiene igual]
-    debugPrint('🔄 [API] === CREANDO COMPANION DESDE STATS RESPONSE ===');
-    
-    String realName = 'Mi Compañero';
-    int happinessLevel = 50;
-    int healthLevel = 50;
-    
-    if (responseData is Map<String, dynamic>) {
-      realName = responseData['name'] as String? ?? realName;
-      happinessLevel = (responseData['happiness_level'] as num?)?.toInt() ?? happinessLevel;
-      healthLevel = (responseData['health_level'] as num?)?.toInt() ?? healthLevel;
-    }
-
-    final companionType = _mapPetIdToCompanionType(petId);
-    final companionStage = _mapPetIdToCompanionStage(petId);
-    final localId = '${companionType.name}_${companionStage.name}';
-
-    return CompanionModelWithPetId(
-      id: localId,
-      type: companionType,
-      stage: companionStage,
-      name: realName,
-      description: 'Mascota con estadísticas actualizadas',
-      level: 1,
-      experience: 0,
-      happiness: happinessLevel,
-      hunger: healthLevel,
-      energy: 100,
-      isOwned: true,
-      isSelected: false,
-      purchasedAt: DateTime.now(),
-      currentMood: _determineMoodFromStats(happinessLevel, healthLevel),
-      purchasePrice: 0,
-      evolutionPrice: 50,
-      unlockedAnimations: ['idle', 'blink', 'happy'],
-      createdAt: DateTime.now(),
-      petId: petId,
-    );
-  }
-
-/// Determinar mood basado en las estadísticas
 
   /// 🔥 MAPEAR STRING A COMPANION STAGE (PARA RESPUESTAS DE LA API)
   CompanionStage _mapStringToCompanionStage(String stageStr) {
@@ -1498,8 +1470,8 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
     debugPrint('🔍 [MAPPING] ID local generado: $localId');
     debugPrint('🆔 [MAPPING] Pet ID preservado: $realPetId');
 
-    // Usar CompanionModelWithPetId para preservar el Pet ID real
-    return CompanionModelWithPetId(
+    // Usar CompanionModelWithBothIds para preservar el Pet ID real
+    return CompanionModelWithBothIds(
       id: localId,
       type: companionType,
       stage: companionStage,
@@ -1518,7 +1490,8 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
       evolutionPrice: _getEvolutionPrice(companionStage),
       unlockedAnimations: ['idle', 'blink', 'happy'],
       createdAt: DateTime.now(),
-      petId: realPetId, // Preservar el Pet ID real de la API
+      originalPetId: realPetId, // Preservar el Pet ID real de la API
+      idUserPet: 'pending', // Se actualizará después
     );
   }
   
@@ -1647,8 +1620,6 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
     }
   }
 
- 
-
   // ==================== FALLBACK DATA ====================
   List<CompanionModel> _getDefaultAvailableCompanions() {
     debugPrint('🔧 [FALLBACK] Usando mascotas por defecto');
@@ -1745,5 +1716,116 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
     ));
 
     return companions;
+  }
+}
+
+// 🔥 MODELO EXTENDIDO CON AMBOS IDs
+class CompanionModelWithBothIds extends CompanionModel {
+  final String originalPetId;  // Para getPetDetails
+  final String idUserPet;      // Para increase/decrease stats
+  
+  const CompanionModelWithBothIds({
+    required String id,
+    required CompanionType type,
+    required CompanionStage stage,
+    required String name,
+    required String description,
+    required int level,
+    required int experience,
+    required int happiness,
+    required int hunger,
+    required int energy,
+    required bool isOwned,
+    required bool isSelected,
+    DateTime? purchasedAt,
+    DateTime? lastFeedTime,
+    DateTime? lastLoveTime,
+    required CompanionMood currentMood,
+    required int purchasePrice,
+    required int evolutionPrice,
+    required List<String> unlockedAnimations,
+    required DateTime createdAt,
+    required this.originalPetId,
+    required this.idUserPet,
+  }) : super(
+          id: id,
+          type: type,
+          stage: stage,
+          name: name,
+          description: description,
+          level: level,
+          experience: experience,
+          happiness: happiness,
+          hunger: hunger,
+          energy: energy,
+          isOwned: isOwned,
+          isSelected: isSelected,
+          purchasedAt: purchasedAt,
+          lastFeedTime: lastFeedTime,
+          lastLoveTime: lastLoveTime,
+          currentMood: currentMood,
+          purchasePrice: purchasePrice,
+          evolutionPrice: evolutionPrice,
+          unlockedAnimations: unlockedAnimations,
+          createdAt: createdAt,
+        );
+
+  @override
+  Map<String, dynamic> toJson() {
+    final json = super.toJson();
+    json['originalPetId'] = originalPetId;
+    json['idUserPet'] = idUserPet;
+    return json;
+  }
+
+  @override
+  CompanionModelWithBothIds copyWith({
+    String? id,
+    CompanionType? type,
+    CompanionStage? stage,
+    String? name,
+    String? description,
+    int? level,
+    int? experience,
+    int? happiness,
+    int? hunger,
+    int? energy,
+    bool? isOwned,
+    bool? isSelected,
+    DateTime? purchasedAt,
+    DateTime? lastFeedTime,
+    DateTime? lastLoveTime,
+    CompanionMood? currentMood,
+    int? purchasePrice,
+    int? evolutionPrice,
+    List<String>? unlockedAnimations,
+    DateTime? createdAt,
+    String? originalPetId,
+    String? idUserPet,
+  }) {
+    return CompanionModelWithBothIds(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      stage: stage ?? this.stage,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      level: level ?? this.level,
+      experience: experience ?? this.experience,
+      happiness: happiness ?? this.happiness,
+      hunger: hunger ?? this.hunger,
+      energy: energy ?? this.energy,
+      isOwned: isOwned ?? this.isOwned,
+      isSelected: isSelected ?? this.isSelected,
+      purchasedAt: purchasedAt ?? this.purchasedAt,
+      lastFeedTime: lastFeedTime ?? this.lastFeedTime,
+      lastLoveTime: lastLoveTime ?? this.lastLoveTime,
+      currentMood: currentMood ?? this.currentMood,
+      purchasePrice: purchasePrice ?? this.purchasePrice,
+      evolutionPrice: evolutionPrice ?? this.evolutionPrice,
+      unlockedAnimations: unlockedAnimations ?? this.unlockedAnimations,
+      createdAt: createdAt ?? this.createdAt,
+      originalPetId: originalPetId ?? this.originalPetId,
+      idUserPet: idUserPet ?? this.idUserPet,
+    );
   }
 }
