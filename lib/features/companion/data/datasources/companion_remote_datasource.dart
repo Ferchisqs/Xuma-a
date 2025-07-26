@@ -125,6 +125,7 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     }
   }
  @override
+@override
 Future<CompanionModel> getPetDetails({
   required String petId, 
   required String userId
@@ -156,21 +157,21 @@ Future<CompanionModel> getPetDetails({
     final petData = response.data as Map<String, dynamic>;
     
     // 🔥 EXTRAER INFORMACIÓN BÁSICA
-    final responsePetId = petData['pet_id'] as String; // ✅ CAMBIADO EL NOMBRE
+    final responsePetId = petData['pet_id'] as String;
     final name = petData['name'] as String? ?? 'Mascota';
     final description = petData['description'] as String? ?? 'Una mascota especial';
     final speciesType = petData['species_type'] as String? ?? 'mammal';
     
     debugPrint('🐾 [API] Pet básico - ID: $responsePetId, Nombre: $name, Tipo: $speciesType');
 
-    // 🔥 EXTRAER BASE STATS (estadísticas por defecto)
+    // 🔥 EXTRAER BASE STATS
     final baseStats = petData['base_stats'] as Map<String, dynamic>? ?? {};
     final baseHealth = (baseStats['health'] as num?)?.toInt() ?? 100;
     final baseHappiness = (baseStats['happiness'] as num?)?.toInt() ?? 100;
     
     debugPrint('📊 [API] Base stats - Salud: $baseHealth, Felicidad: $baseHappiness');
 
-    // 🔥 EXTRAER USER INFO (información específica del usuario)
+    // 🔥 EXTRAER USER INFO
     final userInfo = petData['user_info'] as Map<String, dynamic>? ?? {};
     final userOwns = userInfo['user_owns'] as bool? ?? false;
     final userCanAfford = userInfo['user_can_afford'] as bool? ?? false;
@@ -178,10 +179,12 @@ Future<CompanionModel> getPetDetails({
     
     debugPrint('👤 [API] User info - Posee: $userOwns, Puede comprar: $userCanAfford, Puntos: $userAvailablePoints');
 
-    // 🔥 EXTRAER USER PET INFO (estadísticas actuales de la mascota del usuario)
+    // 🔥 EXTRAER USER PET INFO - AQUÍ ESTÁ EL idUserPet CRÍTICO
     final userPetInfo = userInfo['user_pet_info'] as Map<String, dynamic>? ?? {};
     
-    // 🔥 ESTAS SON LAS ESTADÍSTICAS REALES QUE NECESITAS
+    // 🔥 ¡ESTE ES EL ID QUE NECESITAMOS!
+    final idUserPet = userPetInfo['idUserPet'] as String? ?? '';
+    
     final currentHappiness = (userPetInfo['happiness_level'] as num?)?.toInt() ?? baseHappiness;
     final currentHealth = (userPetInfo['health_level'] as num?)?.toInt() ?? baseHealth;
     final level = (userPetInfo['level'] as num?)?.toInt() ?? 1;
@@ -191,6 +194,7 @@ Future<CompanionModel> getPetDetails({
     final nickname = userPetInfo['nickname'] as String? ?? name;
     
     debugPrint('📈 [API] === STATS REALES DE LA MASCOTA ===');
+    debugPrint('🆔 [API] ID USUARIO MASCOTA (CRÍTICO): $idUserPet');
     debugPrint('❤️ [API] Felicidad actual: $currentHappiness/100');
     debugPrint('🏥 [API] Salud actual: $currentHealth/100');
     debugPrint('🎯 [API] Nivel: $level, Etapa: $evolutionStage, EXP: $experiencePoints');
@@ -200,31 +204,32 @@ Future<CompanionModel> getPetDetails({
     final companionType = _mapSpeciesTypeToCompanionType(speciesType);
     final companionStage = _mapEvolutionStageToCompanionStage(evolutionStage);
     
-    // 🔥 CREAR COMPANION MODEL CON ESTADÍSTICAS REALES
+    // 🔥 CREAR COMPANION MODEL CON EL idUserPet COMO PET ID
     final companion = CompanionModelWithPetId(
       id: '${companionType.name}_${companionStage.name}',
       type: companionType,
       stage: companionStage,
-      name: nickname, // 🔥 USAR NICKNAME DEL USUARIO
+      name: nickname,
       description: description,
-      level: level, // 🔥 NIVEL REAL
-      experience: experiencePoints, // 🔥 EXPERIENCIA REAL
-      happiness: currentHappiness, // 🔥 FELICIDAD REAL DESDE API
-      hunger: currentHealth, // 🔥 SALUD REAL DESDE API (mapear a hunger)
-      energy: 100, // Mantener por defecto por ahora
-      isOwned: userOwns, // 🔥 SI EL USUARIO LA POSEE
-      isSelected: isFeatured, // 🔥 SI ESTÁ DESTACADA
+      level: level,
+      experience: experiencePoints,
+      happiness: currentHappiness,
+      hunger: currentHealth, // Mapear health a hunger
+      energy: 100,
+      isOwned: userOwns,
+      isSelected: isFeatured,
       purchasedAt: userOwns ? DateTime.now() : null,
       currentMood: _determineMoodFromStats(currentHappiness, currentHealth),
-      purchasePrice: 0, // Ya comprada si es owned
+      purchasePrice: 0,
       evolutionPrice: _getEvolutionPriceForStage(evolutionStage),
       unlockedAnimations: _getAnimationsForStage(companionStage),
       createdAt: DateTime.now(),
-      petId: responsePetId, // ✅ USAR LA VARIABLE CORRECTA
+      petId: idUserPet, // 🔥 USAR idUserPet EN LUGAR DE pet_id
     );
 
-    debugPrint('✅ [API] === COMPANION CREADO CON STATS REALES ===');
-    debugPrint('🐾 [API] ${companion.displayName} - Felicidad: ${companion.happiness}, Salud: ${companion.hunger}');
+    debugPrint('✅ [API] === COMPANION CREADO CON idUserPet ===');
+    debugPrint('🐾 [API] ${companion.displayName} - Pet ID: ${companion.petId}');
+    debugPrint('📊 [API] Stats: Felicidad: ${companion.happiness}, Salud: ${companion.hunger}');
     
     return companion;
 
@@ -232,6 +237,174 @@ Future<CompanionModel> getPetDetails({
     debugPrint('❌ [API] Error obteniendo detalles de mascota: $e');
     throw ServerException('Error obteniendo detalles de mascota: ${e.toString()}');
   }
+}
+
+
+@override
+Future<List<CompanionModel>> getUserCompanions(String userId) async {
+  try {
+    debugPrint('👤 [API] === OBTENIENDO MASCOTAS DEL USUARIO CON idUserPet ===');
+    debugPrint('👤 [API] Usuario ID: $userId');
+
+    final response = await apiClient.getGamification(
+      '/api/gamification/pets/$userId',
+      requireAuth: true,
+    );
+
+    debugPrint('✅ [API] Respuesta mascotas usuario: ${response.statusCode}');
+
+    if (response.data == null) {
+      debugPrint('ℹ️ [API] Usuario sin mascotas adoptadas');
+      return [];
+    }
+
+    List<CompanionModel> adoptedCompanions = [];
+    dynamic petsData;
+
+    if (response.data is List) {
+      petsData = response.data as List;
+    } else if (response.data is Map<String, dynamic>) {
+      final dataMap = response.data as Map<String, dynamic>;
+      petsData = dataMap['pets'] ?? dataMap['data'] ?? dataMap['owned_pets'] ?? [];
+    } else {
+      debugPrint('⚠️ [API] Formato de respuesta inesperado');
+      return [];
+    }
+
+    if (petsData is! List) {
+      debugPrint('⚠️ [API] Los datos de mascotas no son una lista');
+      return [];
+    }
+
+    debugPrint('📝 [API] Procesando ${petsData.length} mascotas adoptadas');
+
+    for (int i = 0; i < petsData.length; i++) {
+      try {
+        final petData = petsData[i];
+        debugPrint('🐾 [API] Procesando mascota $i: ${petData['id'] ?? petData['pet_id']}');
+
+        if (petData is Map<String, dynamic>) {
+          // 🔥 EXTRAER EL pet_id PARA LLAMAR A getPetDetails
+          final petId = petData['id'] as String? ?? petData['pet_id'] as String? ?? 'unknown';
+          
+          // 🔥 OBTENER DETALLES COMPLETOS CON idUserPet
+          try {
+            debugPrint('🔄 [API] Obteniendo detalles con idUserPet para: $petId');
+            final companionWithRealStats = await getPetDetails(petId: petId, userId: userId);
+            
+            // 🔥 VERIFICAR QUE TENGA idUserPet
+            if (companionWithRealStats is CompanionModelWithPetId) {
+              final idUserPet = companionWithRealStats.petId;
+              debugPrint('✅ [API] Mascota con idUserPet: ${companionWithRealStats.displayName} -> $idUserPet');
+              
+              if (idUserPet.isNotEmpty && idUserPet != 'unknown') {
+                adoptedCompanions.add(companionWithRealStats);
+              } else {
+                debugPrint('⚠️ [API] idUserPet vacío para ${companionWithRealStats.displayName}');
+              }
+            } else {
+              debugPrint('⚠️ [API] Companion no es CompanionModelWithPetId');
+            }
+            
+          } catch (detailsError) {
+            debugPrint('⚠️ [API] Error obteniendo detalles de $petId: $detailsError');
+            // 🔥 CREAR COMPANION BÁSICO SI FALLA getPetDetails
+            final basicCompanion = _createBasicCompanionFromUserPet(petData);
+            if (basicCompanion != null) {
+              adoptedCompanions.add(basicCompanion);
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('❌ [API] Error mapeando mascota $i: $e');
+      }
+    }
+
+    debugPrint('✅ [API] === MASCOTAS USUARIO CON idUserPet PROCESADAS ===');
+    debugPrint('🏠 [API] Total mascotas del usuario: ${adoptedCompanions.length}');
+
+    // Debug de todos los idUserPet
+    for (int i = 0; i < adoptedCompanions.length; i++) {
+      final companion = adoptedCompanions[i];
+      if (companion is CompanionModelWithPetId) {
+        debugPrint('[$i] ${companion.displayName} -> idUserPet: ${companion.petId}');
+      }
+    }
+
+    // Marcar todas como poseídas y asegurar una activa
+    for (int i = 0; i < adoptedCompanions.length; i++) {
+      adoptedCompanions[i] = adoptedCompanions[i].copyWith(
+        isOwned: true,
+        isSelected: i == 0,
+      );
+    }
+
+    return adoptedCompanions;
+  } catch (e) {
+    debugPrint('❌ [API] Error obteniendo mascotas usuario: $e');
+    return [];
+  }
+}
+
+// 🔥 MÉTODO HELPER PARA CREAR COMPANION BÁSICO
+CompanionModel? _createBasicCompanionFromUserPet(Map<String, dynamic> petData) {
+  try {
+    // Si el endpoint de getUserCompanions ya incluye el idUserPet, usarlo directamente
+    final idUserPet = petData['idUserPet'] as String? ?? 
+                     petData['id_user_pet'] as String? ?? 
+                     petData['user_pet_id'] as String?;
+    
+    if (idUserPet == null || idUserPet.isEmpty) {
+      debugPrint('⚠️ [API] No se encontró idUserPet en datos básicos');
+      return null;
+    }
+    
+    final name = petData['name'] as String? ?? 'Mi Mascota';
+    final speciesType = petData['species_type'] as String? ?? 'mammal';
+    
+    debugPrint('🔧 [API] Creando companion básico con idUserPet: $idUserPet');
+    
+    return CompanionModelWithPetId(
+      id: '${speciesType}_basic',
+      type: _mapSpeciesTypeToCompanionType(speciesType),
+      stage: CompanionStage.young,
+      name: name,
+      description: 'Mascota básica',
+      level: 1,
+      experience: 0,
+      happiness: 75, // Stats por defecto
+      hunger: 80,
+      energy: 100,
+      isOwned: true,
+      isSelected: false,
+      purchasedAt: DateTime.now(),
+      currentMood: CompanionMood.happy,
+      purchasePrice: 0,
+      evolutionPrice: 50,
+      unlockedAnimations: ['idle', 'blink', 'happy'],
+      createdAt: DateTime.now(),
+      petId: idUserPet, // 🔥 EL idUserPet CRÍTICO
+    );
+  } catch (e) {
+    debugPrint('❌ [API] Error creando companion básico: $e');
+    return null;
+  }
+}
+
+// 🔥 MÉTODO HELPER PARA EXTRAER PET ID
+String? _extractApiPetIdFromCompanion(CompanionModel companion) {
+  if (companion is CompanionModelWithPetId) {
+    return companion.petId;
+  }
+  if (companion is CompanionModel) {
+    try {
+      final json = companion.toJson();
+      return json['petId'] as String?;
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
 }
   // ==================== 🔥 REDUCIR ESTADÍSTICAS VIA API ====================
   @override
@@ -334,86 +507,7 @@ Future<CompanionModel> getPetDetails({
     }
   }
 
-  @override
-  Future<List<CompanionModel>> getUserCompanions(String userId) async {
-    try {
-      debugPrint('👤 [API] === OBTENIENDO MASCOTAS DEL USUARIO CON STATS REALES ===');
-      debugPrint('👤 [API] Usuario ID: $userId');
-
-      final response = await apiClient.getGamification(
-        '/api/gamification/pets/$userId',
-        requireAuth: true,
-      );
-
-      debugPrint('✅ [API] Respuesta mascotas usuario: ${response.statusCode}');
-
-      if (response.data == null) {
-        debugPrint('ℹ️ [API] Usuario sin mascotas adoptadas');
-        return [];
-      }
-
-      List<CompanionModel> adoptedCompanions = [];
-      dynamic petsData;
-
-      if (response.data is List) {
-        petsData = response.data as List;
-      } else if (response.data is Map<String, dynamic>) {
-        final dataMap = response.data as Map<String, dynamic>;
-        petsData = dataMap['pets'] ?? dataMap['data'] ?? dataMap['owned_pets'] ?? [];
-      } else {
-        debugPrint('⚠️ [API] Formato de respuesta inesperado');
-        return [];
-      }
-
-      if (petsData is! List) {
-        debugPrint('⚠️ [API] Los datos de mascotas no son una lista');
-        return [];
-      }
-
-      debugPrint('📝 [API] Procesando ${petsData.length} mascotas adoptadas');
-
-      for (int i = 0; i < petsData.length; i++) {
-        try {
-          final petData = petsData[i];
-          debugPrint('🐾 [API] Procesando mascota $i: ${petData['id'] ?? petData['pet_id']}');
-
-          if (petData is Map<String, dynamic>) {
-            final petId = petData['id'] as String? ?? petData['pet_id'] as String? ?? 'unknown';
-            
-            // 🔥 OBTENER DETALLES COMPLETOS CON STATS REALES
-            try {
-              final companionWithStats = await getPetDetails(petId: petId, userId: userId);
-              adoptedCompanions.add(companionWithStats);
-              debugPrint('✅ [API] Mascota con stats reales: ${companionWithStats.displayName} (H:${companionWithStats.happiness}, S:${companionWithStats.hunger})');
-            } catch (detailsError) {
-              debugPrint('⚠️ [API] Error obteniendo detalles de $petId: $detailsError');
-              // Fallback: usar datos básicos
-              final companion = _mapAdoptedPetToCompanion(petData);
-              adoptedCompanions.add(companion);
-            }
-          }
-        } catch (e) {
-          debugPrint('❌ [API] Error mapeando mascota $i: $e');
-        }
-      }
-
-      debugPrint('✅ [API] === MASCOTAS USUARIO CON STATS REALES PROCESADAS ===');
-      debugPrint('🏠 [API] Total mascotas del usuario: ${adoptedCompanions.length}');
-
-      // Marcar todas como poseídas y asegurar una activa
-      for (int i = 0; i < adoptedCompanions.length; i++) {
-        adoptedCompanions[i] = adoptedCompanions[i].copyWith(
-          isOwned: true,
-          isSelected: i == 0,
-        );
-      }
-
-      return adoptedCompanions;
-    } catch (e) {
-      debugPrint('❌ [API] Error obteniendo mascotas usuario: $e');
-      return [];
-    }
-  }
+  
 
   
 

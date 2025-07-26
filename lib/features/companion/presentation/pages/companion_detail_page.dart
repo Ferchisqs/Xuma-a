@@ -449,82 +449,94 @@ class _CompanionDetailView extends StatelessWidget {
 
   // ACCIONES FLOTANTES ACTUALIZADAS
   Widget _buildFloatingActions(BuildContext context,
-      CompanionEntity currentCompanion, bool isLoading, String? currentAction) {
-    return Container(
-      margin: const EdgeInsets.all(20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // 🔥 Botón Alimentar (API REAL)
-          _buildActionButton(
-            icon: Icons.restaurant,
-            color: Colors.green,
-            onPressed: (currentCompanion.hunger < 90) && !isLoading
-                ? () => context
-                    .read<CompanionActionsCubit>()
-                    .feedCompanionViaApi(currentCompanion)
-                : null,
-            isActive: currentAction == 'feeding',
-            disabled: currentCompanion.hunger >= 90,
-            label: 'Alimentar',
-          ),
+    CompanionEntity currentCompanion, bool isLoading, String? currentAction) {
+  return Container(
+    margin: const EdgeInsets.all(20),
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 10,
+          offset: const Offset(0, -5),
+        ),
+      ],
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        // 🔥 Botón Alimentar CORREGIDO
+        _buildActionButton(
+          icon: Icons.restaurant,
+          color: Colors.green,
+          onPressed: (currentCompanion.hunger < 95) && !isLoading  // ✅ CAMBIAR DE 90 A 95
+              ? () {
+                  debugPrint('🍎 [DETAIL] Alimentando via API - Salud actual: ${currentCompanion.hunger}');
+                  context
+                      .read<CompanionActionsCubit>()
+                      .feedCompanionViaApi(currentCompanion);
+                }
+              : null,
+          isActive: currentAction == 'feeding',
+          disabled: currentCompanion.hunger >= 95, // ✅ CAMBIAR VALIDACIÓN
+          label: 'Alimentar',
+        ),
 
-          // 🔥 Botón Dar Amor (API REAL)
-          _buildActionButton(
-            icon: Icons.favorite,
-            color: Colors.pink,
-            onPressed: (currentCompanion.happiness < 90) && !isLoading
-                ? () => context
-                    .read<CompanionActionsCubit>()
-                    .loveCompanionViaApi(currentCompanion)
-                : null,
-            isActive: currentAction == 'loving',
-            disabled: currentCompanion.happiness >= 90,
-            label: 'Amor',
-          ),
+        // 🔥 Botón Dar Amor CORREGIDO
+        _buildActionButton(
+          icon: Icons.favorite,
+          color: Colors.pink,
+          onPressed: (currentCompanion.happiness < 95) && !isLoading  // ✅ CAMBIAR DE 90 A 95
+              ? () {
+                  debugPrint('💖 [DETAIL] Dando amor via API - Felicidad actual: ${currentCompanion.happiness}');
+                  context
+                      .read<CompanionActionsCubit>()
+                      .loveCompanionViaApi(currentCompanion);
+                }
+              : null,
+          isActive: currentAction == 'loving',
+          disabled: currentCompanion.happiness >= 95, // ✅ CAMBIAR VALIDACIÓN
+          label: 'Amor',
+        ),
 
-          // Botón Evolucionar (API REAL)
-          _buildActionButton(
-            icon: Icons.auto_awesome,
-            color: Colors.purple,
-            onPressed: currentCompanion.canEvolve && !isLoading
-                ? () => context
-                    .read<CompanionActionsCubit>()
-                    .evolveCompanion(currentCompanion)
-                : null,
-            isActive: currentAction == 'evolving',
-            disabled: !currentCompanion.canEvolve,
-            label: 'Evolucionar',
-          ),
+        // Botón Evolucionar (mantener igual)
+        _buildActionButton(
+          icon: Icons.auto_awesome,
+          color: Colors.purple,
+          onPressed: currentCompanion.canEvolve && !isLoading
+              ? () {
+                  debugPrint('🦋 [DETAIL] Evolucionando via API');
+                  context
+                      .read<CompanionActionsCubit>()
+                      .evolveCompanion(currentCompanion);
+                }
+              : null,
+          isActive: currentAction == 'evolving',
+          disabled: !currentCompanion.canEvolve,
+          label: 'Evolucionar',
+        ),
 
-          // Botón Activar/Destacar (API REAL)
-          _buildActionButton(
-            icon: currentCompanion.isSelected ? Icons.star : Icons.star_outline,
-            color: Colors.orange,
-            onPressed: !isLoading
-                ? () => context
-                    .read<CompanionActionsCubit>()
-                    .featureCompanion(currentCompanion)
-                : null,
-            isActive: currentAction == 'featuring',
-            label: 'Activar',
-          ),
-        ],
-      ),
-    );
-  }
+        // Botón Activar/Destacar (mantener igual)
+        _buildActionButton(
+          icon: currentCompanion.isSelected ? Icons.star : Icons.star_outline,
+          color: Colors.orange,
+          onPressed: !isLoading
+              ? () {
+                  debugPrint('⭐ [DETAIL] Destacando via API');
+                  context
+                      .read<CompanionActionsCubit>()
+                      .featureCompanion(currentCompanion);
+                }
+              : null,
+          isActive: currentAction == 'featuring',
+          label: 'Activar',
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildActionButton({
     required IconData icon,
@@ -633,18 +645,7 @@ class _CompanionDetailView extends StatelessWidget {
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancelar'),
           ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              context.read<CompanionActionsCubit>().simulateTimePassage(companion);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(Icons.schedule),
-            label: const Text('Simular'),
-          ),
+         
         ],
       ),
     );

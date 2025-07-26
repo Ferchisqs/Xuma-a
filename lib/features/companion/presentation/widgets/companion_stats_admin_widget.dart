@@ -297,15 +297,7 @@ class CompanionStatsAdminWidget extends StatelessWidget {
   Widget _buildQuickActions(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: _buildActionButton(
-            context,
-            'Simular Tiempo',
-            Icons.schedule,
-            Colors.blue,
-            () => context.read<CompanionActionsCubit>().simulateTimePassage(companion),
-          ),
-        ),
+        
         const SizedBox(width: 12),
         Expanded(
           child: _buildActionButton(

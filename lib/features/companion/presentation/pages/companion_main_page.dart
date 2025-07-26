@@ -504,58 +504,64 @@ class _LoadedView extends StatelessWidget {
             right: 10,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // 🍎 Alimentar (solo si hambre < 90)
-                _buildQuickActionButton(
-                  icon: Icons.restaurant,
-                  color: Colors.orange,
-                  onPressed: (companion.hunger < 90)
-                      ? () => _feedCompanion(context, companion)
-                      : null,
-                  needsAttention: companion.hunger < 50,
-                  label: 'Alimentar',
-                ),
-                
-                // 💖 Amor (solo si felicidad < 90)
-                _buildQuickActionButton(
-                  icon: Icons.favorite,
-                  color: Colors.pink,
-                  onPressed: (companion.happiness < 90)
-                      ? () => _loveCompanion(context, companion)
-                      : null,
-                  needsAttention: companion.happiness < 50,
-                  label: 'Amor',
-                ),
-                
-                // 🦋 Evolucionar
-                _buildQuickActionButton(
-                  icon: Icons.auto_awesome,
-                  color: Colors.purple,
-                  onPressed: (companion.canEvolve ?? false)
-                      ? () => _evolveCompanion(context, companion)
-                      : null,
-                  needsAttention: companion.canEvolve ?? false,
-                  label: 'Evolucionar',
-                ),
-                
-                // 🆕 ⏰ Simular Tiempo (NUEVO)
-                _buildQuickActionButton(
-                  icon: Icons.schedule,
-                  color: Colors.blue,
-                  onPressed: () => _showTimeSimulationDialog(context, companion),
-                  needsAttention: false,
-                  label: 'Tiempo',
-                ),
-                
-                // 👁️ Ver Detalle
-                _buildQuickActionButton(
-                  icon: Icons.visibility,
-                  color: Colors.grey[600]!,
-                  onPressed: () => _navigateToDetail(context, companion),
-                  needsAttention: false,
-                  label: 'Detalle',
-                ),
-              ],
+  children: [
+    // 🍎 Alimentar CORREGIDO
+    _buildQuickActionButton(
+      icon: Icons.restaurant,
+      color: Colors.orange,
+      onPressed: (companion.hunger < 95)  // ✅ CAMBIAR DE 90 A 95
+          ? () {
+              debugPrint('🍎 [MAIN] Alimentando desde tarjeta principal - Salud: ${companion.hunger}');
+              _feedCompanion(context, companion);
+            }
+          : null,
+      needsAttention: companion.hunger < 50,  // ✅ MANTENER PARA INDICADOR VISUAL
+      label: 'Alimentar',
+    ),
+    
+    // 💖 Amor CORREGIDO
+    _buildQuickActionButton(
+      icon: Icons.favorite,
+      color: Colors.pink,
+      onPressed: (companion.happiness < 95)  // ✅ CAMBIAR DE 90 A 95
+          ? () {
+              debugPrint('💖 [MAIN] Dando amor desde tarjeta principal - Felicidad: ${companion.happiness}');
+              _loveCompanion(context, companion);
+            }
+          : null,
+      needsAttention: companion.happiness < 50,  // ✅ MANTENER PARA INDICADOR VISUAL
+      label: 'Amor',
+    ),
+    
+    // 🦋 Evolucionar (mantener igual)
+    _buildQuickActionButton(
+      icon: Icons.auto_awesome,
+      color: Colors.purple,
+      onPressed: (companion.canEvolve ?? false)
+          ? () => _evolveCompanion(context, companion)
+          : null,
+      needsAttention: companion.canEvolve ?? false,
+      label: 'Evolucionar',
+    ),
+    
+    // ⏰ Simular Tiempo (mantener igual)
+    _buildQuickActionButton(
+      icon: Icons.schedule,
+      color: Colors.blue,
+      onPressed: () => _showTimeSimulationDialog(context, companion),
+      needsAttention: false,
+      label: 'Tiempo',
+    ),
+    
+    // 👁️ Ver Detalle (mantener igual)
+    _buildQuickActionButton(
+      icon: Icons.visibility,
+      color: Colors.grey[600]!,
+      onPressed: () => _navigateToDetail(context, companion),
+      needsAttention: false,
+      label: 'Detalle',
+    ),
+  ],
             ),
           ),
         ],
@@ -771,18 +777,7 @@ void _showTimeSimulationDialog(BuildContext context, dynamic companion) {
           onPressed: () => Navigator.of(dialogContext).pop(),
           child: const Text('Cancelar'),
         ),
-        ElevatedButton.icon(
-          onPressed: () {
-            Navigator.of(dialogContext).pop();
-            context.read<CompanionActionsCubit>().simulateTimePassage(companion);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-          ),
-          icon: const Icon(Icons.schedule),
-          label: const Text('Simular'),
-        ),
+      
       ],
     ),
   );

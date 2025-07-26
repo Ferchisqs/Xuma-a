@@ -169,46 +169,55 @@ class CompanionRepositoryImpl implements CompanionRepository {
     }
   }
 
+  @override
+Future<Either<Failure, CompanionEntity>> feedCompanionViaApi({
+  required String userId,
+  required String petId,
+}) async {
+  debugPrint('🍎 [REPO] === ALIMENTANDO VIA API CON STATS REALES ===');
   
-  @override
-  Future<Either<Failure, CompanionEntity>> feedCompanionViaApi({
-    required String userId,
-    required String petId,
-  }) async {
-    debugPrint('🍎 [REPO] === ALIMENTANDO VIA API (INCREASE HEALTH) ===');
-    return increasePetStats(
-      userId: userId,
-      petId: petId,
-      health: 15, // Aumentar salud en 15 puntos
-    );
-  }
+  // 🔥 ENVIAR TANTO HAPPINESS COMO HEALTH SEGÚN TU API
+  return increasePetStats(
+    userId: userId,
+    petId: petId,
+    happiness: 5,  // 🔥 AGREGAR 5 DE FELICIDAD
+    health: 15,    // 🔥 AGREGAR 15 DE SALUD
+  );
+}
 
-  @override
-  Future<Either<Failure, CompanionEntity>> loveCompanionViaApi({
-    required String userId,
-    required String petId,
-  }) async {
-    debugPrint('💖 [REPO] === DANDO AMOR VIA API (INCREASE HAPPINESS) ===');
-    return increasePetStats(
-      userId: userId,
-      petId: petId,
-      happiness: 10, // Aumentar felicidad en 10 puntos
-    );
-  }
+@override
+Future<Either<Failure, CompanionEntity>> loveCompanionViaApi({
+  required String userId,
+  required String petId,
+}) async {
+  debugPrint('💖 [REPO] === DANDO AMOR VIA API CON STATS REALES ===');
+  
+  // 🔥 ENVIAR TANTO HAPPINESS COMO HEALTH SEGÚN TU API  
+  return increasePetStats(
+    userId: userId,
+    petId: petId,
+    happiness: 10, // 🔥 AGREGAR 10 DE FELICIDAD
+    health: 5,     // 🔥 AGREGAR 5 DE SALUD
+  );
+}
 
-  @override
-  Future<Either<Failure, CompanionEntity>> simulateTimePassage({
-    required String userId,
-    required String petId,
-  }) async {
-    debugPrint('⏰ [REPO] === SIMULANDO PASO DEL TIEMPO ===');
-    return decreasePetStats(
-      userId: userId,
-      petId: petId,
-      happiness: 5,  // Reducir felicidad en 5 puntos
-      health: 8,     // Reducir salud en 8 puntos
-    );
-  }
+// 🔥 MÉTODO SIMULACIÓN DE TIEMPO CORREGIDO
+@override
+Future<Either<Failure, CompanionEntity>> simulateTimePassage({
+  required String userId,
+  required String petId,
+}) async {
+  debugPrint('⏰ [REPO] === SIMULANDO PASO DEL TIEMPO ===');
+  
+  // 🔥 REDUCIR AMBAS ESTADÍSTICAS
+  return decreasePetStats(
+    userId: userId,
+    petId: petId,
+    happiness: 5,  // 🔥 REDUCIR 5 DE FELICIDAD
+    health: 8,     // 🔥 REDUCIR 8 DE SALUD
+  );
+}
+
 
   // ==================== 🔧 MÉTODOS HELPER PARA CACHE ====================
   Future<void> _updateLocalCacheAfterStatsChange(String userId, CompanionModel updatedCompanion) async {
