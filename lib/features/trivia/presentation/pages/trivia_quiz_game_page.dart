@@ -1,4 +1,4 @@
-// lib/features/trivia/presentation/pages/trivia_quiz_game_page.dart
+// lib/features/trivia/presentation/pages/trivia_quiz_game_page.dart - CORREGIDA PARA USAR ESTRUCTURA REAL
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -258,12 +258,13 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
                 
                 const SizedBox(height: 16),
                 
-                // Opciones
+                // 🔧 OPCIONES CORREGIDAS PARA USAR LA ESTRUCTURA REAL
                 Expanded(
                   child: ListView.builder(
                     itemCount: question.options.length,
                     itemBuilder: (context, index) {
                       final option = question.options[index];
+                      // 🔧 GENERAR OPTION ID BASADO EN LA PREGUNTA Y EL ÍNDICE
                       final optionId = '${question.id}_option_$index';
                       final isSelected = state.currentSelectedAnswer == optionId;
                       
@@ -273,6 +274,7 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
                           context,
                           option,
                           optionId,
+                          index,
                           isSelected,
                           state.isAnswerSubmitted,
                           state,
@@ -293,6 +295,7 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
     BuildContext context,
     String option,
     String optionId,
+    int index,
     bool isSelected,
     bool isAnswerSubmitted,
     QuizSessionStarted state,
@@ -301,7 +304,21 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
     Color borderColor = AppColors.primary.withOpacity(0.3);
     Color textColor = AppColors.textPrimary;
     
-    if (isSelected) {
+    // 🔧 MOSTRAR RESPUESTA CORRECTA E INCORRECTA DESPUÉS DE RESPONDER
+    if (isAnswerSubmitted) {
+      if (index == state.currentQuestion.correctAnswerIndex) {
+        // Esta es la respuesta correcta
+        backgroundColor = AppColors.success.withOpacity(0.1);
+        borderColor = AppColors.success;
+        textColor = AppColors.success;
+      } else if (isSelected) {
+        // Esta fue la respuesta seleccionada pero incorrecta
+        backgroundColor = AppColors.error.withOpacity(0.1);
+        borderColor = AppColors.error;
+        textColor = AppColors.error;
+      }
+    } else if (isSelected) {
+      // Respuesta seleccionada pero aún no enviada
       backgroundColor = AppColors.primary.withOpacity(0.1);
       borderColor = AppColors.primary;
       textColor = AppColors.primary;
@@ -309,7 +326,7 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
 
     return GestureDetector(
       onTap: isAnswerSubmitted ? null : () {
-        print('🧠 [QUIZ] Option selected: $optionId');
+        print('🧠 [QUIZ] Option selected: $optionId (index: $index)');
         context.read<QuizSessionCubit>().selectAnswer(optionId);
         
         // Auto-submit después de seleccionar
@@ -338,7 +355,36 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
                 ),
               ),
             ),
-            if (isSelected && !isAnswerSubmitted)
+            // 🔧 ICONOS MEJORADOS
+            if (isAnswerSubmitted && index == state.currentQuestion.correctAnswerIndex)
+              Container(
+                margin: const EdgeInsets.only(left: 8),
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.success,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.check,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              )
+            else if (isAnswerSubmitted && isSelected && index != state.currentQuestion.correctAnswerIndex)
+              Container(
+                margin: const EdgeInsets.only(left: 8),
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.error,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              )
+            else if (isSelected && !isAnswerSubmitted)
               Container(
                 margin: const EdgeInsets.only(left: 8),
                 padding: const EdgeInsets.all(4),

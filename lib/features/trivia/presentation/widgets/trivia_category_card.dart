@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../domain/entities/trivia_category_entity.dart';
-import '../pages/trivia_quiz_selection_page.dart'; // 🔧 CAMBIO: Ir a selección de quizzes
+import '../pages/trivia_quiz_selection_page.dart';
 
 class TriviaCategoryCard extends StatelessWidget {
   final TriviaCategoryEntity category;
@@ -16,21 +16,7 @@ class TriviaCategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        print('🎯 [CATEGORY CARD] Navigating to quiz selection for category: ${category.id}');
-        print('🎯 [CATEGORY CARD] Category title: ${category.title}');
-        
-        // 🔧 CAMBIO PRINCIPAL: Navegar a la página de selección de quizzes
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TriviaQuizSelectionPage(
-              topicId: category.id,        // 🔧 Usar el ID del topic
-              categoryTitle: category.title, // 🔧 Pasar el título
-            ),
-          ),
-        );
-      },
+      onTap: () => _navigateToQuizSelection(context),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -94,7 +80,7 @@ class TriviaCategoryCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // 🔧 AGREGAR INDICADOR DE NAVEGACIÓN
+                    // Indicador de navegación
                     Positioned(
                       top: 12,
                       left: 12,
@@ -107,7 +93,7 @@ class TriviaCategoryCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.quiz_rounded,
                               color: Colors.white,
                               size: 12,
@@ -160,25 +146,9 @@ class TriviaCategoryCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 🔧 CAMBIAR TEXTO PARA SER MÁS CLARO
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.list_alt,
-                          color: AppColors.primary,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Ver quizzes disponibles',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
+                   
+                    const SizedBox(height: 2), // ESPACIO REDUCIDO
+                    // SEGUNDA FILA TAMBIÉN CORREGIDA
                     Row(
                       children: [
                         const Icon(
@@ -187,43 +157,54 @@ class TriviaCategoryCard extends StatelessWidget {
                           size: 14,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          '${category.pointsPerQuestion} pts por pregunta',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
+                        Expanded(
+                          child: Text(
+                            '${category.pointsPerQuestion} pts por pregunta',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
                     const Spacer(),
-                    // 🔧 AGREGAR INDICADOR DE ACCIÓN
+                    // Botón de acción - CORREGIDO
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _navigateToQuizSelection(context),
                             borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'EXPLORAR',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 10,
-                                ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.arrow_forward_ios,
-                                color: AppColors.primary,
-                                size: 10,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'EXPLORAR',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    Icons.arrow_forward_ios,
+                                    color: AppColors.primary,
+                                    size: 10,
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ],
@@ -236,6 +217,33 @@ class TriviaCategoryCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // 🔧 MÉTODO SEPARADO PARA NAVEGACIÓN - MÁS SEGURO
+  void _navigateToQuizSelection(BuildContext context) {
+    try {
+      print('🎯 [CATEGORY CARD] Navigating to quiz selection for category: ${category.id}');
+      print('🎯 [CATEGORY CARD] Category title: ${category.title}');
+      
+      // Verificar que el contexto tenga un Navigator
+      if (!context.mounted) {
+        print('❌ [CATEGORY CARD] Context is not mounted');
+        return;
+      }
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => TriviaQuizSelectionPage(
+            topicId: category.id,
+            categoryTitle: category.title,
+          ),
+        ),
+      ).catchError((error) {
+        print('❌ [CATEGORY CARD] Navigation error: $error');
+      });
+    } catch (error) {
+      print('❌ [CATEGORY CARD] Exception during navigation: $error');
+    }
   }
 
   LinearGradient _getCategoryGradient() {

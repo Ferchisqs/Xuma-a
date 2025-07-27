@@ -1,4 +1,4 @@
-// lib/features/trivia/data/datasources/quiz_remote_datasource.dart - CORREGIDA CON DOS SERVICIOS
+// lib/features/trivia/data/datasources/quiz_remote_datasource.dart - CORREGIDA SIGUIENDO WEB
 import 'package:injectable/injectable.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -16,7 +16,7 @@ abstract class QuizRemoteDataSource {
   // 3. Obtener quiz específico por ID
   Future<Map<String, dynamic>> getQuizById(String quizId);
   
-  // 4. Obtener preguntas de un quiz
+  // 4. 🔧 MÉTODO PRINCIPAL: Obtener preguntas de un quiz (IGUAL QUE WEB)
   Future<List<TriviaQuestionModel>> getQuizQuestions(String quizId);
   
   // 5. Obtener pregunta específica por ID
@@ -224,22 +224,27 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
-  // ==================== 4. QUIZ QUESTIONS ====================
+  // ==================== 🔧 4. MÉTODO PRINCIPAL: QUIZ QUESTIONS (IGUAL QUE WEB) ====================
   @override
   Future<List<TriviaQuestionModel>> getQuizQuestions(String quizId) async {
     try {
       print('🎯 [QUIZ API] === STEP 4: FETCHING QUIZ QUESTIONS FROM QUIZ SERVICE ===');
+      print('🎯 [QUIZ API] 🔧 SIGUIENDO EXACTAMENTE EL PATRÓN DE LA WEB');
       print('🎯 [QUIZ API] Quiz ID: $quizId');
       print('🎯 [QUIZ API] Endpoint: /api/quiz/questions/quiz/$quizId');
+      print('🎯 [QUIZ API] Web equivalent: \${QUIZ_QUESTION_API_BASE_URL}/questions/quiz/\${quizId}');
       
+      // 🔧 USAR EXACTAMENTE EL MISMO ENDPOINT QUE LA WEB
       final response = await apiClient.getQuiz('/questions/quiz/$quizId');
       print('🎯 [QUIZ API] Response Status: ${response.statusCode}');
       print('🎯 [QUIZ API] Response Data Type: ${response.data.runtimeType}');
       
+      // 🔧 EXTRAER DATOS IGUAL QUE LA WEB: Array.isArray(data) ? data : (data.items || data.data || [])
       List<dynamic> questionsJson = _extractListFromResponse(response.data, 'questions');
       print('🔍 [QUIZ API] Found ${questionsJson.length} questions in response');
       
       if (questionsJson.isEmpty) {
+        print('⚠️ [QUIZ API] No questions found for quiz: $quizId');
         throw ServerException('No questions found for quiz: $quizId');
       }
       
@@ -253,14 +258,23 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
             continue;
           }
           
-          final adaptedQuestion = _adaptQuestionStructure(questionJson, quizId, i);
+          print('🔍 [QUIZ API] Processing question ${i + 1}...');
+          print('🔍 [QUIZ API] Raw question data keys: ${questionJson.keys.toList()}');
+          
+          // 🔧 ADAPTAR ESTRUCTURA PARA QUE COINCIDA CON TriviaQuestionModel
+          final adaptedQuestion = _adaptQuestionStructureFromWeb(questionJson, quizId, i);
+          print('🔍 [QUIZ API] Adapted question keys: ${adaptedQuestion.keys.toList()}');
+          
           final question = TriviaQuestionModel.fromJson(adaptedQuestion);
           questions.add(question);
           
-          print('✅ [QUIZ API] Processed question ${i + 1}: "${question.question}"');
+          print('✅ [QUIZ API] Successfully processed question ${i + 1}: "${question.question}"');
+          print('✅ [QUIZ API] Question has ${question.options.length} options');
+          print('✅ [QUIZ API] Correct answer index: ${question.correctAnswerIndex}');
           
-        } catch (e) {
+        } catch (e, stackTrace) {
           print('❌ [QUIZ API] Failed to parse question $i: $e');
+          print('❌ [QUIZ API] Stack trace: $stackTrace');
           print('❌ [QUIZ API] Question data: ${questionsJson[i]}');
           continue;
         }
@@ -434,24 +448,35 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
   // ==================== HELPER METHODS (IGUALES QUE LA WEB) ====================
 
   List<dynamic> _extractListFromResponse(dynamic responseData, String preferredKey) {
+    print('🔍 [QUIZ API] Extracting list from response...');
+    print('🔍 [QUIZ API] Response type: ${responseData.runtimeType}');
+    
     if (responseData is List) {
+      print('🔍 [QUIZ API] Direct list response: ${responseData.length} items');
       return responseData;
     }
     
     if (responseData is Map<String, dynamic>) {
+      print('🔍 [QUIZ API] Map response, keys: ${responseData.keys.toList()}');
+      
       // Try preferred key first (igual que web)
       if (responseData.containsKey(preferredKey) && responseData[preferredKey] is List) {
-        return responseData[preferredKey] as List<dynamic>;
+        final list = responseData[preferredKey] as List<dynamic>;
+        print('🔍 [QUIZ API] Found list in preferred key "$preferredKey": ${list.length} items');
+        return list;
       }
       
       // Try common list keys (igual que web: items || data || [])
       for (final key in ['items', 'data', 'results', preferredKey]) {
         if (responseData.containsKey(key) && responseData[key] is List) {
-          return responseData[key] as List<dynamic>;
+          final list = responseData[key] as List<dynamic>;
+          print('🔍 [QUIZ API] Found list in key "$key": ${list.length} items');
+          return list;
         }
       }
       
       // If no list found, wrap single object in list
+      print('🔍 [QUIZ API] No list found, wrapping single object in list');
       return [responseData];
     }
     
@@ -470,47 +495,53 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     throw ServerException('Invalid response format: expected Map<String, dynamic>');
   }
 
-  Map<String, dynamic> _adaptQuestionStructure(
+  // 🔧 MÉTODO CLAVE: ADAPTAR ESTRUCTURA DE PREGUNTA IGUAL QUE LA WEB
+  Map<String, dynamic> _adaptQuestionStructureFromWeb(
     Map<String, dynamic> serverQuestion,
     String quizId,
     int index,
   ) {
     print('🔄 [QUIZ API] Adapting question structure for index $index');
-    
-    // If already has correct structure, return as-is
-    if (serverQuestion.containsKey('options') && 
-        serverQuestion.containsKey('correctAnswerIndex')) {
-      print('✅ [QUIZ API] Question already has correct structure');
-      return serverQuestion;
-    }
+    print('🔄 [QUIZ API] Original question keys: ${serverQuestion.keys.toList()}');
     
     // Extract question text
     final questionText = serverQuestion['questionText'] ?? 
                         serverQuestion['question'] ?? 
                         'Question ${index + 1}';
     
-    // Extract options and find correct answer
+    // 🔧 EXTRAER Y PROCESAR OPCIONES IGUAL QUE LA WEB
     List<String> optionTexts = [];
     int correctAnswerIndex = 0;
     
     if (serverQuestion.containsKey('options') && serverQuestion['options'] is List) {
       final options = serverQuestion['options'] as List;
+      print('🔄 [QUIZ API] Found ${options.length} options in question');
       
       for (int i = 0; i < options.length; i++) {
         if (options[i] is Map<String, dynamic>) {
           final option = options[i] as Map<String, dynamic>;
           final optionText = option['optionText']?.toString() ?? 
-                           option['text']?.toString() ?? 'Option ${i + 1}';
+                           option['text']?.toString() ?? 
+                           option['option']?.toString() ??
+                           'Option ${i + 1}';
           optionTexts.add(optionText);
           
-          if (option['isCorrect'] == true) {
+          // 🔧 DETECTAR RESPUESTA CORRECTA IGUAL QUE LA WEB
+          if (option['isCorrect'] == true || option['correct'] == true) {
             correctAnswerIndex = i;
+            print('🔄 [QUIZ API] Found correct answer at index $i: "$optionText"');
           }
+          
+          print('🔄 [QUIZ API] Option ${i + 1}: "$optionText" (Correct: ${option['isCorrect'] ?? false})');
         } else {
-          optionTexts.add(options[i].toString());
+          // Si es string directo
+          final optionText = options[i].toString();
+          optionTexts.add(optionText);
+          print('🔄 [QUIZ API] Option ${i + 1} (string): "$optionText"');
         }
       }
     } else {
+      print('❌ [QUIZ API] No options found in question structure');
       throw ServerException('Question options not found or invalid format');
     }
     
@@ -531,6 +562,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       }
     }
     
+    // 🔧 CREAR ESTRUCTURA ADAPTADA PARA TriviaQuestionModel
     final adaptedQuestion = {
       'id': serverQuestion['id'] ?? '${quizId}_question_${index + 1}',
       'categoryId': quizId,
@@ -547,6 +579,10 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     };
     
     print('✅ [QUIZ API] Question structure adapted successfully');
+    print('✅ [QUIZ API] Final structure: ${adaptedQuestion.keys.toList()}');
+    print('✅ [QUIZ API] Options count: ${optionTexts.length}');
+    print('✅ [QUIZ API] Correct answer: "${optionTexts[correctAnswerIndex]}" at index $correctAnswerIndex');
+    
     return adaptedQuestion;
   }
 }
