@@ -730,42 +730,36 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
   }
 
   String _extractIdUserPetForEvolution(CompanionEntity companion) {
-  debugPrint('🔍 [EVOLUTION_ID] === EXTRAYENDO idUserPet PARA EVOLUCIÓN ===');
-  debugPrint('🐾 [EVOLUTION_ID] Companion: ${companion.displayName}');
+    debugPrint('🔍 [EVOLUTION_ID] === EXTRAYENDO idUserPet PARA EVOLUCIÓN ===');
 
-  // 1. 🔥 SI ES CompanionModelWithBothIds, USAR idUserPet
-  if (companion is CompanionModelWithBothIds) {
-    final idUserPet = companion.idUserPet;
-    debugPrint('✅ [EVOLUTION_ID] idUserPet encontrado: "$idUserPet"');
-
-    if (idUserPet.isNotEmpty && idUserPet != 'unknown' && idUserPet != 'pending') {
-      debugPrint('✅ [EVOLUTION_ID] idUserPet válido para evolución: $idUserPet');
-      return idUserPet;
-    }
-  }
-
-  // 2. 🔥 FALLBACK: Buscar en JSON
-  if (companion is CompanionModel) {
-    try {
-      final json = companion.toJson();
-      if (json.containsKey('idUserPet') && json['idUserPet'] != null) {
-        final idUserPet = json['idUserPet'] as String;
-        if (idUserPet.isNotEmpty && idUserPet != 'unknown') {
-          debugPrint('✅ [EVOLUTION_ID] idUserPet del JSON: $idUserPet');
-          return idUserPet;
-        }
+    // 1. SI ES CompanionModelWithBothIds, usar idUserPet
+    if (companion is CompanionModelWithBothIds) {
+      final idUserPet = companion.idUserPet;
+      if (idUserPet.isNotEmpty && idUserPet != 'unknown' && idUserPet != 'pending') {
+        debugPrint('✅ [EVOLUTION_ID] idUserPet válido: $idUserPet');
+        return idUserPet;
       }
-    } catch (e) {
-      debugPrint('❌ [EVOLUTION_ID] Error accediendo JSON: $e');
     }
-  }
 
-  // 3. 🆘 ERROR CRÍTICO
-  debugPrint('🆘 [EVOLUTION_ID] === ERROR: NO SE ENCONTRÓ idUserPet ===');
-  throw Exception(
-    '❌ No se encontró idUserPet válido para evolucionar ${companion.displayName}. '
-    'Asegúrate de que la mascota esté correctamente adoptada.');
-}
+    // 2. Fallback: buscar en JSON
+    if (companion is CompanionModel) {
+      try {
+        final json = companion.toJson();
+        if (json.containsKey('idUserPet')) {
+          final idUserPet = json['idUserPet'] as String;
+          if (idUserPet.isNotEmpty && idUserPet != 'unknown') {
+            return idUserPet;
+          }
+        }
+      } catch (e) {
+        debugPrint('❌ [EVOLUTION_ID] Error accediendo JSON: $e');
+      }
+    }
+
+    // 3. 🔥 NUEVO: Usar companion.id directamente si no hay idUserPet
+    debugPrint('⚠️ [EVOLUTION_ID] Usando companion.id como fallback: ${companion.id}');
+    return companion.id;
+  }
 
 
   void resetState() {

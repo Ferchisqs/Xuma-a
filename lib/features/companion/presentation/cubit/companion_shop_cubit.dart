@@ -8,6 +8,7 @@ import 'package:injectable/injectable.dart';
 import 'package:xuma_a/core/services/token_manager.dart';
 import 'package:xuma_a/features/companion/data/models/api_pet_response_model.dart';
 import 'package:xuma_a/features/companion/data/models/companion_model.dart';
+import 'package:xuma_a/features/companion/data/datasources/companion_remote_datasource.dart';
 import '../../domain/entities/companion_entity.dart';
 import '../../domain/entities/companion_stats_entity.dart';
 import '../../domain/usecases/get_companion_shop_usecase.dart';
@@ -92,7 +93,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
 
   Future<void> loadShop() async {
     try {
-      debugPrint('🏪 [SHOP_CUBIT] === CARGANDO TIENDA CORREGIDA ===');
+      debugPrint('🏦 [SHOP_CUBIT] === CARGANDO TIENDA CORREGIDA ===');
       emit(CompanionShopLoading());
 
       final userId = await tokenManager.getUserId();
@@ -113,21 +114,21 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
         (shopData) {
           debugPrint('✅ [SHOP_CUBIT] === TIENDA API CARGADA ===');
           
-          // 🔥 OBTENER MASCOTAS DEL USUARIO
-          _userOwnedCompanions = _extractUserOwnedCompanions(shopData.availableCompanions);
-          debugPrint('🏠 [SHOP_CUBIT] Mascotas del usuario: ${_userOwnedCompanions.length}');
+          // 🔥 OBTENER MASCOTAS DEL USUARIO (desde availableCompanions donde isOwned = true)
+          _userOwnedCompanions = shopData.availableCompanions.where((c) => c.isOwned).toList();
+          
+          debugPrint('👤 [SHOP_DEBUG] User owned companions: ${_userOwnedCompanions.length}');
+          
+          final shopCompanions = _buildProgressiveShop(shopData.availableCompanions, _userOwnedCompanions);
           
           // 🔥 CONSTRUIR MAPEO DINÁMICO
           _buildDynamicMapping(shopData.availableCompanions);
 
-          // 🔥 NUEVA LÓGICA: MOSTRAR TODAS LAS ETAPAS CON ESTADOS CORRECTOS
-          final completePurchasableCompanions = _buildProgressiveShop(_userOwnedCompanions);
-
-          debugPrint('🛒 [SHOP_CUBIT] Tienda completa: ${completePurchasableCompanions.length} items');
+          debugPrint('🛍️ [PROGRESSIVE_SHOP] Total items: ${shopCompanions.length}');
 
           emit(CompanionShopLoaded(
             availableCompanions: shopData.availableCompanions,
-            purchasableCompanions: completePurchasableCompanions,
+            purchasableCompanions: shopCompanions,
             userStats: shopData.userStats,
             availablePetIds: Map.from(_localIdToApiPetId),
             userOwnedCompanions: _userOwnedCompanions,
@@ -141,42 +142,58 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
   }
 
   // 🔥 NUEVA LÓGICA: TIENDA CON PROGRESIÓN CORRECTA
- List<CompanionEntity> _buildProgressiveShop(List<CompanionEntity> userOwnedCompanions) {
-  debugPrint('🏗️ [PROGRESSIVE_SHOP] === CONSTRUYENDO TIENDA SOLO CON BABY ===');
-  
-  final shopCompanions = <CompanionEntity>[];
-  
-  // 🔥 PARA CADA TIPO, MOSTRAR SOLO BABY SI NO TIENE NINGUNA ETAPA
-  for (final type in [CompanionType.dexter, CompanionType.elly, CompanionType.paxolotl, CompanionType.yami]) {
-    // ✅ VERIFICAR SI TIENE CUALQUIER ETAPA DE ESTE TIPO
-    final hasAnyStageOfType = userOwnedCompanions.any((c) => c.type == type);
+  List<CompanionEntity> _buildProgressiveShop(List<CompanionEntity> availableCompanions, List<CompanionEntity> userOwnedCompanions) {
+    debugPrint('🏗️ [PROGRESSIVE_SHOP] === CONSTRUYENDO TIENDA CON TODAS LAS ETAPAS ===');
     
-    debugPrint('🔍 [PROGRESSIVE_SHOP] ${type.name}: Tiene alguna etapa: $hasAnyStageOfType');
+    final shopCompanions = <CompanionEntity>[];
     
-    if (!hasAnyStageOfType) {
-      // ✅ SOLO MOSTRAR BABY PARA ADOPCIÓN INICIAL
-      debugPrint('📦 [PROGRESSIVE_SHOP] ${type.name}: Mostrar BABY (adopción inicial)');
-      shopCompanions.add(_createCompanionForShop(type, CompanionStage.baby));
-    } else {
-      debugPrint('✅ [PROGRESSIVE_SHOP] ${type.name}: Ya adoptado, no mostrar en tienda');
+    // 🔥 PARA CADA TIPO, MOSTRAR TODAS LAS ETAPAS
+    for (final type in [CompanionType.dexter, CompanionType.elly, CompanionType.paxolotl, CompanionType.yami]) {
+      // Obtener etapas que el usuario ya tiene de este tipo
+      final userStagesOfType = userOwnedCompanions
+          .where((c) => c.type == type)
+          .map((c) => c.stage)
+          .toSet();
+      
+      debugPrint('🔍 [PROGRESSIVE_SHOP] ${type.name}: Etapas que tiene: $userStagesOfType');
+      
+      // Agregar todas las etapas (baby, young, adult)
+      for (final stage in [CompanionStage.baby, CompanionStage.young, CompanionStage.adult]) {
+        final hasThisStage = userStagesOfType.contains(stage);
+        final canBuyThisStage = _canBuyStageProgressive(stage, userStagesOfType);
+        
+        if (!hasThisStage) {  // Solo mostrar si NO la tiene
+          // 🔥 CREAR COMPANION CON DESCRIPCIÓN CORRECTA DESDE EL INICIO
+          final description = canBuyThisStage 
+            ? '🔓 ${_getNameForType(type)} ${stage.name} - Disponible'
+            : '🔒 ${_getNameForType(type)} ${stage.name} - Requiere etapa anterior';
+            
+          final companion = _createCompanionForShopWithDescription(type, stage, description);
+          
+          shopCompanions.add(companion);
+          
+          debugPrint('${canBuyThisStage ? "🔓" : "🔒"} ${type.name}_${stage.name}: ${companion.purchasePrice}★');
+        }
+      }
     }
+
+    // 🔥 ORDENAR: Primero las disponibles, luego por precio
+    shopCompanions.sort((a, b) {
+      final aCanBuy = _canBuyCompanionProgressive(a, userOwnedCompanions);
+      final bCanBuy = _canBuyCompanionProgressive(b, userOwnedCompanions);
+      
+      if (aCanBuy && !bCanBuy) return -1;
+      if (!aCanBuy && bCanBuy) return 1;
+      return a.purchasePrice.compareTo(b.purchasePrice);
+    });
+
+    debugPrint('🏪 [PROGRESSIVE_SHOP] === TIENDA FINAL CON PROGRESIÓN ===');
+    debugPrint('🛒 [PROGRESSIVE_SHOP] Total items: ${shopCompanions.length}');
+    
+    return shopCompanions;
   }
 
-  // 🔥 ORDENAR POR PRECIO
-  shopCompanions.sort((a, b) => a.purchasePrice.compareTo(b.purchasePrice));
-
-  debugPrint('🏪 [PROGRESSIVE_SHOP] === TIENDA FINAL SOLO BABY ===');
-  debugPrint('🛒 [PROGRESSIVE_SHOP] Total items: ${shopCompanions.length}');
-  
-  for (final companion in shopCompanions) {
-    debugPrint('🔓 ${companion.displayName} ${companion.stage.name}: ${companion.purchasePrice}★');
-  }
-
-  return shopCompanions;
-}
-
-  // 🔥 CREAR COMPANION PARA TIENDA CON ESTADO PROGRESIVO
- CompanionEntity _createCompanionForShop(CompanionType type, CompanionStage stage) {
+  CompanionEntity _createCompanionForShop(CompanionType type, CompanionStage stage) {
   final prices = _getPricesForType(type);
   
   return CompanionModel(
@@ -201,11 +218,35 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
   );
 }
 
+  // 🔥 CREAR COMPANION PARA TIENDA CON DESCRIPCIÓN PERSONALIZADA
+  CompanionEntity _createCompanionForShopWithDescription(CompanionType type, CompanionStage stage, String description) {
+    final prices = _getPricesForType(type);
+    
+    return CompanionModel(
+      id: '${type.name}_${stage.name}',
+      type: type,
+      stage: stage,
+      name: _getNameForType(type),
+      description: description, // 🔥 USAR DESCRIPCIÓN PERSONALIZADA
+      level: 1,
+      experience: 0,
+      happiness: 100,
+      hunger: 100,
+      energy: 100,
+      isOwned: false, // ✅ SIEMPRE FALSE EN TIENDA
+      isSelected: false,
+      purchasedAt: null,
+      currentMood: CompanionMood.happy,
+      purchasePrice: prices[stage]!,
+      evolutionPrice: 50,
+      unlockedAnimations: ['idle', 'blink', 'happy'],
+      createdAt: DateTime.now(),
+    );
+  }
+
 // 🔥 SIMPLIFICAR VALIDACIONES DE COMPRA
 Future<void> purchaseCompanion(CompanionEntity companion) async {
-  debugPrint('🛒 [SHOP_CUBIT] === ADOPCIÓN INICIAL ===');
-  debugPrint('🐾 [SHOP_CUBIT] Adoptando: ${companion.displayName} ${companion.stage.name}');
-  debugPrint('💰 [SHOP_CUBIT] Precio: ${companion.purchasePrice}★');
+  debugPrint('🛒 [SHOP_CUBIT] === ADOPCIÓN CON VALIDACIÓN PROGRESIVA ===');
 
   if (state is! CompanionShopLoaded) {
     emit(CompanionShopError(message: '❌ Error: Estado de tienda no válido'));
@@ -214,7 +255,15 @@ Future<void> purchaseCompanion(CompanionEntity companion) async {
 
   final currentState = state as CompanionShopLoaded;
 
-  // 🔥 VALIDACIÓN SIMPLE: Puntos suficientes
+  // 🔥 VALIDACIÓN PROGRESIVA
+  if (!_canBuyCompanionProgressive(companion, currentState.userOwnedCompanions)) {
+    emit(CompanionShopError(
+      message: '🔒 Debes tener la etapa anterior de ${companion.displayName} primero',
+    ));
+    return;
+  }
+
+  // 🔥 VALIDACIÓN DE PUNTOS
   if (currentState.userStats.availablePoints < companion.purchasePrice) {
     final faltantes = companion.purchasePrice - currentState.userStats.availablePoints;
     emit(CompanionShopError(
@@ -232,9 +281,9 @@ Future<void> purchaseCompanion(CompanionEntity companion) async {
       return;
     }
 
-    // 🔥 USAR ID DE BABY PARA ADOPCIÓN
+    // 🔥 USAR ID CORRECTO PARA LA API
     final apiPetId = currentState.availablePetIds[companion.id] ?? 
-                   '${companion.type.name}_1'; // baby = etapa 1
+                   '${companion.type.name}_${_getStageNumber(companion.stage)}';
 
     debugPrint('🗺️ [SHOP_CUBIT] Pet ID para adopción: $apiPetId');
 
@@ -253,6 +302,15 @@ Future<void> purchaseCompanion(CompanionEntity companion) async {
       },
       (adoptedCompanion) {
         debugPrint('🎉 [SHOP_CUBIT] === ADOPCIÓN EXITOSA ===');
+        
+        // 🔥 ACTUALIZACIÓN INMEDIATA: Agregar a lista de user-owned companions
+        debugPrint('🔄 [SHOP_CUBIT] Actualizando lista de user-owned companions...');
+        if (!_userOwnedCompanions.any((c) => c.id == adoptedCompanion.id)) {
+          _userOwnedCompanions.add(adoptedCompanion);
+          debugPrint('✅ [SHOP_CUBIT] Agregado ${adoptedCompanion.displayName} a user-owned (total: ${_userOwnedCompanions.length})');
+        } else {
+          debugPrint('⚠️ [SHOP_CUBIT] ${adoptedCompanion.displayName} ya estaba en user-owned');
+        }
         
         final message = '🎉 ¡Has adoptado a ${adoptedCompanion.displayName}! Ahora puedes evolucionarlo.';
         
@@ -291,8 +349,21 @@ Future<void> purchaseCompanion(CompanionEntity companion) async {
 
   // 🔥 VERIFICAR SI PUEDE COMPRAR CON LÓGICA PROGRESIVA
   bool _canBuyCompanionProgressive(CompanionEntity companion, List<CompanionEntity> userOwnedCompanions) {
+    debugPrint('🔍 [PROGRESSIVE_VALIDATION] === VALIDANDO COMPRA PROGRESIVA ===');
+    debugPrint('🐾 [PROGRESSIVE_VALIDATION] Companion a comprar: ${companion.displayName} ${companion.stage.name}');
+    debugPrint('👤 [PROGRESSIVE_VALIDATION] Total user owned companions: ${userOwnedCompanions.length}');
+    
+    // Debug: Mostrar todas las mascotas que tiene el usuario
+    for (int i = 0; i < userOwnedCompanions.length; i++) {
+      final owned = userOwnedCompanions[i];
+      debugPrint('  [$i] ${owned.displayName} ${owned.stage.name} (${owned.type.name}) - isOwned: ${owned.isOwned}');
+    }
+    
     // Si ya lo tiene, no puede comprarlo
-    if (companion.isOwned) return false;
+    if (companion.isOwned) {
+      debugPrint('❌ [PROGRESSIVE_VALIDATION] Ya posee esta mascota');
+      return false;
+    }
     
     // Obtener etapas que tiene de este tipo
     final userStagesOfType = userOwnedCompanions
@@ -300,7 +371,12 @@ Future<void> purchaseCompanion(CompanionEntity companion) async {
         .map((c) => c.stage)
         .toSet();
     
-    return _canBuyStageProgressive(companion.stage, userStagesOfType);
+    debugPrint('🔍 [PROGRESSIVE_VALIDATION] Etapas de ${companion.type.name} que posee: $userStagesOfType');
+    
+    final canBuy = _canBuyStageProgressive(companion.stage, userStagesOfType);
+    debugPrint('${canBuy ? "✅" : "❌"} [PROGRESSIVE_VALIDATION] Puede comprar ${companion.stage.name}: $canBuy');
+    
+    return canBuy;
   }
 
   // 🔥 OBTENER ESTADO PROGRESIVO DEL COMPANION
@@ -463,12 +539,33 @@ Future<void> purchaseCompanion(CompanionEntity companion) async {
   }
 
   Future<void> _reloadShopAfterPurchase() async {
+    debugPrint('🔄 [SHOP_RELOAD] === INICIANDO RECARGA DESPUÉS DE COMPRA ===');
+    debugPrint('⏰ [SHOP_RELOAD] Esperando 1.5 segundos para que API se actualice...');
     await Future.delayed(const Duration(milliseconds: 1500));
-    if (isClosed) return;
+    
+    if (isClosed) {
+      debugPrint('❌ [SHOP_RELOAD] Cubit cerrado, cancelando recarga');
+      return;
+    }
+    
+    debugPrint('🔄 [SHOP_RELOAD] Recargando tienda...');
     await loadShop();
+    debugPrint('✅ [SHOP_RELOAD] Recarga completada');
   }
 
   void refreshShop() {
     loadShop();
   }
+
+// 🔥 MÉTODO HELPER PARA OBTENER NÚMERO DE ETAPA
+int _getStageNumber(CompanionStage stage) {
+  switch (stage) {
+    case CompanionStage.baby:
+      return 1;
+    case CompanionStage.young:
+      return 2;
+    case CompanionStage.adult:
+      return 3;
+  }
+}
 }

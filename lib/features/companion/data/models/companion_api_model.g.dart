@@ -21,10 +21,12 @@ CompanionApiModel _$CompanionApiModelFromJson(Map<String, dynamic> json) =>
       selectedStage: json['selected_stage'] as String?,
       price: (json['price'] as num?)?.toInt(),
       available: json['available'] as bool?,
+      userInfo: json['user_info'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$CompanionApiModelToJson(CompanionApiModel instance) =>
     <String, dynamic>{
+      'user_info': instance.userInfo,
       'id': instance.id,
       'name': instance.name,
       'species_type': instance.speciesType,

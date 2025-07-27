@@ -1007,8 +1007,9 @@ Future<CompanionModel> evolveOwnedPetViaApi({
       debugPrint('⚠️ [ADOPTION] Respuesta no es Map, usando fallback: $fallbackNickname');
     }
 
-    final companionType = _mapPetIdToCompanionType(petId);
-    final companionStage = _mapPetIdToCompanionStage(petId);
+    // 🔥 MAPEAR POR NOMBRE REAL, NO POR petId
+    final companionType = _mapNameToCompanionType(realName);
+    final companionStage = CompanionStage.baby; // Siempre baby para adopción inicial
 
     final localId = '${companionType.name}_${companionStage.name}';
     debugPrint('🆔 [ADOPTION] Local ID generado: $localId, Pet ID preservado: $petId');
@@ -1804,5 +1805,445 @@ class CompanionModelWithBothIds extends CompanionModel {
       originalPetId: originalPetId ?? this.originalPetId,
       idUserPet: idUserPet ?? this.idUserPet,
     );
+  }
+}
+
+// ==================== 🔥 MAPEO CORRECTO DE NOMBRES - ARREGLADO ====================
+  
+/// 🔥 MAPEO CORRECTO: Nombres reales de la API → Tipos locales
+CompanionType _mapApiNameToCompanionType(String apiName) {
+  debugPrint('🗺️ [MAPPING] === MAPEANDO NOMBRE DE API ===');
+  debugPrint('🗺️ [MAPPING] Nombre de API recibido: "$apiName"');
+  
+  final nameLower = apiName.toLowerCase().trim();
+  debugPrint('🗺️ [MAPPING] Nombre normalizado: "$nameLower"');
+  
+  CompanionType result;
+  
+  if (nameLower.contains('dexter') || nameLower.contains('chihuahua') || nameLower == 'dexter') {
+    result = CompanionType.dexter;
+    debugPrint('✅ [MAPPING] → CompanionType.dexter');
+  } else if (nameLower.contains('elly') || nameLower.contains('panda') || nameLower == 'elly') {
+    result = CompanionType.elly;
+    debugPrint('✅ [MAPPING] → CompanionType.elly');
+  } else if (nameLower.contains('paxoloth') || nameLower.contains('paxolotl') || 
+             nameLower.contains('ajolote') || nameLower.contains('axolotl')) {
+    result = CompanionType.paxolotl;
+    debugPrint('✅ [MAPPING] → CompanionType.paxolotl');
+  } else if (nameLower.contains('yami') || nameLower.contains('jaguar') || nameLower == 'yami') {
+    result = CompanionType.yami;
+    debugPrint('✅ [MAPPING] → CompanionType.yami');
+  } else {
+    debugPrint('⚠️ [MAPPING] Nombre no reconocido: "$apiName", usando Dexter por defecto');
+    result = CompanionType.dexter;
+  }
+  
+  debugPrint('🎯 [MAPPING] Resultado final: ${result.name}');
+  return result;
+}
+
+/// 🔥 MAPEO CORRECTO: Species type de API → Tipos locales
+CompanionType _mapSpeciesTypeToCompanionType(String speciesType) {
+  debugPrint('🗺️ [SPECIES] === MAPEANDO SPECIES TYPE ===');
+  debugPrint('🗺️ [SPECIES] Species type recibido: "$speciesType"');
+  
+  final typeLower = speciesType.toLowerCase().trim();
+  debugPrint('🗺️ [SPECIES] Species normalizado: "$typeLower"');
+  
+  CompanionType result;
+  
+  if (typeLower.contains('dog') || typeLower.contains('chihuahua') || typeLower == 'mammal') {
+    result = CompanionType.dexter;
+    debugPrint('✅ [SPECIES] dog/chihuahua → CompanionType.dexter');
+  } else if (typeLower.contains('panda') || typeLower == 'bear') {
+    result = CompanionType.elly;
+    debugPrint('✅ [SPECIES] panda → CompanionType.elly');
+  } else if (typeLower.contains('axolotl') || typeLower.contains('ajolote') || typeLower == 'amphibian') {
+    result = CompanionType.paxolotl;
+    debugPrint('✅ [SPECIES] axolotl → CompanionType.paxolotl');
+  } else if (typeLower.contains('jaguar') || typeLower.contains('felino') || typeLower == 'cat') {
+    result = CompanionType.yami;
+    debugPrint('✅ [SPECIES] jaguar → CompanionType.yami');
+  } else {
+    debugPrint('⚠️ [SPECIES] Species no reconocido: "$speciesType", usando Dexter por defecto');
+    result = CompanionType.dexter;
+  }
+  
+  debugPrint('🎯 [SPECIES] Resultado final: ${result.name}');
+  return result;
+}
+
+// ==================== 🔥 CREAR TODAS LAS ETAPAS PARA CADA TIPO ====================
+List<CompanionModel> _createAllStagesForPet(ApiPetResponseModel apiPet) {
+  debugPrint('🏗️ [STAGES] === CREANDO TODAS LAS ETAPAS ===');
+  debugPrint('🏗️ [STAGES] Pet: ${apiPet.name}');
+  
+  // 🔥 MAPEO CORRECTO DEL NOMBRE
+  final companionType = _mapApiNameToCompanionType(apiPet.name);
+  debugPrint('🎯 [STAGES] Tipo mapeado: ${companionType.name}');
+  
+  final companions = <CompanionModel>[];
+  final now = DateTime.now();
+  
+  // 🔥 CREAR LAS 3 ETAPAS: baby, young, adult
+  final stages = [
+    {'stage': CompanionStage.baby, 'suffix': 'baby'},
+    {'stage': CompanionStage.young, 'suffix': 'young'},
+    {'stage': CompanionStage.adult, 'suffix': 'adult'},
+  ];
+  
+  for (int i = 0; i < stages.length; i++) {
+    final stageInfo = stages[i];
+    final stage = stageInfo['stage'] as CompanionStage;
+    final suffix = stageInfo['suffix'] as String;
+    
+    debugPrint('🔨 [STAGES] Creando etapa: ${stage.name}');
+    
+    final companion = CompanionModelWithPetId(
+      id: '${companionType.name}_${stage.name}',
+      type: companionType,
+      stage: stage,
+      name: _getCorrectDisplayName(companionType), // 🔥 NOMBRE CORRECTO
+      description: _generateDescription(companionType, stage),
+      level: i + 1,
+      experience: 0,
+      happiness: 100,
+      hunger: 100,
+      energy: 100,
+      isOwned: false,
+      isSelected: false,
+      purchasedAt: null,
+      currentMood: CompanionMood.happy,
+      purchasePrice: _calculatePriceForStage(companionType, stage),
+      evolutionPrice: _getEvolutionPrice(stage),
+      unlockedAnimations: _getAnimationsForStage(stage),
+      createdAt: now,
+      petId: '${apiPet.petId}_$suffix', // 🔥 Pet ID diferente por etapa
+    );
+    
+    companions.add(companion);
+    debugPrint('✅ [STAGES] Creado: ${companion.displayName} ${stage.name} - ${companion.purchasePrice}★');
+  }
+  
+  debugPrint('🎉 [STAGES] Total etapas creadas: ${companions.length}');
+  return companions;
+}
+
+// ==================== 🔥 NOMBRES CORRECTOS ====================
+String _getCorrectDisplayName(CompanionType type) {
+  switch (type) {
+    case CompanionType.dexter:
+      return 'Dexter';
+    case CompanionType.elly:
+      return 'Elly';
+    case CompanionType.paxolotl:
+      return 'Paxolotl';
+    case CompanionType.yami:
+      return 'Yami';
+  }
+}
+
+// ==================== 🔥 PRECIOS PROGRESIVOS ====================
+int _calculatePriceForStage(CompanionType type, CompanionStage stage) {
+  // Precios base por tipo
+  final basePrices = {
+    CompanionType.dexter: 100,   // Ya no gratis
+    CompanionType.elly: 200,
+    CompanionType.paxolotl: 600,
+    CompanionType.yami: 2500,
+  };
+  
+  final basePrice = basePrices[type]!;
+  
+  // Multiplicador por etapa
+  switch (stage) {
+    case CompanionStage.baby:
+      return basePrice;
+    case CompanionStage.young:
+      return (basePrice * 1.5).round();
+    case CompanionStage.adult:
+      return (basePrice * 2.0).round();
+  }
+}
+
+// ==================== 🔥 CREAR COMPANION ADOPTADO CON MAPEO CORRECTO ====================
+CompanionModel _createAdoptedCompanionWithCorrectMapping(
+  String petId,
+  String nickname,
+  dynamic responseData,
+) {
+  debugPrint('🔨 [CREATE] === CREANDO COMPANION CON MAPEO CORRECTO ===');
+  debugPrint('🆔 [CREATE] Pet ID: $petId');
+  debugPrint('🏷️ [CREATE] Nickname: $nickname');
+
+  // 🔥 EXTRAER TIPO Y ETAPA DEL PET ID
+  final companionType = _extractTypeFromPetId(petId);
+  final companionStage = _extractStageFromPetId(petId);
+  
+  debugPrint('🎯 [CREATE] Tipo extraído: ${companionType.name}');
+  debugPrint('🎯 [CREATE] Etapa extraída: ${companionStage.name}');
+
+  // 🔥 USAR NOMBRE CORRECTO SEGÚN EL TIPO
+  final correctName = _getCorrectDisplayName(companionType);
+  debugPrint('📝 [CREATE] Nombre correcto: $correctName');
+
+  final localId = '${companionType.name}_${companionStage.name}';
+
+  return CompanionModelWithPetId(
+    id: localId,
+    type: companionType,
+    stage: companionStage,
+    name: correctName, // 🔥 NOMBRE CORRECTO
+    description: _generateDescription(companionType, companionStage),
+    level: 1,
+    experience: 0,
+    happiness: 100,
+    hunger: 100,
+    energy: 100,
+    isOwned: true,
+    isSelected: false,
+    purchasedAt: DateTime.now(),
+    currentMood: CompanionMood.happy,
+    purchasePrice: _calculatePriceForStage(companionType, companionStage),
+    evolutionPrice: _getEvolutionPrice(companionStage),
+    unlockedAnimations: _getAnimationsForStage(companionStage),
+    createdAt: DateTime.now(),
+    petId: petId,
+  );
+}
+
+// ==================== 🔥 EXTRAER TIPO Y ETAPA DEL PET ID ====================
+CompanionType _extractTypeFromPetId(String petId) {
+  final petIdLower = petId.toLowerCase();
+  
+  if (petIdLower.contains('dexter') || petIdLower.contains('chihuahua')) {
+    return CompanionType.dexter;
+  } else if (petIdLower.contains('elly') || petIdLower.contains('panda')) {
+    return CompanionType.elly;
+  } else if (petIdLower.contains('paxoloth') || petIdLower.contains('paxolotl') || petIdLower.contains('axolotl')) {
+    return CompanionType.paxolotl;
+  } else if (petIdLower.contains('yami') || petIdLower.contains('jaguar')) {
+    return CompanionType.yami;
+  }
+  
+  debugPrint('⚠️ [EXTRACT] Pet ID no reconocido: $petId, usando dexter');
+  return CompanionType.dexter;
+}
+
+CompanionStage _extractStageFromPetId(String petId) {
+  final petIdLower = petId.toLowerCase();
+  
+  if (petIdLower.contains('baby') || petIdLower.contains('1')) {
+    return CompanionStage.baby;
+  } else if (petIdLower.contains('young') || petIdLower.contains('2')) {
+    return CompanionStage.young;
+  } else if (petIdLower.contains('adult') || petIdLower.contains('3')) {
+    return CompanionStage.adult;
+  }
+  
+  return CompanionStage.baby;
+}
+
+// ==================== MÉTODOS HELPER ====================
+String _generateDescription(CompanionType type, CompanionStage stage) {
+  final name = _getCorrectDisplayName(type);
+  switch (stage) {
+    case CompanionStage.baby:
+      return 'Un adorable $name bebé lleno de energía';
+    case CompanionStage.young:
+      return '$name ha crecido y es más juguetón';
+    case CompanionStage.adult:
+      return '$name adulto, el compañero perfecto';
+  }
+}
+
+int _getEvolutionPrice(CompanionStage stage) {
+  switch (stage) {
+    case CompanionStage.baby:
+      return 50;
+    case CompanionStage.young:
+      return 100;
+    case CompanionStage.adult:
+      return 0;
+  }
+}
+
+List<String> _getAnimationsForStage(CompanionStage stage) {
+  switch (stage) {
+    case CompanionStage.baby:
+      return ['idle', 'blink', 'happy'];
+    case CompanionStage.young:
+      return ['idle', 'blink', 'happy', 'eating'];
+    case CompanionStage.adult:
+      return ['idle', 'blink', 'happy', 'eating', 'loving', 'excited'];
+  }
+}
+
+CompanionModel _createDefaultCompanion(CompanionType type, CompanionStage stage) {
+  return CompanionModel(
+    id: '${type.name}_${stage.name}',
+    type: type,
+    stage: stage,
+    name: _getCorrectDisplayName(type),
+    description: _generateDescription(type, stage),
+    level: 1,
+    experience: 0,
+    happiness: 100,
+    hunger: 100,
+    energy: 100,
+    isOwned: false,
+    isSelected: false,
+    purchasedAt: null,
+    currentMood: CompanionMood.happy,
+    purchasePrice: _calculatePriceForStage(type, stage),
+    evolutionPrice: _getEvolutionPrice(stage),
+    unlockedAnimations: _getAnimationsForStage(stage),
+    createdAt: DateTime.now(),
+  );
+}
+
+List<CompanionModel> _getCompleteDefaultCompanions() {
+  debugPrint('🔧 [FALLBACK] Usando mascotas completas por defecto');
+  final companions = <CompanionModel>[];
+  final now = DateTime.now();
+
+  for (final type in CompanionType.values) {
+    for (final stage in CompanionStage.values) {
+      companions.add(_createDefaultCompanion(type, stage));
+    }
+  }
+
+  return companions;
+}
+
+// ==================== MÉTODOS HELPER PARA RESPUESTAS ====================
+  
+CompanionModel _createCompanionFromStatsResponse(String idUserPet, dynamic responseData) {
+  return CompanionModel(
+    id: 'updated_companion',
+    type: CompanionType.dexter,
+    stage: CompanionStage.young,
+    name: 'Mi Compañero',
+    description: 'Mascota con estadísticas actualizadas',
+    level: 1,
+    experience: 0,
+    happiness: responseData is Map ? (responseData['happiness_level'] ?? 50) : 50,
+    hunger: responseData is Map ? (responseData['health_level'] ?? 50) : 50,
+    energy: 100,
+    isOwned: true,
+    isSelected: false,
+    purchasedAt: DateTime.now(),
+    currentMood: CompanionMood.happy,
+    purchasePrice: 0,
+    evolutionPrice: 50,
+    unlockedAnimations: ['idle', 'blink', 'happy'],
+    createdAt: DateTime.now(),
+  );
+}
+
+CompanionModel _createEvolvedCompanionFromResponse(String petId, dynamic responseData) {
+  final type = _extractTypeFromPetId(petId);
+  final currentStage = _extractStageFromPetId(petId);
+  
+  final nextStage = currentStage == CompanionStage.baby 
+      ? CompanionStage.young 
+      : currentStage == CompanionStage.young 
+          ? CompanionStage.adult 
+          : CompanionStage.adult;
+  
+  return CompanionModel(
+    id: '${type.name}_${nextStage.name}',
+    type: type,
+    stage: nextStage,
+    name: _getCorrectDisplayName(type),
+    description: _generateDescription(type, nextStage),
+    level: nextStage.index + 1,
+    experience: 0,
+    happiness: 100,
+    hunger: 100,
+    energy: 100,
+    isOwned: true,
+    isSelected: true,
+    purchasedAt: DateTime.now(),
+    currentMood: CompanionMood.excited,
+    purchasePrice: 0,
+    evolutionPrice: _getEvolutionPrice(nextStage),
+    unlockedAnimations: _getAnimationsForStage(nextStage),
+    createdAt: DateTime.now(),
+  );
+}
+
+CompanionModel _createFeaturedCompanionFromResponse(String petId, dynamic responseData) {
+  final type = _extractTypeFromPetId(petId);
+  final stage = _extractStageFromPetId(petId);
+  
+  return CompanionModel(
+    id: '${type.name}_${stage.name}',
+    type: type,
+    stage: stage,
+    name: _getCorrectDisplayName(type),
+    description: _generateDescription(type, stage),
+    level: 1,
+    experience: 0,
+    happiness: 100,
+    hunger: 100,
+    energy: 100,
+    isOwned: true,
+    isSelected: true,
+    purchasedAt: DateTime.now(),
+    currentMood: CompanionMood.happy,
+    purchasePrice: 0,
+    evolutionPrice: _getEvolutionPrice(stage),
+    unlockedAnimations: _getAnimationsForStage(stage),
+    createdAt: DateTime.now(),
+  );
+}
+
+CompanionModel _createCompanionFromDetailsResponse(String petId, dynamic responseData) {
+  final type = _extractTypeFromPetId(petId);
+  final stage = _extractStageFromPetId(petId);
+  
+  int happiness = 100;
+  int health = 100;
+  
+  if (responseData is Map<String, dynamic>) {
+    final userPetInfo = responseData['user_pet_info'] as Map<String, dynamic>? ?? {};
+    happiness = (userPetInfo['happiness_level'] as num?)?.toInt() ?? 100;
+    health = (userPetInfo['health_level'] as num?)?.toInt() ?? 100;
+  }
+  
+  return CompanionModel(
+    id: '${type.name}_${stage.name}',
+    type: type,
+    stage: stage,
+    name: _getCorrectDisplayName(type),
+    description: _generateDescription(type, stage),
+    level: 1,
+    experience: 0,
+    happiness: happiness,
+    hunger: health,
+    energy: 100,
+    isOwned: true,
+    isSelected: false,
+    purchasedAt: DateTime.now(),
+    currentMood: _determineMoodFromStats(happiness, health),
+    purchasePrice: 0,
+    evolutionPrice: _getEvolutionPrice(stage),
+    unlockedAnimations: _getAnimationsForStage(stage),
+    createdAt: DateTime.now(),
+  );
+}
+
+CompanionMood _determineMoodFromStats(int happiness, int health) {
+  if (happiness >= 80 && health >= 80) {
+    return CompanionMood.excited;
+  } else if (happiness >= 60 && health >= 60) {
+    return CompanionMood.happy;
+  } else if (happiness <= 30 || health <= 30) {
+    return CompanionMood.sad;
+  } else if (health <= 40) {
+    return CompanionMood.hungry;
+  } else {
+    return CompanionMood.normal;
   }
 }

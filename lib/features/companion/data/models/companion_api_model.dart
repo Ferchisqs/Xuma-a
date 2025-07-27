@@ -7,6 +7,10 @@ part 'companion_api_model.g.dart';
 
 @JsonSerializable()
 class CompanionApiModel {
+  // ...campos existentes...
+  @JsonKey(name: 'user_info')
+  final Map<String, dynamic>? userInfo; // Nuevo campo para user_info
+
   final String id;
   final String name;
   @JsonKey(name: 'species_type')
@@ -42,6 +46,7 @@ class CompanionApiModel {
     this.selectedStage,
     this.price,
     this.available,
+    this.userInfo,
   });
 
   factory CompanionApiModel.fromJson(Map<String, dynamic> json) =>
@@ -51,6 +56,14 @@ class CompanionApiModel {
 
   // 🔧 MAPEO DE API A ENTIDAD LOCAL
   CompanionEntity toEntity() {
+    // Nuevo: detectar si el usuario posee la mascota
+    bool owned = false;
+    if (userInfo != null && userInfo!['user_owns'] != null) {
+      owned = userInfo!['user_owns'] == true;
+    } else if (adoptedAt != null) {
+      owned = true;
+    }
+
     final companionType = _mapSpeciesTypeToCompanionType(speciesType);
     final companionStage = _mapStageToCompanionStage(stage ?? selectedStage ?? 'baby');
     
@@ -65,7 +78,7 @@ class CompanionApiModel {
       happiness: 100, // Valores por defecto para campos no en API
       hunger: 100,
       energy: 100,
-      isOwned: adoptedAt != null,
+      isOwned: owned,
       isSelected: featured ?? false,
       purchasedAt: adoptedAt != null ? DateTime.parse(adoptedAt!) : null,
       currentMood: CompanionMood.happy,
