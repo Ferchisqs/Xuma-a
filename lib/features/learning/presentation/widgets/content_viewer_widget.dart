@@ -1,4 +1,3 @@
-// lib/features/learning/presentation/widgets/content_viewer_widget.dart - CORREGIDO
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -26,20 +25,25 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
   bool _imageLoadError = false;
   bool _showMediaDetails = false;
   
+  // Variables para control de video
+  VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
+  bool _isVideoPlaying = false;
+  
+  @override
+  void dispose() {
+    // Limpiar recursos del video
+    _videoController?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 🆕 VERIFICAR SI ES ContentModel PARA ACCEDER A MEDIA MEJORADO
     final contentModel = widget.content is ContentModel ? widget.content as ContentModel : null;
-    
-    print('🔍 [CONTENT VIEWER] Building enhanced widget for content: ${widget.content.title}');
-    if (contentModel != null) {
-      print('🔍 [CONTENT VIEWER] Enhanced media info: ${contentModel.getMediaInfo()}');
-    }
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Tarjeta principal del contenido
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
@@ -56,7 +60,6 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header con título del contenido
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -66,136 +69,91 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
                     topRight: Radius.circular(16),
                   ),
                 ),
-                child: _buildContentHeader(contentModel),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.content.title,
+                            style: AppTextStyles.h3.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.article_outlined,
+                      color: Colors.white.withOpacity(0.8),
+                      size: 32,
+                    ),
+                  ],
+                ),
               ),
               
-              // 🔧 SECCIÓN DE MULTIMEDIA MEJORADA
+              // Sección de multimedia con soporte para video
               _buildEnhancedMediaSection(contentModel),
               
-              // Contenido principal
               Padding(
                 padding: const EdgeInsets.all(20),
-                child: _buildContentBody(contentModel),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.content.description.isNotEmpty) ...[
+                      Text(
+                        'Descripción',
+                        style: AppTextStyles.h4.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        widget.content.description,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                          height: 1.6,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                    
+                    Text(
+                      'Contenido',
+                      style: AppTextStyles.h4.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      widget.content.content,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textPrimary,
+                        height: 1.7,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
         
         const SizedBox(height: 32),
-        
-        // 🆕 INFORMACIÓN DETALLADA DE MEDIA (EXPANDIBLE)
-        if (contentModel != null && contentModel.hasAnyMedia)
-          _buildMediaDetailsSection(contentModel),
-        
-        const SizedBox(height: 24),
         
         // Botón de completado
         _buildCompletionButton(),
-        
-        const SizedBox(height: 32),
       ],
     );
   }
 
-  // 🆕 HEADER DEL CONTENIDO MEJORADO
-  Widget _buildContentHeader(ContentModel? contentModel) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.content.title,
-                style: AppTextStyles.h3.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              
-              // Badges de categoría y media
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  _buildBadge(widget.content.category, Icons.category),
-                  if (contentModel?.hasAnyMedia == true) ...[
-                    if (contentModel!.hasMainMedia)
-                      _buildBadge(
-                        contentModel.isMainMediaVideo ? 'Video' : 'Media',
-                        contentModel.isMainMediaVideo ? Icons.videocam : Icons.perm_media,
-                      ),
-                    if (contentModel.hasThumbnailMedia)
-                      _buildBadge('Imagen', Icons.image),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
-        Icon(
-          Icons.article_outlined,
-          color: Colors.white.withOpacity(0.8),
-          size: 32,
-        ),
-      ],
-    );
-  }
-
-  // 🆕 BADGE HELPER
-  Widget _buildBadge(String label, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.white, size: 12),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 10,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 🔧 SECCIÓN DE MULTIMEDIA MEJORADA - CORREGIDA
   Widget _buildEnhancedMediaSection(ContentModel? contentModel) {
-    print('🎬 [CONTENT VIEWER] Building media section');
-    print('🎬 [CONTENT VIEWER] Has resolved media: ${contentModel?.hasAnyResolvedMedia}');
-    print('🎬 [CONTENT VIEWER] Media URL: ${contentModel?.mediaUrl}');
-    print('🎬 [CONTENT VIEWER] Thumbnail URL: ${contentModel?.thumbnailUrl}');
-    
     if (contentModel?.hasAnyResolvedMedia != true) {
-      return _buildMediaPlaceholder(contentModel);
-    }
-
-    // 🔧 DECIDIR QUÉ URL USAR
-    String? imageUrl;
-    bool isVideo = false;
-    
-    if (contentModel!.hasResolvedThumbnailMedia) {
-      imageUrl = contentModel.thumbnailUrl;
-      print('🎬 [CONTENT VIEWER] Using thumbnail URL: $imageUrl');
-    } else if (contentModel.hasResolvedMainMedia) {
-      imageUrl = contentModel.mediaUrl;
-      isVideo = contentModel.isMainMediaVideo;
-      print('🎬 [CONTENT VIEWER] Using main media URL: $imageUrl, isVideo: $isVideo');
-    }
-
-    if (imageUrl == null || imageUrl.isEmpty) {
-      print('❌ [CONTENT VIEWER] No valid URL found');
-      return _buildMediaPlaceholder(contentModel);
+      return _buildMediaPlaceholder();
     }
 
     return Container(
@@ -203,87 +161,34 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
       width: double.infinity,
       child: Stack(
         children: [
-          // 🔧 MOSTRAR IMAGEN O VIDEO
-          if (isVideo)
-            _buildVideoContainer(imageUrl, contentModel)
-          else
-            _buildImageContainer(imageUrl),
+          // Contenido principal del media
+          _buildMediaContent(contentModel!),
           
-          // Overlay con información
-          _buildMediaOverlay(contentModel, isVideo),
+          // Overlay con controles
+          _buildMediaOverlay(contentModel),
         ],
       ),
     );
   }
 
-  // CORREGIDO: Widget para imagen
-  Widget _buildImageContainer(String imageUrl) {
-    print('🖼️ [CONTENT VIEWER] Loading image: $imageUrl');
+  Widget _buildMediaContent(ContentModel contentModel) {
+    if (contentModel.hasResolvedMainMedia) {
+      final mediaUrl = contentModel.mediaUrl!;
+      
+      if (contentModel.isMainMediaVideo) {
+        return _buildVideoPlayer(mediaUrl, contentModel);
+      } else {
+        return _buildImageViewer(mediaUrl);
+      }
+    }
     
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      child: Image.network(
-        imageUrl,
-        fit: BoxFit.cover,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) {
-            print('✅ [CONTENT VIEWER] Image loaded successfully');
-            return child;
-          }
-          
-          return Container(
-            color: AppColors.primaryLight.withOpacity(0.1),
-            child: Center(
-              child: CircularProgressIndicator(
-                value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                    : null,
-                color: AppColors.primary,
-              ),
-            ),
-          );
-        },
-        errorBuilder: (context, error, stackTrace) {
-          print('❌ [CONTENT VIEWER] Error loading image: $error');
-          return Container(
-            color: AppColors.error.withOpacity(0.1),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.broken_image,
-                    size: 64,
-                    color: AppColors.error.withOpacity(0.5),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Error al cargar imagen',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.error,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
+    if (contentModel.hasResolvedThumbnailMedia) {
+      return _buildImageViewer(contentModel.thumbnailUrl!);
+    }
+    
+    return _buildMediaPlaceholder();
   }
 
-  // CORREGIDO: Container de video simplificado
-  Widget _buildVideoContainer(String videoUrl, ContentModel contentModel) {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: Colors.black,
-      child: _buildVideoPlayer(videoUrl, contentModel), // Usar el método existente
-    );
-  }
-
-  // 🆕 REPRODUCTOR DE VIDEO - CORREGIDO
   Widget _buildVideoPlayer(String videoUrl, ContentModel contentModel) {
     return Container(
       width: double.infinity,
@@ -292,68 +197,273 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Thumbnail si está disponible
+          // Thumbnail como fondo si está disponible
           if (contentModel.hasResolvedThumbnailMedia)
-            Image.network(
-              contentModel.thumbnailUrl!,
-              width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => _buildVideoFallback(),
-            )
+            _buildVideoThumbnail(contentModel.thumbnailUrl!, videoUrl)
           else
             _buildVideoFallback(),
           
-          // Botón de play
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6),
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              onPressed: () => _showVideoDialog(videoUrl),
-              icon: const Icon(
-                Icons.play_arrow,
-                color: Colors.white,
-                size: 48,
-              ),
-            ),
-          ),
+          // Reproductor de video si está inicializado
+          if (_isVideoInitialized && _videoController != null)
+            _buildVideoPlayerWidget()
+          else
+            _buildVideoPlayButton(videoUrl),
+          
+          // Controles de video
+          if (_isVideoInitialized)
+            _buildVideoControls(),
           
           // Indicador de video
-          Positioned(
-            top: 12,
-            left: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.red,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.videocam, color: Colors.white, size: 12),
-                  const SizedBox(width: 4),
-                  Text(
-                    'VIDEO',
-                    style: AppTextStyles.caption.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          _buildVideoIndicator(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVideoThumbnail(String thumbnailUrl, String videoUrl) {
+    return GestureDetector(
+      onTap: () => _initializeAndPlayVideo(videoUrl),
+      child: Stack(
+        children: [
+          Image.network(
+            thumbnailUrl,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _buildVideoFallback(),
+          ),
+          Container(
+            color: Colors.black.withOpacity(0.3),
+            width: double.infinity,
+            height: double.infinity,
           ),
         ],
       ),
     );
   }
 
-  // 🆕 OVERLAY DE MEDIA CON INFORMACIÓN
-  Widget _buildMediaOverlay(ContentModel contentModel, bool isVideo) {
+  Widget _buildVideoPlayerWidget() {
+    if (_videoController == null || !_isVideoInitialized) {
+      return const SizedBox.shrink();
+    }
+
+    return GestureDetector(
+      onTap: _toggleVideoPlayback,
+      child: AspectRatio(
+        aspectRatio: _videoController!.value.aspectRatio,
+        child: VideoPlayer(_videoController!),
+      ),
+    );
+  }
+
+  Widget _buildVideoControls() {
+    if (_videoController == null || !_isVideoInitialized) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned(
+      bottom: 20,
+      left: 20,
+      right: 20,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Barra de progreso
+            VideoProgressIndicator(
+              _videoController!,
+              allowScrubbing: true,
+              colors: VideoProgressColors(
+                playedColor: Colors.white,
+                bufferedColor: Colors.white.withOpacity(0.3),
+                backgroundColor: Colors.white.withOpacity(0.1),
+              ),
+            ),
+            const SizedBox(height: 8),
+            
+            // Controles de reproducción
+            Row(
+              children: [
+                IconButton(
+                  onPressed: _toggleVideoPlayback,
+                  icon: Icon(
+                    _isVideoPlaying ? Icons.pause : Icons.play_arrow,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    _formatVideoDuration(_videoController!.value.position, _videoController!.value.duration),
+                    style: AppTextStyles.caption.copyWith(color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => _showFullScreenVideo(_videoController!),
+                  icon: const Icon(Icons.fullscreen, color: Colors.white, size: 24),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideoPlayButton(String videoUrl) {
+    return GestureDetector(
+      onTap: () => _initializeAndPlayVideo(videoUrl),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.6),
+          shape: BoxShape.circle,
+        ),
+        padding: const EdgeInsets.all(20),
+        child: const Icon(
+          Icons.play_arrow,
+          color: Colors.white,
+          size: 48,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideoIndicator() {
+    return Positioned(
+      top: 12,
+      left: 12,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.videocam, color: Colors.white, size: 12),
+            const SizedBox(width: 4),
+            Text(
+              'VIDEO',
+              style: AppTextStyles.caption.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _initializeAndPlayVideo(String videoUrl) async {
+    try {
+      await _videoController?.dispose();
+      
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+      await _videoController!.initialize();
+      
+      setState(() {
+        _isVideoInitialized = true;
+        _isVideoPlaying = true;
+      });
+      
+      await _videoController!.play();
+      _videoController!.addListener(_onVideoStateChanged);
+      
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cargar el video: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  void _toggleVideoPlayback() {
+    if (_videoController == null || !_isVideoInitialized) return;
+    
+    setState(() {
+      if (_isVideoPlaying) {
+        _videoController!.pause();
+        _isVideoPlaying = false;
+      } else {
+        _videoController!.play();
+        _isVideoPlaying = true;
+      }
+    });
+  }
+
+  void _onVideoStateChanged() {
+    if (_videoController == null) return;
+    setState(() {
+      _isVideoPlaying = _videoController!.value.isPlaying;
+    });
+  }
+
+  String _formatVideoDuration(Duration position, Duration total) {
+    String formatDuration(Duration duration) {
+      String twoDigits(int n) => n.toString().padLeft(2, '0');
+      String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+      String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+      return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
+    }
+    
+    return "${formatDuration(position)} / ${formatDuration(total)}";
+  }
+
+  void _showFullScreenVideo(VideoPlayerController controller) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => _FullScreenVideoPlayer(controller: controller),
+        fullscreenDialog: true,
+      ),
+    );
+  }
+
+  Widget _buildImageViewer(String imageUrl) {
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        
+        return Center(
+          child: CircularProgressIndicator(
+            value: loadingProgress.expectedTotalBytes != null
+                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                : null,
+            color: AppColors.primary,
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: AppColors.error.withOpacity(0.1),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.broken_image, size: 64, color: AppColors.error.withOpacity(0.5)),
+                const SizedBox(height: 12),
+                Text('Error al cargar imagen', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMediaOverlay(ContentModel contentModel) {
     return Positioned(
       top: 0,
       left: 0,
@@ -373,24 +483,23 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              // Tipo de media
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isVideo ? Colors.red : Colors.blue,
+                  color: contentModel.isMainMediaVideo ? Colors.red : Colors.blue,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      isVideo ? Icons.videocam : Icons.image,
+                      contentModel.isMainMediaVideo ? Icons.videocam : Icons.image,
                       color: Colors.white,
                       size: 12,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      isVideo ? 'VIDEO' : 'IMAGEN',
+                      contentModel.isMainMediaVideo ? 'VIDEO' : 'IMAGEN',
                       style: AppTextStyles.caption.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -400,54 +509,14 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
                   ],
                 ),
               ),
-              
               const Spacer(),
-              
-              // Botones de acción
-              Row(
-                children: [
-                  // Botón de información
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _showMediaDetails = !_showMediaDetails;
-                        });
-                      },
-                      icon: Icon(
-                        _showMediaDetails ? Icons.info : Icons.info_outline,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(width: 8),
-                  
-                  // Botón de pantalla completa
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: IconButton(
-                      onPressed: () => _showFullScreenMedia(
-                        isVideo ? contentModel.mediaUrl! : 
-                        (contentModel.hasResolvedMainMedia ? contentModel.mediaUrl! : contentModel.thumbnailUrl!),
-                        isVideo,
-                      ),
-                      icon: const Icon(
-                        Icons.fullscreen,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ],
+              IconButton(
+                onPressed: () => _showFullScreenMedia(contentModel),
+                icon: const Icon(
+                  Icons.fullscreen,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
             ],
           ),
@@ -456,259 +525,35 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
     );
   }
 
-  // 🆕 PLACEHOLDER DE MEDIA MEJORADO
-  Widget _buildMediaPlaceholder(ContentModel? contentModel) {
-    final hasMediaIds = contentModel?.hasAnyMedia == true;
-    final hasResolvedMedia = contentModel?.hasAnyResolvedMedia == true;
-    
+  Widget _buildMediaPlaceholder() {
     return Container(
       height: 250,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.primaryLight.withOpacity(0.1),
-        border: Border.all(
-          color: AppColors.primaryLight.withOpacity(0.3),
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            hasMediaIds ? Icons.hourglass_empty : Icons.image_not_supported,
-            size: 64,
-            color: AppColors.primary.withOpacity(0.5),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'XUMA\'A',
-            style: AppTextStyles.h4.copyWith(
-              color: AppColors.primary.withOpacity(0.7),
-              fontWeight: FontWeight.bold,
+      color: AppColors.primaryLight.withOpacity(0.1),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.image_not_supported,
+              size: 64,
+              color: AppColors.primary.withOpacity(0.5),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            hasMediaIds
-                ? 'Procesando multimedia...'
-                : 'Sin multimedia disponible',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.primary.withOpacity(0.8),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (hasMediaIds && !hasResolvedMedia) ...[
             const SizedBox(height: 12),
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: 8),
             Text(
-              'ID: ${contentModel?.mainMediaId ?? contentModel?.thumbnailMediaId ?? "N/A"}',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textHint,
-                fontFamily: 'monospace',
+              'Sin multimedia',
+              style: AppTextStyles.h4.copyWith(
+                color: AppColors.primary.withOpacity(0.7),
               ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
 
-  // 🆕 SECCIÓN DE DETALLES DE MEDIA EXPANDIBLE
-  Widget _buildMediaDetailsSection(ContentModel contentModel) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      height: _showMediaDetails ? null : 0,
-      child: _showMediaDetails
-          ? Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.primary.withOpacity(0.2),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Información de multimedia',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  ...contentModel.getMediaInfo().entries.map((entry) {
-                    return _buildInfoRow(entry.key, entry.value?.toString() ?? 'N/A');
-                  }).toList(),
-                ],
-              ),
-            )
-          : const SizedBox.shrink(),
-    );
-  }
-
-  // 🆕 FILA DE INFORMACIÓN
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: AppTextStyles.caption.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textHint,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 🆕 CONTENIDO DEL CUERPO
-  Widget _buildContentBody(ContentModel? contentModel) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Descripción
-        if (widget.content.description.isNotEmpty) ...[
-          Text(
-            'Descripción',
-            style: AppTextStyles.h4.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.primaryLight.withOpacity(0.3),
-              ),
-            ),
-            child: Text(
-              widget.content.description,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-                height: 1.6,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-        ],
-        
-        // Contenido principal
-        Text(
-          'Contenido',
-          style: AppTextStyles.h4.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.primaryLight.withOpacity(0.3),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.content.content.isNotEmpty 
-                    ? widget.content.content 
-                    : _getDefaultContent(),
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textPrimary,
-                  height: 1.7,
-                ),
-              ),
-              const SizedBox(height: 20),
-              
-              // Información adicional
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppColors.success.withOpacity(0.3),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.eco,
-                      color: AppColors.success,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '¡Cada pequeña acción cuenta para proteger nuestro planeta! 🌱',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.success,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // 🆕 FALLBACK PARA VIDEO
   Widget _buildVideoFallback() {
     return Container(
-      color: Colors.black.withOpacity(0.8),
+      color: Colors.black,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -723,7 +568,6 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
               'Contenido de video',
               style: AppTextStyles.bodyMedium.copyWith(
                 color: Colors.white,
-                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -732,275 +576,66 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
     );
   }
 
-  // 🆕 MOSTRAR VIDEO EN DIÁLOGO
-  void _showVideoDialog(String videoUrl) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog.fullscreen(
-        backgroundColor: Colors.black,
-        child: Stack(
-          children: [
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.play_circle_fill,
-                    color: Colors.white,
-                    size: 80,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Reproductor de video',
-                    style: AppTextStyles.h3.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Funcionalidad disponible próximamente',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: Colors.white.withOpacity(0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'URL: ${videoUrl.length > 50 ? "${videoUrl.substring(0, 50)}..." : videoUrl}',
-                    style: AppTextStyles.caption.copyWith(
-                      color: Colors.white.withOpacity(0.5),
-                      fontFamily: 'monospace',
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: 40,
-              right: 16,
-              child: IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _showFullScreenMedia(ContentModel contentModel) {
+    // Implementación para mostrar media en pantalla completa
   }
 
-  // 🆕 MOSTRAR MEDIA EN PANTALLA COMPLETA
-  void _showFullScreenMedia(String mediaUrl, bool isVideo) {
-    if (isVideo) {
-      _showVideoDialog(mediaUrl);
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => Dialog.fullscreen(
-        backgroundColor: Colors.black,
-        child: Stack(
-          children: [
-            Center(
-              child: InteractiveViewer(
-                child: Image.network(
-                  mediaUrl,
-                  fit: BoxFit.contain,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                            : null,
-                        color: Colors.white,
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.error_outline,
-                            color: Colors.white,
-                            size: 64,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Error al cargar la imagen',
-                            style: AppTextStyles.bodyLarge.copyWith(
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            Positioned(
-              top: 40,
-              right: 16,
-              child: IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 🆕 BOTÓN DE COMPLETADO MEJORADO
   Widget _buildCompletionButton() {
     return SizedBox(
       width: double.infinity,
-      child: ElevatedButton.icon(
+      child: ElevatedButton(
         onPressed: () {
           setState(() {
             _isCompleted = !_isCompleted;
           });
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(
-                    _isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(_isCompleted ? '¡Contenido marcado como leído!' : 'Contenido desmarcado'),
-                ],
-              ),
-              backgroundColor: _isCompleted ? AppColors.success : AppColors.primary,
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
         },
-        icon: Icon(
-          _isCompleted ? Icons.check_circle : Icons.check_circle_outline,
-          color: Colors.white,
-        ),
-        label: Text(
-          _isCompleted ? 'Contenido leído ✓' : 'Marcar como leído',
-          style: AppTextStyles.buttonLarge.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: _isCompleted ? AppColors.success : AppColors.primary,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: _isCompleted ? 4 : 2,
+        ),
+        child: Text(
+          _isCompleted ? 'Completado ✓' : 'Marcar como completado',
+          style: AppTextStyles.buttonLarge,
         ),
       ),
     );
   }
-
-  String _getDefaultContent() {
-    return '''
-En este contenido aprenderás sobre ${widget.content.title.toLowerCase()}.
-
-Este tema es fundamental para comprender cómo podemos contribuir al cuidado del medio ambiente en nuestra vida diaria.
-
-Puntos clave:
-• Comprender los conceptos básicos
-• Identificar oportunidades de aplicación
-• Desarrollar hábitos sostenibles
-• Contribuir al cuidado del medio ambiente
-
-¡Gracias por aprender con XUMA'A y cuidar nuestro planeta! 🌱
-    ''';
-  }
 }
 
-// 🆕 SIMPLE VIDEO PLAYER WIDGET (Si no tienes video_player configurado)
-class SimpleVideoPlayer extends StatefulWidget {
-  final String url;
+// Reproductor de video en pantalla completa
+class _FullScreenVideoPlayer extends StatelessWidget {
+  final VideoPlayerController controller;
 
-  const SimpleVideoPlayer({Key? key, required this.url}) : super(key: key);
+  const _FullScreenVideoPlayer({required this.controller});
 
-  @override
-  State<SimpleVideoPlayer> createState() => _SimpleVideoPlayerState();
-}
-
-class _SimpleVideoPlayerState extends State<SimpleVideoPlayer> {
   @override
   Widget build(BuildContext context) {
-    // Por ahora, muestra un placeholder hasta implementar video_player
-    return Container(
-      color: Colors.black,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.play_circle_fill,
-              color: Colors.white,
-              size: 80,
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Center(
+            child: AspectRatio(
+              aspectRatio: controller.value.aspectRatio,
+              child: VideoPlayer(controller),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Video Player',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+          ),
+          Positioned(
+            top: 40,
+            right: 16,
+            child: IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 24),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Toca para reproducir',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              widget.url.length > 30 
-                ? '${widget.url.substring(0, 30)}...' 
-                : widget.url,
-              style: TextStyle(
-                color: Colors.white54,
-                fontSize: 10,
-                fontFamily: 'monospace',
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -1,4 +1,4 @@
-// lib/features/learning/data/models/content_model.dart - MEJORADO CON SOPORTE COMPLETO PARA MEDIA
+// lib/features/learning/data/models/content_model.dart - DETECCIÓN MEJORADA CON CATEGORÍAS
 import 'package:json_annotation/json_annotation.dart';
 import '../../domain/entities/content_entity.dart';
 
@@ -167,38 +167,86 @@ class ContentModel extends ContentEntity {
     return thumbnailUrl ?? mediaUrl ?? imageUrl;
   }
 
-  // 🆕 GETTERS PARA INFORMACIÓN DE MEDIA DESDE METADATA
+  // 🔧 GETTERS MEJORADOS PARA INFORMACIÓN DE MEDIA DESDE METADATA CON CATEGORÍAS
   bool get isMainMediaVideo {
     final meta = mediaMetadata ?? {};
+    
+    // 🔧 PRIORIZAR CATEGORÍA DE LA API
+    final category = meta['main_category']?.toString()?.toLowerCase() ?? meta['category']?.toString()?.toLowerCase() ?? '';
+    if (category == 'video') {
+      print('🎬 [CONTENT MODEL] Main media is VIDEO (from category)');
+      return true;
+    }
+    
+    // Fallback a otros métodos
     final isVideoFlag = meta['main_is_video'] == true;
     final mimeType = meta['main_media_type']?.toString() ?? '';
-    final category = meta['main_category']?.toString()?.toLowerCase() ?? '';
-    return isVideoFlag ||
-        mimeType.startsWith('video/') ||
-        category == 'video' ||
-        mimeType == 'video';
+    final isVideoFromMime = mimeType.startsWith('video/') || mimeType == 'video';
+    
+    final result = isVideoFlag || isVideoFromMime;
+    print('🎬 [CONTENT MODEL] Main media is VIDEO: $result (category: "$category", mime: "$mimeType")');
+    return result;
   }
 
   bool get isMainMediaImage {
     final meta = mediaMetadata ?? {};
+    
+    // 🔧 PRIORIZAR CATEGORÍA DE LA API
+    final category = meta['main_category']?.toString()?.toLowerCase() ?? meta['category']?.toString()?.toLowerCase() ?? '';
+    if (category == 'image') {
+      print('🖼️ [CONTENT MODEL] Main media is IMAGE (from category)');
+      return true;
+    }
+    
+    // Fallback a otros métodos
     final isImageFlag = meta['main_is_image'] == true;
     final mimeType = meta['main_media_type']?.toString() ?? '';
-    final category = meta['main_category']?.toString()?.toLowerCase() ?? '';
-    return isImageFlag ||
-        mimeType.startsWith('image/') ||
-        category == 'image' ||
-        mimeType == 'image';
+    final isImageFromMime = mimeType.startsWith('image/') || mimeType == 'image';
+    
+    final result = isImageFlag || isImageFromMime;
+    print('🖼️ [CONTENT MODEL] Main media is IMAGE: $result (category: "$category", mime: "$mimeType")');
+    return result;
   }
 
   bool get isThumbnailImage {
     final meta = mediaMetadata ?? {};
+    
+    // 🔧 PRIORIZAR CATEGORÍA DE LA API
+    final category = meta['thumbnail_category']?.toString()?.toLowerCase() ?? meta['category']?.toString()?.toLowerCase() ?? '';
+    if (category == 'image') {
+      return true;
+    }
+    
+    // Fallback a otros métodos
     final isImageFlag = meta['thumbnail_is_image'] == true;
     final mimeType = meta['thumbnail_media_type']?.toString() ?? '';
-    final category = meta['main_category']?.toString()?.toLowerCase() ?? '';
-    return isImageFlag ||
-        mimeType.startsWith('image/') ||
-        category == 'image' ||
-        mimeType == 'image';
+    return isImageFlag || mimeType.startsWith('image/') || mimeType == 'image';
+  }
+
+  // 🆕 GETTERS ADICIONALES PARA AUDIO Y DOCUMENTOS
+  bool get isMainMediaAudio {
+    final meta = mediaMetadata ?? {};
+    
+    final category = meta['main_category']?.toString()?.toLowerCase() ?? meta['category']?.toString()?.toLowerCase() ?? '';
+    if (category == 'audio') {
+      return true;
+    }
+    
+    final mimeType = meta['main_media_type']?.toString() ?? '';
+    return mimeType.startsWith('audio/') || mimeType == 'audio';
+  }
+
+  bool get isMainMediaDocument {
+    final meta = mediaMetadata ?? {};
+    
+    final category = meta['main_category']?.toString()?.toLowerCase() ?? meta['category']?.toString()?.toLowerCase() ?? '';
+    if (category == 'document') {
+      return true;
+    }
+    
+    final mimeType = meta['main_media_type']?.toString() ?? '';
+    final docTypes = ['application/pdf', 'application/msword', 'text/plain'];
+    return docTypes.any((type) => mimeType.startsWith(type));
   }
 
   String? get mainMediaType {
@@ -209,7 +257,16 @@ class ContentModel extends ContentEntity {
     return mediaMetadata?['thumbnail_media_type']?.toString();
   }
 
-  // 🆕 MÉTODO PARA OBTENER INFORMACIÓN COMPLETA DE MEDIA
+  // 🆕 GETTER PARA CATEGORÍA DE MEDIA
+  String? get mainMediaCategory {
+    return mediaMetadata?['main_category']?.toString() ?? mediaMetadata?['category']?.toString();
+  }
+
+  String? get thumbnailMediaCategory {
+    return mediaMetadata?['thumbnail_category']?.toString() ?? mediaMetadata?['category']?.toString();
+  }
+
+  // 🆕 MÉTODO PARA OBTENER INFORMACIÓN COMPLETA DE MEDIA MEJORADO
   Map<String, dynamic> getMediaInfo() {
     return {
       'hasMainMedia': hasMainMedia,
@@ -224,9 +281,14 @@ class ContentModel extends ContentEntity {
       'thumbnailUrl': thumbnailUrl,
       'finalImageUrl': finalImageUrl,
       'isMainMediaVideo': isMainMediaVideo,
+      'isMainMediaImage': isMainMediaImage,
+      'isMainMediaAudio': isMainMediaAudio, // 🆕
+      'isMainMediaDocument': isMainMediaDocument, // 🆕
       'isThumbnailImage': isThumbnailImage,
       'mainMediaType': mainMediaType,
       'thumbnailMediaType': thumbnailMediaType,
+      'mainMediaCategory': mainMediaCategory, // 🆕
+      'thumbnailMediaCategory': thumbnailMediaCategory, // 🆕
       'metadata': mediaMetadata,
     };
   }
@@ -374,10 +436,8 @@ class ContentModel extends ContentEntity {
 
   // 🔧 VERIFICAR SI UN ID PARECE SER DE MEDIA
   static bool _looksLikeMediaId(String id) {
-    // UUIDs, hashes largos, etc.
-    return id.length > 16 && 
-           (id.contains('-') || // UUID format
-            RegExp(r'^[a-fA-F0-9]+$').hasMatch(id)); // Hex hash
+    // Considerar IDs que son alfanuméricos y tienen longitud típica de media
+    return RegExp(r'^[a-zA-Z0-9_-]{10,}$').hasMatch(id);
   }
 
   // 🔧 CREAR CONTENIDO FALLBACK
