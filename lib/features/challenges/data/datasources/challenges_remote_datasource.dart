@@ -450,34 +450,97 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
   }
 
   Map<String, dynamic> _adaptChallengeFromAPI(
-    Map<String, dynamic> apiChallenge,
-    int index,
-  ) {
-    print('🔄 [CHALLENGES] Adapting challenge structure from API for index $index');
-    
-    // Mapear campos de la API a estructura esperada
-    return {
-      'id': apiChallenge['id'] ?? 'challenge_${index + 1}',
-      'title': apiChallenge['title'] ?? apiChallenge['name'] ?? 'Challenge ${index + 1}',
-      'description': apiChallenge['description'] ?? 'Challenge description from API',
-      'category': apiChallenge['category'] ?? apiChallenge['type'] ?? 'general',
-      'imageUrl': apiChallenge['imageUrl'] ?? apiChallenge['image'] ?? '',
-      'iconCode': _getIconForCategory(apiChallenge['category'] ?? 'general'),
-      'type': _mapChallengeType(apiChallenge['challengeType'] ?? apiChallenge['type']),
-      'difficulty': _mapChallengeDifficulty(apiChallenge['difficulty']),
-      'totalPoints': apiChallenge['points'] ?? apiChallenge['totalPoints'] ?? apiChallenge['reward'] ?? 100,
-      'currentProgress': apiChallenge['currentProgress'] ?? apiChallenge['progress'] ?? 0,
-      'targetProgress': apiChallenge['targetProgress'] ?? apiChallenge['target'] ?? apiChallenge['goal'] ?? 10,
-      'status': _mapChallengeStatus(apiChallenge['status']),
-      'startDate': apiChallenge['startDate'] ?? apiChallenge['createdAt'] ?? DateTime.now().toIso8601String(),
-      'endDate': apiChallenge['endDate'] ?? apiChallenge['expiresAt'] ?? DateTime.now().add(const Duration(days: 7)).toIso8601String(),
-      'requirements': _extractRequirements(apiChallenge),
-      'rewards': _extractRewards(apiChallenge),
-      'isParticipating': apiChallenge['isParticipating'] ?? apiChallenge['joined'] ?? false,
-      'completedAt': apiChallenge['completedAt'],
-      'createdAt': apiChallenge['createdAt'] ?? DateTime.now().toIso8601String(),
-    };
+  Map<String, dynamic> apiChallenge,
+  int index,
+) {
+  print('🔄 [CHALLENGES] Adapting challenge structure from API for index $index');
+  print('🔄 [CHALLENGES] Raw API data: $apiChallenge');
+  
+  // ===== MAPEAR CAMPOS DE TU API REAL =====
+  
+  // 1. INSTRUCCIONES - Extraer del objeto instructions
+  List<String> instructions = [];
+  if (apiChallenge['instructions'] != null) {
+    final instructionsObj = apiChallenge['instructions'];
+    if (instructionsObj is Map<String, dynamic> && instructionsObj['steps'] is List) {
+      final steps = instructionsObj['steps'] as List;
+      instructions = steps.where((step) => step != null && step.toString().trim().isNotEmpty).map((step) => step.toString()).toList();
+    }
   }
+  
+  // 2. VALIDACIÓN - Extraer del objeto validationCriteria
+  List<String> evidenceRequired = [];
+  if (apiChallenge['validationCriteria'] != null) {
+    final validationObj = apiChallenge['validationCriteria'];
+    if (validationObj is Map<String, dynamic> && validationObj['requiredEvidence'] is List) {
+      final evidence = validationObj['requiredEvidence'] as List;
+      evidenceRequired = evidence.where((ev) => ev != null && ev.toString().trim().isNotEmpty).map((ev) => ev.toString()).toList();
+    }
+  }
+  
+  // 3. FECHAS - Convertir strings ISO a DateTime
+  DateTime? startDate;
+  DateTime? endDate;
+  try {
+    if (apiChallenge['startDate'] != null) {
+      startDate = DateTime.parse(apiChallenge['startDate']);
+    }
+    if (apiChallenge['endDate'] != null) {
+      endDate = DateTime.parse(apiChallenge['endDate']);
+    }
+  } catch (e) {
+    print('⚠️ [CHALLENGES] Error parsing dates: $e');
+  }
+  
+  // 4. RESTRICCIONES DE EDAD
+  int? minAge;
+  int? maxAge;
+  if (apiChallenge['ageRestrictions'] != null) {
+    final ageObj = apiChallenge['ageRestrictions'];
+    if (ageObj is Map<String, dynamic>) {
+      minAge = ageObj['minAge'];
+      maxAge = ageObj['maxAge'];
+    }
+  }
+  
+  // 5. MAPEAR A ESTRUCTURA ESPERADA
+  return {
+    // ===== CAMPOS BÁSICOS =====
+    'id': apiChallenge['id'] ?? 'challenge_${index + 1}',
+    'title': apiChallenge['title'] ?? 'Challenge ${index + 1}',
+    'description': apiChallenge['description'] ?? 'Challenge description from API',
+    'category': apiChallenge['category'] ?? 'general',
+    
+    // ===== CAMPOS DESDE TU API =====
+    'instructions': instructions, // ✅ AGREGADO
+    'difficulty': apiChallenge['difficulty'] ?? 'easy', // ✅ AGREGADO
+    'pointsReward': apiChallenge['pointsReward'] ?? 100, // ✅ AGREGADO (mapear a totalPoints)
+    'estimatedDurationDays': apiChallenge['estimatedDurationDays'] ?? 7, // ✅ AGREGADO
+    'validationType': apiChallenge['validationType'] ?? 'photo', // ✅ AGREGADO
+    'requiredEvidence': evidenceRequired, // ✅ AGREGADO (para requirements)
+    'maxParticipants': apiChallenge['maxParticipants'] ?? 100, // ✅ AGREGADO
+    'currentParticipants': apiChallenge['currentParticipants'] ?? 0, // ✅ AGREGADO
+    'minAge': minAge, // ✅ AGREGADO
+    'maxAge': maxAge, // ✅ AGREGADO
+    
+    // ===== CAMPOS MAPEADOS =====
+    'imageUrl': apiChallenge['imageUrl'] ?? '',
+    'iconCode': _getIconForCategory(apiChallenge['category'] ?? 'general'),
+    'type': _mapChallengeType(apiChallenge['challengeType'] ?? 'daily'),
+    'totalPoints': apiChallenge['pointsReward'] ?? 100, // Mapear desde pointsReward
+    'currentProgress': 0, // Usuario aún no participa
+    'targetProgress': _calculateTargetProgress(apiChallenge),
+    'status': _mapChallengeStatus('notStarted'), // Usuario no ha empezado
+    'startDate': startDate?.toIso8601String() ?? DateTime.now().toIso8601String(),
+    'endDate': endDate?.toIso8601String() ?? DateTime.now().add(Duration(days: apiChallenge['estimatedDurationDays'] ?? 7)).toIso8601String(),
+    'requirements': _buildRequirements(apiChallenge, evidenceRequired),
+    'rewards': _buildRewards(apiChallenge),
+    'isParticipating': false, // Usuario no participa inicialmente
+    'completedAt': null,
+    'createdAt': apiChallenge['createdAt'] ?? DateTime.now().toIso8601String(),
+  };
+}
+
 
   Map<String, dynamic> _adaptUserStatsFromAPI(
     Map<String, dynamic> apiStats,
@@ -533,6 +596,99 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
     }
   }
 
+ List<String> _buildRequirements(Map<String, dynamic> apiChallenge, List<String> evidenceRequired) {
+  final requirements = <String>[];
+  
+  // Agregar instrucciones como requisitos
+  if (apiChallenge['instructions'] != null) {
+    final instructionsObj = apiChallenge['instructions'];
+    if (instructionsObj is Map<String, dynamic> && instructionsObj['steps'] is List) {
+      final steps = instructionsObj['steps'] as List;
+      for (final step in steps) {
+        if (step != null && step.toString().trim().isNotEmpty) {
+          requirements.add('• ${step.toString()}');
+        }
+      }
+    }
+  }
+  
+  // Agregar evidencia requerida
+  for (final evidence in evidenceRequired) {
+    if (evidence.trim().isNotEmpty) {
+      requirements.add('• Evidencia: $evidence');
+    }
+  }
+  
+  // Agregar requisitos de validación
+  final validationType = apiChallenge['validationType'] ?? 'photo';
+  requirements.add('• Tipo de validación: $validationType');
+  
+  // Agregar restricciones de edad si existen
+  if (apiChallenge['ageRestrictions'] != null) {
+    final ageObj = apiChallenge['ageRestrictions'];
+    if (ageObj is Map<String, dynamic>) {
+      final minAge = ageObj['minAge'];
+      final maxAge = ageObj['maxAge'];
+      if (minAge != null && maxAge != null) {
+        requirements.add('• Edad requerida: $minAge - $maxAge años');
+      }
+    }
+  }
+  
+  // Si no hay requisitos, agregar defaults
+  if (requirements.isEmpty) {
+    requirements.addAll([
+      '• Seguir las instrucciones del desafío',
+      '• Tomar fotografías de evidencia',
+      '• Esperar validación del equipo'
+    ]);
+  }
+  
+  return requirements;
+}
+
+List<String> _buildRewards(Map<String, dynamic> apiChallenge) {
+  final rewards = <String>[];
+  
+  // Puntos principales
+  final points = apiChallenge['pointsReward'] ?? 100;
+  rewards.add('$points puntos EcoXuma');
+  
+  // Duración para calcular bonus
+  final duration = apiChallenge['estimatedDurationDays'] ?? 7;
+  if (duration <= 1) {
+    rewards.add('Badge "Acción Rápida"');
+  } else if (duration >= 7) {
+    rewards.add('Badge "Constancia Verde"');
+  }
+  
+  // Recompensas basadas en categoría
+  final category = apiChallenge['category']?.toString().toLowerCase() ?? '';
+  switch (category) {
+    case 'reciclaje':
+      rewards.add('Badge "Reciclador Pro"');
+      rewards.add('Contribución al reciclaje comunitario');
+      break;
+    case 'energia':
+      rewards.add('Badge "Ahorrador de Energía"');
+      rewards.add('Impacto en reducción de CO2');
+      break;
+    case 'agua':
+      rewards.add('Badge "Guardián del Agua"');
+      rewards.add('Litros de agua ahorrados');
+      break;
+    case 'compostaje':
+      rewards.add('Badge "Maestro Composta"');
+      rewards.add('Kg de residuos orgánicos aprovechados');
+      break;
+    default:
+      rewards.add('Badge de logro');
+      rewards.add('Contribución al medio ambiente');
+  }
+  
+  return rewards;
+}
+
   String _mapChallengeStatus(dynamic status) {
     if (status == null) return 'notStarted';
     final statusStr = status.toString().toLowerCase();
@@ -581,7 +737,27 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
     final points = apiChallenge['points'] ?? apiChallenge['totalPoints'] ?? 100;
     return ['$points puntos EcoXuma', 'Badge de logro', 'Contribución al medio ambiente'];
   }
-
+int _calculateTargetProgress(Map<String, dynamic> apiChallenge) {
+  // Si hay un target específico, usarlo
+  if (apiChallenge['targetProgress'] != null) {
+    return apiChallenge['targetProgress'];
+  }
+  
+  // Si no, calcular basado en la categoría
+  final category = apiChallenge['category']?.toString().toLowerCase() ?? '';
+  switch (category) {
+    case 'reciclaje':
+      return 10; // 10 items reciclados
+    case 'energia':
+      return 5; // 5 acciones de ahorro
+    case 'agua':
+      return 7; // 7 días de ahorro
+    case 'compostaje':
+      return 3; // 3 veces compostar
+    default:
+      return 5; // Default
+  }
+}
   int _getIconForCategory(String category) {
     final categoryLower = category.toLowerCase();
     
@@ -601,5 +777,70 @@ class ChallengesRemoteDataSourceImpl implements ChallengesRemoteDataSource {
       default:
         return 0xe567; // Icons.recycling
     }
+  }
+
+  // 🆕 MÉTODOS HELPER PARA EXTRAER CAMPOS ADICIONALES
+  
+  List<String> _extractInstructions(Map<String, dynamic> apiChallenge) {
+    if (apiChallenge.containsKey('instructions')) {
+      final instructions = apiChallenge['instructions'];
+      if (instructions is Map<String, dynamic> && instructions.containsKey('steps')) {
+        final steps = instructions['steps'];
+        if (steps is List) {
+          return steps.map((step) => step?.toString() ?? '').where((step) => step.isNotEmpty).toList();
+        }
+      } else if (instructions is List) {
+        return instructions.map((step) => step?.toString() ?? '').where((step) => step.isNotEmpty).toList();
+      }
+    }
+    
+    // Fallback a requirements si no hay instructions
+    return _extractRequirements(apiChallenge);
+  }
+  
+  Map<String, dynamic> _extractValidationCriteria(Map<String, dynamic> apiChallenge) {
+    if (apiChallenge.containsKey('validationCriteria')) {
+      final criteria = apiChallenge['validationCriteria'];
+      if (criteria is Map<String, dynamic>) {
+        return {
+          'requiredEvidence': _extractRequiredEvidence(criteria),
+          'minPhotos': criteria['minPhotos'] ?? 1,
+          'maxPhotos': criteria['maxPhotos'] ?? 5,
+        };
+      }
+    }
+    
+    return {
+      'requiredEvidence': ['Foto de evidencia'],
+      'minPhotos': 1,
+      'maxPhotos': 5,
+    };
+  }
+  
+  List<String> _extractRequiredEvidence(Map<String, dynamic> criteria) {
+    if (criteria.containsKey('requiredEvidence')) {
+      final evidence = criteria['requiredEvidence'];
+      if (evidence is List) {
+        return evidence.map((item) => item?.toString() ?? '').where((item) => item.isNotEmpty).toList();
+      }
+    }
+    return ['Foto de evidencia'];
+  }
+  
+  Map<String, dynamic> _extractAgeRestrictions(Map<String, dynamic> apiChallenge) {
+    if (apiChallenge.containsKey('ageRestrictions')) {
+      final restrictions = apiChallenge['ageRestrictions'];
+      if (restrictions is Map<String, dynamic>) {
+        return {
+          'minAge': restrictions['minAge'] ?? 8,
+          'maxAge': restrictions['maxAge'] ?? 18,
+        };
+      }
+    }
+    
+    return {
+      'minAge': 8,
+      'maxAge': 18,
+    };
   }
 }

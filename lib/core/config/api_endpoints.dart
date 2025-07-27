@@ -20,6 +20,9 @@ class ApiEndpoints {
   // 🆕 🧠 QUIZ SERVICE - Para quiz challenge system
   static const String quizServiceUrl = 'https://quiz-challenge-service-production.up.railway.app/';
 
+  // 🆕 📁 MEDIA SERVICE - Para subir archivos
+  static const String mediaServiceUrl = 'https://media-service-production-6446.up.railway.app';
+
   // ==================== AUTENTICACIÓN ====================
   static const String register = '/api/auth/register';
   static const String login = '/api/auth/login';

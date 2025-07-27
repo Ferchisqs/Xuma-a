@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:injectable/injectable.dart';
+import 'package:xuma_a/core/services/media_resolver_service.dart';
 import 'package:xuma_a/features/trivia/domain/usecases/get_quizzes_by_topic_usecase.dart';
 import 'injection.config.dart';
 
@@ -110,14 +111,26 @@ void _registerMediaDependencies() {
       () => MediaRemoteDataSourceImpl(getIt<ApiClient>()),
     );
   }
+
+  if (!getIt.isRegistered<MediaResolverService>()) {
+    getIt.registerLazySingleton<MediaResolverService>(
+      () => MediaResolverService(getIt<MediaRemoteDataSource>()),
+    );
+  }
 }
 
 void _registerContentDependencies() {
+  if (!getIt.isRegistered<MediaResolverService>()) {
+    getIt.registerLazySingleton<MediaResolverService>(
+      () => MediaResolverService(getIt<MediaRemoteDataSource>()),
+    );
+  }
+  
   if (!getIt.isRegistered<ContentRemoteDataSource>()) {
     getIt.registerLazySingleton<ContentRemoteDataSource>(
       () => ContentRemoteDataSourceImpl(
-        getIt<ApiClient>(),
-        getIt<MediaRemoteDataSource>(),
+        getIt<ApiClient>(),           // primer parámetro posicional
+        getIt<MediaResolverService>(),  // segundo parámetro posicional
       ),
     );
   }
@@ -128,6 +141,7 @@ void _registerContentDependencies() {
         remoteDataSource: getIt<ContentRemoteDataSource>(),
         localDataSource: getIt(),
         networkInfo: getIt(),
+        mediaResolverService: getIt<MediaResolverService>(), // 👈 AGREGADO
       ),
     );
   }

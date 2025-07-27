@@ -1,5 +1,6 @@
 // lib/features/learning/data/repositories/content_repository_impl.dart - CON BY-TOPIC
 import 'package:injectable/injectable.dart';
+import 'package:xuma_a/core/services/media_resolver_service.dart';
 import '../../../../core/utils/either.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -15,11 +16,13 @@ class ContentRepositoryImpl implements ContentRepository {
   final ContentRemoteDataSource remoteDataSource;
   final LearningLocalDataSource localDataSource;
   final NetworkInfo networkInfo;
+  final MediaResolverService mediaResolverService; // 👈 Agregado
 
   ContentRepositoryImpl({
     required this.remoteDataSource,
     required this.localDataSource,
     required this.networkInfo,
+    required this.mediaResolverService,
   });
 
   @override
@@ -75,13 +78,16 @@ class ContentRepositoryImpl implements ContentRepository {
       if (await networkInfo.isConnected) {
         try {
           print('🌐 [CONTENT REPO] Network available, fetching content from remote');
-          final remoteContent = await remoteDataSource.getContentById(id);
+          final rawContent = await remoteDataSource.getContentById(id); // 👈 Cambio: rawContent
+          
+          // 👈 Nuevo: Resolver media URLs
+          final resolvedContent = await mediaResolverService.resolveMediaUrls(rawContent);
           
           // TODO: Cache content if needed
-          // await localDataSource.cacheContent(remoteContent);
+          // await localDataSource.cacheContent(resolvedContent);
           
-          print('✅ [CONTENT REPO] Got content: ${remoteContent.title}');
-          return Right(remoteContent);
+          print('✅ [CONTENT REPO] Got content: ${resolvedContent.title}');
+          return Right(resolvedContent); // 👈 Cambio: resolvedContent
         } catch (e) {
           print('❌ [CONTENT REPO] Remote content fetch failed: $e');
           

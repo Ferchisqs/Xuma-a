@@ -14,6 +14,7 @@ class ApiClient {
   late final Dio _contentDio;  
   late final Dio _gamificationDio;
   late final Dio _quizDio;
+  late final Dio _mediaDio;
   final NetworkInfo _networkInfo;
   final CacheService _cacheService;
   final TokenManager _tokenManager;
@@ -28,8 +29,24 @@ class ApiClient {
     _setupContentDio();
     _setupGamificationDio();
     _setupQuizDio();
+    _setupMediaDio();
+
   }
 
+void _setupMediaDio() {
+  _mediaDio = Dio(BaseOptions(
+    baseUrl: 'https://media-service-production-6446.up.railway.app', // Tu URL de media service
+    connectTimeout: Duration(milliseconds: ApiEndpoints.connectTimeout),
+    receiveTimeout: Duration(milliseconds: ApiEndpoints.receiveTimeout),
+    sendTimeout: Duration(milliseconds: ApiEndpoints.sendTimeout),
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+  ));
+
+  _setupInterceptors(_mediaDio, 'MEDIA');
+}
   void _setupAuthDio() {
     _authDio = Dio(BaseOptions(
       baseUrl: ApiEndpoints.authServiceUrl,
@@ -261,6 +278,10 @@ class ApiClient {
         print('🔐 [API CLIENT] Using AUTH service for: $path');
         return _authDio;
       }
+       if (baseUrl.contains('media-service-production')) {
+      print('🎬 [API CLIENT] Using MEDIA service for: $path');
+      return _mediaDio;
+    }
     }
 
     if (ApiEndpoints.isQuizEndpoint(path) || 
@@ -281,6 +302,11 @@ class ApiClient {
       print('🔐 [API CLIENT] Auto-detected AUTH service for: $path');
       return _authDio;
     }
+      if (path.startsWith('/api/media/') || path.contains('/api/media/')) {
+    print('🎬 [API CLIENT] Auto-detected MEDIA service for: $path');
+    return _mediaDio;
+  }
+  
 
     print('🔐 [API CLIENT] Using default AUTH service for: $path');
     return _authDio;
@@ -315,6 +341,56 @@ class ApiClient {
   }
 }
 
+
+Future<Response> getMedia(String endpoint) async {
+  await _checkConnection();
+  
+  print('🎬 [API CLIENT] === MEDIA REQUEST ===');
+  print('🎬 [API CLIENT] Endpoint: $endpoint');
+  
+  try {
+    // 🔧 USAR LA URL COMPLETA DEL MEDIA SERVICE
+    final fullUrl = 'https://media-service-production-6446.up.railway.app$endpoint';
+    print('🎬 [API CLIENT] Full URL: $fullUrl');
+    
+    // Crear un Dio temporal para el media service
+    final mediaDio = Dio(BaseOptions(
+      baseUrl: 'https://media-service-production-6446.up.railway.app',
+      connectTimeout: Duration(milliseconds: 30000),
+      receiveTimeout: Duration(milliseconds: 30000),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ));
+    
+    // Agregar logging
+    mediaDio.interceptors.add(
+      LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        logPrint: (obj) => print('🎬 [MEDIA API]: $obj'),
+      ),
+    );
+    
+    final response = await mediaDio.get(endpoint);
+    
+    print('✅ [API CLIENT] Media request successful: ${response.statusCode}');
+    print('✅ [API CLIENT] Response data: ${response.data}');
+    
+    return response;
+    
+  } on DioException catch (e) {
+    print('❌ [API CLIENT] Media request error: $e');
+    print('❌ [API CLIENT] Error type: ${e.type}');
+    print('❌ [API CLIENT] Error message: ${e.message}');
+    print('❌ [API CLIENT] Response: ${e.response?.data}');
+    throw _handleDioError(e);
+  } catch (e) {
+    print('❌ [API CLIENT] Unexpected media error: $e');
+    throw Exception('Error inesperado en media: $e');
+  }
+}
 // 🆕 MÉTODO ESPECÍFICO PARA POST CON FORMDATA AL GAMIFICATION SERVICE  
 Future<Response> postGamificationWithFormData(
   String endpoint, {

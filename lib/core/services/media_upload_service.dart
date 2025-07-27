@@ -53,10 +53,10 @@ class MediaUploadService {
 
     print('📤 [MEDIA UPLOAD] FormData created, uploading...');
 
-    // 🔧 USAR EL MÉTODO CORRECTO PARA SUBIR AL GAMIFICATION SERVICE
-    final response = await _apiClient.postGamificationWithFormData(
+    // 🔧 USAR EL SERVICIO QUIZ PARA SUBIR MEDIA
+    final response = await _apiClient.postQuiz(
       '/api/media/upload',
-      formData: formData,
+      data: formData,
     );
 
     print('✅ [MEDIA UPLOAD] Upload successful: ${response.statusCode}');

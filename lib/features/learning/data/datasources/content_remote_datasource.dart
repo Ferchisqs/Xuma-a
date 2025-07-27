@@ -5,7 +5,7 @@ import '../../../../core/config/api_endpoints.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../models/topic_model.dart';
 import '../models/content_model.dart';
-import 'media_remote_datasource.dart';
+import '../../../../core/services/media_resolver_service.dart';
 
 abstract class ContentRemoteDataSource {
   Future<List<TopicModel>> getTopics();
@@ -16,9 +16,9 @@ abstract class ContentRemoteDataSource {
 @Injectable(as: ContentRemoteDataSource)
 class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
   final ApiClient apiClient;
-  final MediaRemoteDataSource mediaDataSource;
+  final MediaResolverService mediaResolver;
 
-  ContentRemoteDataSourceImpl(this.apiClient, this.mediaDataSource);
+  ContentRemoteDataSourceImpl(this.apiClient, this.mediaResolver);
 
   @override
   Future<List<TopicModel>> getTopics() async {
@@ -207,63 +207,10 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
     try {
       print('🎬 [CONTENT API] === RESOLVING CONTENT MEDIA ===');
       print('🎬 [CONTENT API] Content: ${content.title}');
-      print('🎬 [CONTENT API] Main Media ID: ${content.mainMediaId}');
-      print('🎬 [CONTENT API] Thumbnail Media ID: ${content.thumbnailMediaId}');
       
-      String? resolvedMediaUrl;
-      String? resolvedThumbnailUrl;
-      MediaResponse? mainMediaResponse;
-      MediaResponse? thumbnailMediaResponse;
-      
-      // Resolver main media si existe
-      if (content.mainMediaId != null && content.mainMediaId!.isNotEmpty) {
-        print('🎬 [CONTENT API] Resolving main media...');
-        mainMediaResponse = await mediaDataSource.getMediaResponse(content.mainMediaId!);
-        resolvedMediaUrl = mainMediaResponse?.url;
-        
-        if (mainMediaResponse != null) {
-          print('✅ [CONTENT API] Main media resolved: ${mainMediaResponse.isValid ? "✅" : "❌"}');
-          print('✅ [CONTENT API] Main media type: ${mainMediaResponse.type}');
-          print('✅ [CONTENT API] Main media MIME: ${mainMediaResponse.mimeType}');
-          print('✅ [CONTENT API] Main media file type: ${mainMediaResponse.fileType}');
-        } else {
-          print('❌ [CONTENT API] Failed to resolve main media');
-        }
-      }
-      
-      // Resolver thumbnail si existe
-      if (content.thumbnailMediaId != null && content.thumbnailMediaId!.isNotEmpty) {
-        print('🎬 [CONTENT API] Resolving thumbnail media...');
-        thumbnailMediaResponse = await mediaDataSource.getMediaResponse(content.thumbnailMediaId!);
-        resolvedThumbnailUrl = thumbnailMediaResponse?.url;
-        
-        if (thumbnailMediaResponse != null) {
-          print('✅ [CONTENT API] Thumbnail resolved: ${thumbnailMediaResponse.isValid ? "✅" : "❌"}');
-          print('✅ [CONTENT API] Thumbnail type: ${thumbnailMediaResponse.type}');
-        } else {
-          print('❌ [CONTENT API] Failed to resolve thumbnail media');
-        }
-      }
-      
-      // Crear content con URLs resueltos y metadata adicional
-      final resolvedContent = ContentModel.withResolvedMedia(
-        originalContent: content,
-        resolvedMediaUrl: resolvedMediaUrl,
-        resolvedThumbnailUrl: resolvedThumbnailUrl,
-        mediaMetadata: {
-          'main_media_response': mainMediaResponse?.toString(),
-          'thumbnail_media_response': thumbnailMediaResponse?.toString(),
-          'main_media_type': mainMediaResponse?.type.toString(),
-          'thumbnail_media_type': thumbnailMediaResponse?.type.toString(),
-          'main_is_video': mainMediaResponse?.isVideo ?? false,
-          'thumbnail_is_image': thumbnailMediaResponse?.isImage ?? false,
-        },
-      );
+      final resolvedContent = await mediaResolver.resolveMediaUrls(content);
       
       print('🎬 [CONTENT API] Media resolution complete');
-      print('🎬 [CONTENT API] Final main URL: ${resolvedContent.mediaUrl != null ? "✅ Available" : "❌ Not available"}');
-      print('🎬 [CONTENT API] Final thumbnail URL: ${resolvedContent.thumbnailUrl != null ? "✅ Available" : "❌ Not available"}');
-      
       return resolvedContent;
       
     } catch (mediaError) {
@@ -275,25 +222,7 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
   /// Resolver media optimizado para listas (solo thumbnails por defecto)
   Future<ContentModel> _resolveContentMediaOptimized(ContentModel content, {bool isList = false}) async {
     try {
-      if (isList) {
-        // Para listas, solo resolver thumbnail para mejor rendimiento
-        print('🎬 [CONTENT API] Resolving thumbnail for list item: ${content.title}');
-        
-        if (content.thumbnailMediaId != null && content.thumbnailMediaId!.isNotEmpty) {
-          final thumbnailResponse = await mediaDataSource.getMediaResponse(content.thumbnailMediaId!);
-          
-          return ContentModel.withResolvedMedia(
-            originalContent: content,
-            resolvedMediaUrl: null, // No resolver main media en listas
-            resolvedThumbnailUrl: thumbnailResponse?.url,
-          );
-        }
-        
-        return content;
-      } else {
-        // Para vista individual, resolver todo
-        return await _resolveContentMedia(content);
-      }
+      return await mediaResolver.resolveMediaUrls(content);
     } catch (e) {
       print('⚠️ [CONTENT API] Failed to resolve optimized media: $e');
       return content;
