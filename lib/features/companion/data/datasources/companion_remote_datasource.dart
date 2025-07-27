@@ -35,13 +35,13 @@ abstract class CompanionRemoteDataSource {
   
   // 🔥 MÉTODOS DE STATS CORREGIDOS
   Future<CompanionModel> increasePetStats({
-    required String petId, 
+    required String idUserPet, 
     int? happiness, 
     int? health
   });
   
   Future<CompanionModel> decreasePetStats({
-    required String petId, 
+    required String idUserPet, 
     int? happiness, 
     int? health
   });
@@ -66,17 +66,17 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
   // ==================== 🔥 AUMENTAR ESTADÍSTICAS VIA API ====================
   @override
   Future<CompanionModel> increasePetStats({
-    required String petId,
+    required String idUserPet,
     int? happiness,
     int? health,
   }) async {
     try {
       debugPrint('📈 [API] === AUMENTANDO STATS VIA API REAL ===');
-      debugPrint('🆔 [API] Pet ID: $petId');
+      debugPrint('🆔 [API] Pet ID: $idUserPet');
       debugPrint('😊 [API] Aumentar felicidad: ${happiness ?? 0}');
       debugPrint('❤️ [API] Aumentar salud: ${health ?? 0}');
 
-      final endpoint = '/api/gamification/pet-stats/$petId/increase';
+      final endpoint = '/api/gamification/pet-stats/$idUserPet/increase';
       final requestBody = <String, dynamic>{};
       
       if (happiness != null) requestBody['happiness'] = happiness;
@@ -102,10 +102,10 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
         final userId = await tokenManager.getUserId();
         if (userId != null) {
           debugPrint('🔄 [API] Obteniendo stats actualizadas desde pet details...');
-          return await getPetDetails(petId: petId, userId: userId);
+          return await getPetDetails(petId: idUserPet, userId: userId);
         } else {
           // Fallback: crear companion desde respuesta
-          return _createCompanionFromStatsResponse(petId, response.data);
+          return _createCompanionFromStatsResponse(idUserPet, response.data);
         }
       } else {
         throw ServerException(
@@ -125,7 +125,6 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
     }
   }
  @override
-@override
 Future<CompanionModel> getPetDetails({
   required String petId, 
   required String userId
@@ -200,8 +199,8 @@ Future<CompanionModel> getPetDetails({
     debugPrint('🎯 [API] Nivel: $level, Etapa: $evolutionStage, EXP: $experiencePoints');
     debugPrint('⭐ [API] Destacada: $isFeatured, Nickname: $nickname');
 
-    // 🔥 MAPEAR A COMPANION TYPE Y STAGE
-    final companionType = _mapSpeciesTypeToCompanionType(speciesType);
+    // 🔥 CORRECCIÓN: USAR EL MÉTODO DE MAPEO CORRECTO BASADO EN EL NOMBRE
+    final companionType = _mapNameToCompanionType(name); // ✅ USAR ESTE MÉTODO
     final companionStage = _mapEvolutionStageToCompanionStage(evolutionStage);
     
     // 🔥 CREAR COMPANION MODEL CON EL idUserPet COMO PET ID
@@ -366,7 +365,7 @@ CompanionModel? _createBasicCompanionFromUserPet(Map<String, dynamic> petData) {
     
     return CompanionModelWithPetId(
       id: '${speciesType}_basic',
-      type: _mapSpeciesTypeToCompanionType(speciesType),
+      type: _mapSpeciesTypeToCompanionType(name),
       stage: CompanionStage.young,
       name: name,
       description: 'Mascota básica',
@@ -409,17 +408,17 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
   // ==================== 🔥 REDUCIR ESTADÍSTICAS VIA API ====================
   @override
   Future<CompanionModel> decreasePetStats({
-    required String petId,
+    required String idUserPet,
     int? happiness,
     int? health,
   }) async {
     try {
       debugPrint('📉 [API] === REDUCIENDO STATS VIA API REAL ===');
-      debugPrint('🆔 [API] Pet ID: $petId');
+      debugPrint('🆔 [API] Pet ID: $idUserPet');
       debugPrint('😢 [API] Reducir felicidad: ${happiness ?? 0}');
       debugPrint('🩹 [API] Reducir salud: ${health ?? 0}');
 
-      final endpoint = '/api/gamification/pet-stats/$petId/decrease';
+      final endpoint = '/api/gamification/pet-stats/$idUserPet/decrease';
       final requestBody = <String, dynamic>{};
       
       if (happiness != null) requestBody['happiness'] = happiness;
@@ -445,10 +444,10 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
         final userId = await tokenManager.getUserId();
         if (userId != null) {
           debugPrint('🔄 [API] Obteniendo stats actualizadas desde pet details...');
-          return await getPetDetails(petId: petId, userId: userId);
+          return await getPetDetails(petId: idUserPet, userId: userId);
         } else {
           // Fallback: crear companion desde respuesta
-          return _createCompanionFromStatsResponse(petId, response.data);
+          return _createCompanionFromStatsResponse(idUserPet, response.data);
         }
       } else {
         throw ServerException(
@@ -1542,30 +1541,29 @@ Future<List<CompanionModel>> getStoreCompanions({required String userId}) async 
   }
   
   /// Mapeo correcto por nombre de la mascota
-  CompanionType _mapNameToCompanionType(String name) {
-    final nameLower = name.toLowerCase();
-    
-    debugPrint('🔍 [NAME_MAPPING] Mapeando nombre: $name');
-    
-    if (nameLower.contains('dexter')) {
-      debugPrint('✅ [NAME_MAPPING] -> CompanionType.dexter');
-      return CompanionType.dexter;
-    } else if (nameLower.contains('elly')) {
-      debugPrint('✅ [NAME_MAPPING] -> CompanionType.elly');
-      return CompanionType.elly;
-    } else if (nameLower.contains('paxoloth') || nameLower.contains('paxolotl')) {
-      debugPrint('✅ [NAME_MAPPING] -> CompanionType.paxolotl');
-      return CompanionType.paxolotl;
-    } else if (nameLower.contains('yami')) {
-      debugPrint('✅ [NAME_MAPPING] -> CompanionType.yami');
-      return CompanionType.yami;
-    }
-    
-    // Fallback: Mapear por species_type si el nombre no coincide
-    debugPrint('⚠️ [NAME_MAPPING] Nombre no reconocido, usando fallback');
-    return CompanionType.dexter; // Por defecto
+ CompanionType _mapNameToCompanionType(String name) {
+  final nameLower = name.toLowerCase();
+  
+  debugPrint('🔍 [NAME_MAPPING] Mapeando nombre: $name');
+  
+  if (nameLower.contains('dexter')) {
+    debugPrint('✅ [NAME_MAPPING] -> CompanionType.dexter');
+    return CompanionType.dexter;
+  } else if (nameLower.contains('elly')) {
+    debugPrint('✅ [NAME_MAPPING] -> CompanionType.elly');
+    return CompanionType.elly;
+  } else if (nameLower.contains('paxoloth') || nameLower.contains('paxolotl')) {
+    debugPrint('✅ [NAME_MAPPING] -> CompanionType.paxolotl');
+    return CompanionType.paxolotl;
+  } else if (nameLower.contains('yami')) {
+    debugPrint('✅ [NAME_MAPPING] -> CompanionType.yami');
+    return CompanionType.yami;
   }
-
+  
+  // Fallback: Mapear por species_type si el nombre no coincide
+  debugPrint('⚠️ [NAME_MAPPING] Nombre no reconocido, usando fallback');
+  return CompanionType.dexter; // Por defecto
+}
   /// Crear Dexter joven para la tienda
   CompanionModel _createDexterYoungForStore() {
     return CompanionModel(

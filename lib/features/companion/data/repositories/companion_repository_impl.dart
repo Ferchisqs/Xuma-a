@@ -65,7 +65,7 @@ class CompanionRepositoryImpl implements CompanionRepository {
         try {
           // 🔥 LLAMAR AL ENDPOINT REAL DE INCREASE STATS
           final updatedCompanion = await remoteDataSource.increasePetStats(
-            petId: petId,
+            idUserPet: petId,
             happiness: happiness,
             health: health,
           );
@@ -108,7 +108,7 @@ class CompanionRepositoryImpl implements CompanionRepository {
         try {
           // 🔥 LLAMAR AL ENDPOINT REAL DE DECREASE STATS (CORRECCIÓN IMPORTANTE)
           final updatedCompanion = await remoteDataSource.decreasePetStats(
-            petId: petId,
+            idUserPet: petId,
             happiness: happiness,
             health: health,
           );
