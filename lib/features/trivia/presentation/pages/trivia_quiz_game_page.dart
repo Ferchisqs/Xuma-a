@@ -1,11 +1,10 @@
-// lib/features/trivia/presentation/pages/trivia_quiz_game_page.dart - CORREGIDA PARA USAR ESTRUCTURA REAL
+// lib/features/trivia/presentation/pages/trivia_quiz_game_page.dart - CORREGIDO
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../di/injection.dart';
-import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../cubit/quiz_session_cubit.dart';
@@ -15,18 +14,26 @@ import '../widgets/trivia_progress_widget.dart';
 class TriviaQuizGamePage extends StatelessWidget {
   final String quizId;
   final String topicId;
+  final String userId; // 🔧 AGREGAR USER ID COMO PARÁMETRO
 
   const TriviaQuizGamePage({
     Key? key,
     required this.quizId,
     required this.topicId,
+    required this.userId, // 🔧 REQUERIDO
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    print('🧠 [QUIZ] Using provided user ID: $userId');
+
     return BlocProvider(
       create: (_) => getIt<QuizSessionCubit>(),
-      child: _TriviaQuizGameContent(quizId: quizId, topicId: topicId),
+      child: _TriviaQuizGameContent(
+        quizId: quizId, 
+        topicId: topicId,
+        userId: userId, // 🔧 PASAR EL USER ID DIRECTAMENTE
+      ),
     );
   }
 }
@@ -34,10 +41,12 @@ class TriviaQuizGamePage extends StatelessWidget {
 class _TriviaQuizGameContent extends StatefulWidget {
   final String quizId;
   final String topicId;
+  final String userId; // 🔧 AGREGAR USER ID COMO PARÁMETRO
 
   const _TriviaQuizGameContent({
     required this.quizId,
     required this.topicId,
+    required this.userId, // 🔧 REQUERIDO
   });
 
   @override
@@ -60,21 +69,12 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
   }
 
   void _startQuiz() {
-    final authState = context.read<AuthCubit>().state;
-    if (authState is AuthAuthenticated) {
-      print('🧠 [QUIZ] Starting quiz with userId: ${authState.user.id}');
-      context.read<QuizSessionCubit>().startQuiz(
-        quizId: widget.quizId,
-        userId: authState.user.id,
-      );
-    } else {
-      print('⚠️ [QUIZ] No authenticated user found, using demo user');
-      // Para desarrollo, usar un userId de ejemplo
-      context.read<QuizSessionCubit>().startQuiz(
-        quizId: widget.quizId,
-        userId: 'demo_user_123',
-      );
-    }
+    // 🔧 USAR EL USER ID PASADO COMO PARÁMETRO
+    print('🧠 [QUIZ] Starting quiz with userId: ${widget.userId}');
+    context.read<QuizSessionCubit>().startQuiz(
+      quizId: widget.quizId,
+      userId: widget.userId,
+    );
   }
 
   void _startTimer(int timeRemaining) {
@@ -131,12 +131,7 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
           }
           
           if (state is QuizSessionError) {
-            return Center(
-              child: EcoErrorWidget(
-                message: state.message,
-                onRetry: () => _startQuiz(),
-              ),
-            );
+            return _buildErrorState(context, state.message);
           }
           
           if (state is QuizSessionStarted) {
@@ -152,6 +147,116 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  // 🔧 NUEVO: Estado de error mejorado
+  Widget _buildErrorState(BuildContext context, String errorMessage) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.error.withOpacity(0.3)),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: AppColors.error,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error al cargar el quiz',
+                    style: AppTextStyles.h4.copyWith(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    errorMessage,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Debug info
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Debug Info:',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Quiz ID: ${widget.quizId}',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                        Text(
+                          'User ID: ${widget.userId}',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                        Text(
+                          'Expected URL: /api/quiz/questions/quiz/${widget.quizId}',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => _startQuiz(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reintentar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Volver'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -330,10 +435,12 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
         context.read<QuizSessionCubit>().selectAnswer(optionId);
         
         // Auto-submit después de seleccionar
-        context.read<QuizSessionCubit>().submitAnswer(
-          timeTakenSeconds: state.currentQuestion.timeLimit - state.timeRemaining,
-          answerConfidence: 5, // Confianza media por defecto
-        );
+        Future.delayed(const Duration(milliseconds: 500), () {
+          context.read<QuizSessionCubit>().submitAnswer(
+            timeTakenSeconds: state.currentQuestion.timeLimit - state.timeRemaining,
+            answerConfidence: 5, // Confianza media por defecto
+          );
+        });
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -620,15 +727,13 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
               // Botones de acción
               Column(
                 children: [
-                  // Botón principal - Ver compañeros
+                  // Botón principal - Continuar con quizzes
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
+                    child: ElevatedButton(
                       onPressed: () {
                         Navigator.of(dialogContext).pop();
                         Navigator.of(context).pop();
-                        // TODO: Navegar a compañeros si tienes NavigationCubit
-                        // context.read<NavigationCubit>().goToCompanion();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
@@ -638,42 +743,10 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
                         ),
                         elevation: 4,
                       ),
-                      icon: const Icon(
-                        Icons.pets,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      label: Text(
-                        'Ver mis Compañeros',
-                        style: AppTextStyles.buttonLarge.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 12),
-                  
-                  // Botón secundario - Continuar con quizzes
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.of(dialogContext).pop();
-                        Navigator.of(context).pop();
-                      },
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.primary),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
                       child: Text(
                         'Continuar con Quizzes',
                         style: AppTextStyles.buttonLarge.copyWith(
-                          color: AppColors.primary,
+                          color: Colors.white,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

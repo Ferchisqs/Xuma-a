@@ -1,4 +1,4 @@
-// lib/features/trivia/data/datasources/quiz_remote_datasource.dart - CORREGIDA SIGUIENDO WEB
+// lib/features/trivia/data/datasources/quiz_remote_datasource.dart - ALINEADO CON WEB
 import 'package:injectable/injectable.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -16,7 +16,7 @@ abstract class QuizRemoteDataSource {
   // 3. Obtener quiz específico por ID
   Future<Map<String, dynamic>> getQuizById(String quizId);
   
-  // 4. 🔧 MÉTODO PRINCIPAL: Obtener preguntas de un quiz (IGUAL QUE WEB)
+  // 4. 🔧 MÉTODO PRINCIPAL: Obtener preguntas de un quiz (EXACTAMENTE IGUAL QUE WEB)
   Future<List<TriviaQuestionModel>> getQuizQuestions(String quizId);
   
   // 5. Obtener pregunta específica por ID
@@ -224,15 +224,16 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     }
   }
 
-  // ==================== 🔧 4. MÉTODO PRINCIPAL: QUIZ QUESTIONS (IGUAL QUE WEB) ====================
+  // ==================== 🔧 4. MÉTODO PRINCIPAL: QUIZ QUESTIONS (EXACTAMENTE IGUAL QUE WEB) ====================
   @override
   Future<List<TriviaQuestionModel>> getQuizQuestions(String quizId) async {
     try {
       print('🎯 [QUIZ API] === STEP 4: FETCHING QUIZ QUESTIONS FROM QUIZ SERVICE ===');
-      print('🎯 [QUIZ API] 🔧 SIGUIENDO EXACTAMENTE EL PATRÓN DE LA WEB');
+      print('🎯 [QUIZ API] 🔧 EXACTAMENTE IGUAL QUE WEB: getQuizQuestions');
       print('🎯 [QUIZ API] Quiz ID: $quizId');
       print('🎯 [QUIZ API] Endpoint: /api/quiz/questions/quiz/$quizId');
       print('🎯 [QUIZ API] Web equivalent: \${QUIZ_QUESTION_API_BASE_URL}/questions/quiz/\${quizId}');
+      print('🎯 [QUIZ API] Web URL: https://quiz-challenge-service-production.up.railway.app/api/quiz');
       
       // 🔧 USAR EXACTAMENTE EL MISMO ENDPOINT QUE LA WEB
       final response = await apiClient.getQuiz('/questions/quiz/$quizId');
@@ -240,7 +241,24 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
       print('🎯 [QUIZ API] Response Data Type: ${response.data.runtimeType}');
       
       // 🔧 EXTRAER DATOS IGUAL QUE LA WEB: Array.isArray(data) ? data : (data.items || data.data || [])
-      List<dynamic> questionsJson = _extractListFromResponse(response.data, 'questions');
+      List<dynamic> questionsJson;
+      
+      if (response.data is List) {
+        // Web: Array.isArray(data) ? data
+        questionsJson = response.data as List<dynamic>;
+        print('🔍 [QUIZ API] Direct array response (like web): ${questionsJson.length} items');
+      } else if (response.data is Map<String, dynamic>) {
+        // Web: (data.items || data.data || [])
+        final dataMap = response.data as Map<String, dynamic>;
+        print('🔍 [QUIZ API] Object response, keys: ${dataMap.keys.toList()}');
+        
+        questionsJson = (dataMap['items'] ?? dataMap['data'] ?? []) as List<dynamic>;
+        print('🔍 [QUIZ API] Extracted using web logic: ${questionsJson.length} items');
+      } else {
+        print('❌ [QUIZ API] Unexpected response format: ${response.data.runtimeType}');
+        throw ServerException('Invalid response format from Quiz Service');
+      }
+      
       print('🔍 [QUIZ API] Found ${questionsJson.length} questions in response');
       
       if (questionsJson.isEmpty) {

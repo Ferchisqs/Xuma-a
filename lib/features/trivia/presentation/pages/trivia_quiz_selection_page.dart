@@ -621,6 +621,7 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
                   builder: (_) => TriviaQuizGamePage(
                     quizId: quizId,
                     topicId: widget.topicId,
+                    userId: 'demo_user_123', // 🔧 USAR USER ID POR DEFECTO
                   ),
                 ),
               );
@@ -632,6 +633,7 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
                 builder: (_) => TriviaQuizGamePage(
                   quizId: quizId,
                   topicId: widget.topicId,
+                  userId: 'demo_user_123', // 🔧 USAR USER ID POR DEFECTO
                 ),
               ),
             );
