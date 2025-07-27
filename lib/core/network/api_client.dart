@@ -342,113 +342,94 @@ void _setupMediaDio() {
 }
 
 
+// Método getMedia() mejorado para api_client.dart
 Future<Response> getMedia(String endpoint) async {
   await _checkConnection();
   
-  print('🎬 [API CLIENT] === MEDIA REQUEST ===');
+  print('🎬 [API CLIENT] === MEDIA REQUEST WITH AUTH ===');
   print('🎬 [API CLIENT] Endpoint: $endpoint');
   
   try {
-    // 🔧 USAR LA URL COMPLETA DEL MEDIA SERVICE
-    final fullUrl = 'https://media-service-production-6446.up.railway.app$endpoint';
-    print('🎬 [API CLIENT] Full URL: $fullUrl');
+    // 🔧 OBTENER TOKEN DE AUTENTICACIÓN
+    final token = await _tokenManager.getAccessToken();
+    print('🎬 [API CLIENT] Has auth token: ${token != null}');
     
-    // Crear un Dio temporal para el media service
-    final mediaDio = Dio(BaseOptions(
-      baseUrl: 'https://media-service-production-6446.up.railway.app',
-      connectTimeout: Duration(milliseconds: 30000),
-      receiveTimeout: Duration(milliseconds: 30000),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    ));
+    if (token == null) {
+      throw Exception('No authentication token available for media service');
+    }
     
-    // Agregar logging
-    mediaDio.interceptors.add(
-      LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        logPrint: (obj) => print('🎬 [MEDIA API]: $obj'),
+    // 🔧 USAR EL _mediaDio QUE YA ESTÁ CONFIGURADO
+    print('🎬 [API CLIENT] Using configured _mediaDio');
+    print('🎬 [API CLIENT] Media service base URL: ${_mediaDio.options.baseUrl}');
+    print('🎬 [API CLIENT] Full URL: ${_mediaDio.options.baseUrl}$endpoint');
+    
+    final response = await _mediaDio.get(
+      endpoint,
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
       ),
     );
     
-    final response = await mediaDio.get(endpoint);
-    
     print('✅ [API CLIENT] Media request successful: ${response.statusCode}');
-    print('✅ [API CLIENT] Response data: ${response.data}');
+    print('✅ [API CLIENT] Response data type: ${response.data.runtimeType}');
+    
+    // 🔧 DEBUG DE LA RESPUESTA
+    if (response.data is Map<String, dynamic>) {
+      final data = response.data as Map<String, dynamic>;
+      print('✅ [API CLIENT] Response keys: ${data.keys.toList()}');
+      
+      if (data.containsKey('data')) {
+        final innerData = data['data'];
+        if (innerData is Map<String, dynamic>) {
+          print('✅ [API CLIENT] Inner data keys: ${innerData.keys.toList()}');
+          print('✅ [API CLIENT] Has publicUrl: ${innerData.containsKey('publicUrl')}');
+          if (innerData.containsKey('publicUrl')) {
+            print('✅ [API CLIENT] publicUrl: ${innerData['publicUrl']}');
+          }
+        }
+      }
+    }
     
     return response;
     
   } on DioException catch (e) {
-    print('❌ [API CLIENT] Media request error: $e');
-    print('❌ [API CLIENT] Error type: ${e.type}');
+    print('❌ [API CLIENT] Media DioException: ${e.type}');
+    print('❌ [API CLIENT] Status code: ${e.response?.statusCode}');
     print('❌ [API CLIENT] Error message: ${e.message}');
-    print('❌ [API CLIENT] Response: ${e.response?.data}');
+    print('❌ [API CLIENT] Response data: ${e.response?.data}');
+    
+    // 🔧 MANEJO ESPECÍFICO DE ERRORES DE MEDIA
+    if (e.response?.statusCode == 401) {
+      print('🔑 [API CLIENT] Media service authentication failed');
+      print('🔑 [API CLIENT] Token may be expired or invalid');
+      
+      // Intentar refrescar token automáticamente
+      try {
+        print('🔄 [API CLIENT] Attempting to refresh token for media request...');
+        final refreshed = await _retryWithRefreshToken(e, _mediaDio);
+        if (refreshed != null) {
+          print('✅ [API CLIENT] Token refreshed, media request successful');
+          return refreshed;
+        }
+      } catch (refreshError) {
+        print('❌ [API CLIENT] Token refresh failed: $refreshError');
+      }
+    } else if (e.response?.statusCode == 403) {
+      print('🚫 [API CLIENT] Media service access forbidden');
+    } else if (e.response?.statusCode == 404) {
+      print('🔍 [API CLIENT] Media not found on service');
+    }
+    
     throw _handleDioError(e);
   } catch (e) {
     print('❌ [API CLIENT] Unexpected media error: $e');
     throw Exception('Error inesperado en media: $e');
   }
 }
-// 🆕 MÉTODO ESPECÍFICO PARA POST CON FORMDATA AL GAMIFICATION SERVICE  
-Future<Response> postGamificationWithFormData(
-  String endpoint, {
-  required FormData formData,
-  Map<String, dynamic>? queryParameters,
-}) async {
-  await _checkConnection();
-  
-  print('📤 [API CLIENT] Gamification FormData post: $endpoint');
-  
-  try {
-    final response = await _gamificationDio.post(
-      endpoint,
-      data: formData,
-      queryParameters: queryParameters,
-      options: Options(
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          ...ApiEndpoints.gamificationHeaders,
-        },
-      ),
-    );
-    
-    print('✅ [API CLIENT] Gamification FormData post successful: ${response.statusCode}');
-    return response;
-  } on DioException catch (e) {
-    print('❌ [API CLIENT] Gamification FormData post error: $e');
-    throw _handleDioError(e);
-  }
-}
-
-  Future<void> _addAuthToken(RequestOptions options, String serviceName) async {
-    final authEndpoints = [
-      ApiEndpoints.login,
-      ApiEndpoints.register,
-      ApiEndpoints.refreshToken,
-    ];
-    
-    final isAuthEndpoint = authEndpoints.any((endpoint) => 
-      options.path.contains(endpoint));
-    
-    if (!isAuthEndpoint) {
-      final token = await _tokenManager.getAccessToken();
-      if (token != null) {
-        options.headers['Authorization'] = 'Bearer $token';
-        print('🔍 [$serviceName] Added auth token to request: ${options.path}');
-      } else {
-        print('⚠️ [$serviceName] No access token available for: ${options.path}');
-        
-        if (serviceName == 'QUIZ' && 
-            (options.path.contains('/by-topic/') || options.path.contains('/questions/'))) {
-          print('ℹ️ [$serviceName] Public quiz endpoint (no token required)');
-        }
-      }
-    } else {
-      print('🔍 [$serviceName] Skipping auth token for auth endpoint: ${options.path}');
-    }
-  }
 
   Future<void> _handleTokenResponse(Response response, String serviceName) async {
     if (response.data is Map<String, dynamic>) {
@@ -686,7 +667,38 @@ Future<Response> postGamificationWithFormData(
       options: Options(extra: {'baseUrl': ApiEndpoints.gamificationServiceUrl}),
     );
   }
+// Agrega este método a tu clase ApiClient
 
+Future<void> _addAuthToken(RequestOptions options, String serviceName) async {
+  try {
+    // Solo agregar token si no se ha excluido explícitamente
+    if (options.headers['Authorization'] != null && options.headers['Authorization'] == null) {
+      // Si Authorization está explícitamente establecido como null, no agregar token
+      print('🔓 [$serviceName] Authorization explicitly disabled for: ${options.path}');
+      options.headers.remove('Authorization');
+      return;
+    }
+
+    final token = await _tokenManager.getAccessToken();
+    
+    if (token != null && token.isNotEmpty) {
+      options.headers['Authorization'] = 'Bearer $token';
+      print('🔑 [$serviceName] Auth token added for: ${options.path}');
+    } else {
+      print('⚠️ [$serviceName] No auth token available for: ${options.path}');
+      
+      // Para servicios que requieren autenticación, no eliminar el header
+      // Dejar que el servidor responda con 401 si es necesario
+      if (serviceName != 'CONTENT') {
+        // Content service puede funcionar sin auth para algunos endpoints
+        print('🔐 [$serviceName] Service requires auth but no token available');
+      }
+    }
+  } catch (e) {
+    print('❌ [$serviceName] Error adding auth token: $e');
+    // No lanzar error aquí, dejar que la request continúe
+  }
+}
   Future<Response> patchGamification(
     String endpoint, {
     dynamic data,

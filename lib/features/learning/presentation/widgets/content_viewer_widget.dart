@@ -1,5 +1,6 @@
-// lib/features/learning/presentation/widgets/content_viewer_widget.dart - MEJORADO PARA MULTIMEDIA
+// lib/features/learning/presentation/widgets/content_viewer_widget.dart - CORREGIDO
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../domain/entities/content_entity.dart';
@@ -168,164 +169,121 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> {
     );
   }
 
-  // 🔧 SECCIÓN DE MULTIMEDIA MEJORADA
+  // 🔧 SECCIÓN DE MULTIMEDIA MEJORADA - CORREGIDA
   Widget _buildEnhancedMediaSection(ContentModel? contentModel) {
-  print('🎬 [CONTENT VIEWER] Building media section');
-  print('🎬 [CONTENT VIEWER] Has resolved media: ${contentModel?.hasAnyResolvedMedia}');
-  print('🎬 [CONTENT VIEWER] Media URL: ${contentModel?.mediaUrl}');
-  print('🎬 [CONTENT VIEWER] Thumbnail URL: ${contentModel?.thumbnailUrl}');
-  
-  if (contentModel?.hasAnyResolvedMedia != true) {
-    return _buildMediaPlaceholder(contentModel);
+    print('🎬 [CONTENT VIEWER] Building media section');
+    print('🎬 [CONTENT VIEWER] Has resolved media: ${contentModel?.hasAnyResolvedMedia}');
+    print('🎬 [CONTENT VIEWER] Media URL: ${contentModel?.mediaUrl}');
+    print('🎬 [CONTENT VIEWER] Thumbnail URL: ${contentModel?.thumbnailUrl}');
+    
+    if (contentModel?.hasAnyResolvedMedia != true) {
+      return _buildMediaPlaceholder(contentModel);
+    }
+
+    // 🔧 DECIDIR QUÉ URL USAR
+    String? imageUrl;
+    bool isVideo = false;
+    
+    if (contentModel!.hasResolvedThumbnailMedia) {
+      imageUrl = contentModel.thumbnailUrl;
+      print('🎬 [CONTENT VIEWER] Using thumbnail URL: $imageUrl');
+    } else if (contentModel.hasResolvedMainMedia) {
+      imageUrl = contentModel.mediaUrl;
+      isVideo = contentModel.isMainMediaVideo;
+      print('🎬 [CONTENT VIEWER] Using main media URL: $imageUrl, isVideo: $isVideo');
+    }
+
+    if (imageUrl == null || imageUrl.isEmpty) {
+      print('❌ [CONTENT VIEWER] No valid URL found');
+      return _buildMediaPlaceholder(contentModel);
+    }
+
+    return Container(
+      height: 300,
+      width: double.infinity,
+      child: Stack(
+        children: [
+          // 🔧 MOSTRAR IMAGEN O VIDEO
+          if (isVideo)
+            _buildVideoContainer(imageUrl, contentModel)
+          else
+            _buildImageContainer(imageUrl),
+          
+          // Overlay con información
+          _buildMediaOverlay(contentModel, isVideo),
+        ],
+      ),
+    );
   }
 
-  // 🔧 DECIDIR QUÉ URL USAR
-  String? imageUrl;
-  bool isVideo = false;
-  
-  if (contentModel!.hasResolvedThumbnailMedia) {
-    imageUrl = contentModel.thumbnailUrl;
-    print('🎬 [CONTENT VIEWER] Using thumbnail URL: $imageUrl');
-  } else if (contentModel.hasResolvedMainMedia) {
-    imageUrl = contentModel.mediaUrl;
-    isVideo = contentModel.isMainMediaVideo;
-    print('🎬 [CONTENT VIEWER] Using main media URL: $imageUrl, isVideo: $isVideo');
-  }
-
-  if (imageUrl == null || imageUrl.isEmpty) {
-    print('❌ [CONTENT VIEWER] No valid URL found');
-    return _buildMediaPlaceholder(contentModel);
-  }
-
-  return Container(
-    height: 300,
-    width: double.infinity,
-    child: Stack(
-      children: [
-        // 🔧 MOSTRAR IMAGEN O VIDEO
-        if (isVideo)
-          _buildVideoContainer(imageUrl, contentModel)
-        else
-          _buildImageContainer(imageUrl),
-        
-        // Overlay con información
-        _buildMediaOverlay(contentModel, isVideo),
-      ],
-    ),
-  );
-}
-
-Widget _buildImageContainer(String imageUrl) {
-  print('🖼️ [CONTENT VIEWER] Loading image: $imageUrl');
-  
-  return Container(
-    width: double.infinity,
-    height: double.infinity,
-    child: Image.network(
-      imageUrl,
-      fit: BoxFit.cover,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) {
-          print('✅ [CONTENT VIEWER] Image loaded successfully');
-          return child;
-        }
-        
-        return Container(
-          color: AppColors.primaryLight.withOpacity(0.1),
-          child: Center(
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                  : null,
-              color: AppColors.primary,
-            ),
-          ),
-        );
-      },
-      errorBuilder: (context, error, stackTrace) {
-        print('❌ [CONTENT VIEWER] Error loading image: $error');
-        return Container(
-          color: AppColors.error.withOpacity(0.1),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.broken_image,
-                  size: 64,
-                  color: AppColors.error.withOpacity(0.5),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Error al cargar imagen',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.error,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    ),
-  );
-}
-
-Widget _buildVideoContainer(String videoUrl, ContentModel contentModel) {
-  return Container(
-    width: double.infinity,
-    height: double.infinity,
-    color: Colors.black,
-    child: Stack(
-      alignment: Alignment.center,
-      children: [
-        // Thumbnail si está disponible
-        if (contentModel.hasResolvedThumbnailMedia && 
-            contentModel.thumbnailUrl != videoUrl)
-          Image.network(
-            contentModel.thumbnailUrl!,
-            width: double.infinity,
-            height: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              color: Colors.black87,
-              child: Icon(
-                Icons.movie,
-                size: 64,
-                color: Colors.white.withOpacity(0.7),
+  // CORREGIDO: Widget para imagen
+  Widget _buildImageContainer(String imageUrl) {
+    print('🖼️ [CONTENT VIEWER] Loading image: $imageUrl');
+    
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      child: Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) {
+            print('✅ [CONTENT VIEWER] Image loaded successfully');
+            return child;
+          }
+          
+          return Container(
+            color: AppColors.primaryLight.withOpacity(0.1),
+            child: Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                    : null,
+                color: AppColors.primary,
               ),
             ),
-          )
-        else
-          Container(
-            color: Colors.black87,
-            child: Icon(
-              Icons.movie,
-              size: 64,
-              color: Colors.white.withOpacity(0.7),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          print('❌ [CONTENT VIEWER] Error loading image: $error');
+          return Container(
+            color: AppColors.error.withOpacity(0.1),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.broken_image,
+                    size: 64,
+                    color: AppColors.error.withOpacity(0.5),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Error al cargar imagen',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.error,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        
-        // Botón de play
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.6),
-            shape: BoxShape.circle,
-          ),
-          child: IconButton(
-            onPressed: () => _showVideoDialog(videoUrl),
-            icon: const Icon(
-              Icons.play_arrow,
-              color: Colors.white,
-              size: 48,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-  // 🆕 REPRODUCTOR DE VIDEO PLACEHOLDER (mejorar con video_player si es necesario)
+          );
+        },
+      ),
+    );
+  }
+
+  // CORREGIDO: Container de video simplificado
+  Widget _buildVideoContainer(String videoUrl, ContentModel contentModel) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Colors.black,
+      child: _buildVideoPlayer(videoUrl, contentModel), // Usar el método existente
+    );
+  }
+
+  // 🆕 REPRODUCTOR DE VIDEO - CORREGIDO
   Widget _buildVideoPlayer(String videoUrl, ContentModel contentModel) {
     return Container(
       width: double.infinity,
@@ -390,40 +348,6 @@ Widget _buildVideoContainer(String videoUrl, ContentModel contentModel) {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // 🆕 VISUALIZADOR DE IMAGEN MEJORADO
-  Widget _buildImageViewer(String imageUrl, ContentModel contentModel) {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      child: Image.network(
-        imageUrl,
-        fit: BoxFit.cover,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) {
-            print('✅ [CONTENT VIEWER] Image loaded successfully: $imageUrl');
-            return child;
-          }
-          
-          return _buildLoadingIndicator(loadingProgress);
-        },
-        errorBuilder: (context, error, stackTrace) {
-          print('❌ [CONTENT VIEWER] Error loading image: $error');
-          print('❌ [CONTENT VIEWER] Failed URL: $imageUrl');
-          
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                _imageLoadError = true;
-              });
-            }
-          });
-          
-          return _buildImageErrorFallback();
-        },
       ),
     );
   }
@@ -781,79 +705,6 @@ Widget _buildVideoContainer(String videoUrl, ContentModel contentModel) {
     );
   }
 
-  // 🆕 INDICADOR DE CARGA PARA IMÁGENES
-  Widget _buildLoadingIndicator(ImageChunkEvent loadingProgress) {
-    final progress = loadingProgress.expectedTotalBytes != null
-        ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-        : null;
-    
-    return Container(
-      color: AppColors.primaryLight.withOpacity(0.1),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              value: progress,
-              color: AppColors.primary,
-              strokeWidth: 3,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Cargando imagen...',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.primary,
-              ),
-            ),
-            if (progress != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                '${(progress * 100).toInt()}%',
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textHint,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 🆕 FALLBACK PARA ERROR DE IMAGEN
-  Widget _buildImageErrorFallback() {
-    return Container(
-      color: AppColors.error.withOpacity(0.1),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.broken_image,
-              size: 64,
-              color: AppColors.error.withOpacity(0.5),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Error al cargar imagen',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.error,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Verifique su conexión a internet',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textHint,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // 🆕 FALLBACK PARA VIDEO
   Widget _buildVideoFallback() {
     return Container(
@@ -1091,5 +942,66 @@ Puntos clave:
 
 ¡Gracias por aprender con XUMA'A y cuidar nuestro planeta! 🌱
     ''';
+  }
+}
+
+// 🆕 SIMPLE VIDEO PLAYER WIDGET (Si no tienes video_player configurado)
+class SimpleVideoPlayer extends StatefulWidget {
+  final String url;
+
+  const SimpleVideoPlayer({Key? key, required this.url}) : super(key: key);
+
+  @override
+  State<SimpleVideoPlayer> createState() => _SimpleVideoPlayerState();
+}
+
+class _SimpleVideoPlayerState extends State<SimpleVideoPlayer> {
+  @override
+  Widget build(BuildContext context) {
+    // Por ahora, muestra un placeholder hasta implementar video_player
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.play_circle_fill,
+              color: Colors.white,
+              size: 80,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Video Player',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Toca para reproducir',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              widget.url.length > 30 
+                ? '${widget.url.substring(0, 30)}...' 
+                : widget.url,
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 10,
+                fontFamily: 'monospace',
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -43,6 +43,10 @@ class MediaResolverService {
             'main_filename': mediaResponse.filename,
             'main_size': mediaResponse.size,
           });
+          // Propagate category if present in metadata
+          if (mediaResponse.metadata != null && mediaResponse.metadata!.containsKey('category')) {
+            mediaMetadata['main_category'] = mediaResponse.metadata!['category'];
+          }
         } else {
           print('❌ [MEDIA RESOLVER] Failed to resolve main media: ${content.mainMediaId}');
         }

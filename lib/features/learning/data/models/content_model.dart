@@ -169,13 +169,36 @@ class ContentModel extends ContentEntity {
 
   // 🆕 GETTERS PARA INFORMACIÓN DE MEDIA DESDE METADATA
   bool get isMainMediaVideo {
-    return mediaMetadata?['main_is_video'] == true ||
-           mediaMetadata?['main_media_type']?.toString().contains('video') == true;
+    final meta = mediaMetadata ?? {};
+    final isVideoFlag = meta['main_is_video'] == true;
+    final mimeType = meta['main_media_type']?.toString() ?? '';
+    final category = meta['main_category']?.toString()?.toLowerCase() ?? '';
+    return isVideoFlag ||
+        mimeType.startsWith('video/') ||
+        category == 'video' ||
+        mimeType == 'video';
+  }
+
+  bool get isMainMediaImage {
+    final meta = mediaMetadata ?? {};
+    final isImageFlag = meta['main_is_image'] == true;
+    final mimeType = meta['main_media_type']?.toString() ?? '';
+    final category = meta['main_category']?.toString()?.toLowerCase() ?? '';
+    return isImageFlag ||
+        mimeType.startsWith('image/') ||
+        category == 'image' ||
+        mimeType == 'image';
   }
 
   bool get isThumbnailImage {
-    return mediaMetadata?['thumbnail_is_image'] == true ||
-           mediaMetadata?['thumbnail_media_type']?.toString().contains('image') == true;
+    final meta = mediaMetadata ?? {};
+    final isImageFlag = meta['thumbnail_is_image'] == true;
+    final mimeType = meta['thumbnail_media_type']?.toString() ?? '';
+    final category = meta['main_category']?.toString()?.toLowerCase() ?? '';
+    return isImageFlag ||
+        mimeType.startsWith('image/') ||
+        category == 'image' ||
+        mimeType == 'image';
   }
 
   String? get mainMediaType {

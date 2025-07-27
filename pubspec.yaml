@@ -40,6 +40,9 @@ dependencies:
   # Image Handling
   cached_network_image: ^3.3.0
 
+  # Video Playback
+  video_player: ^2.8.1
+
   # 🆕 NUEVAS DEPENDENCIAS PARA CHALLENGES
   image_picker: ^1.0.4  # Para seleccionar imágenes de cámara/galería
   path_provider: ^2.1.1  # Para rutas de archivos

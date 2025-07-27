@@ -1,4 +1,4 @@
-// lib/features/learning/data/datasources/media_remote_datasource.dart - CORREGIDO PARA publicUrl
+// lib/features/learning/data/datasources/media_remote_datasource.dart - CORREGIDO CON AUTH
 import 'package:injectable/injectable.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/config/api_endpoints.dart';
@@ -65,13 +65,18 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
   @override
   Future<MediaResponse?> getMediaResponse(String mediaId) async {
     try {
-      print('🎬 [MEDIA API] Fetching media ID: $mediaId');
+      print('🎬 [MEDIA API] === FETCHING MEDIA WITH AUTHENTICATION ===');
+      print('🎬 [MEDIA API] Media ID: $mediaId');
       
-      // 🔧 USAR EL ENDPOINT CORRECTO CON EL MÉTODO ESPECÍFICO
+      // 🔧 USAR EL ApiClient QUE YA TIENE AUTENTICACIÓN CONFIGURADA
       final endpoint = '/api/media/files/$mediaId';
+      print('🎬 [MEDIA API] Endpoint: $endpoint');
+      
+      // 🔧 USAR EL MÉTODO getMedia() QUE YA CONFIGURASTE EN ApiClient
       final response = await apiClient.getMedia(endpoint);
       
       print('🎬 [MEDIA API] Response Status: ${response.statusCode}');
+      print('🎬 [MEDIA API] Response Data Type: ${response.data.runtimeType}');
       
       if (response.statusCode == 200 && response.data != null) {
         
@@ -83,8 +88,10 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
           Map<String, dynamic> data;
           if (responseMap.containsKey('data')) {
             data = responseMap['data'] as Map<String, dynamic>;
+            print('🎬 [MEDIA API] Data found in response.data');
           } else {
             data = responseMap;
+            print('🎬 [MEDIA API] Using response directly as data');
           }
           
           print('🎬 [MEDIA API] Data keys: ${data.keys.toList()}');
@@ -94,6 +101,9 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
           
           if (publicUrl != null && publicUrl.isNotEmpty) {
             print('✅ [MEDIA API] Found publicUrl: $publicUrl');
+            print('✅ [MEDIA API] Media type: ${data['mimeType']}');
+            print('✅ [MEDIA API] File size: ${data['fileSize']}');
+            print('✅ [MEDIA API] Original name: ${data['originalName']}');
             
             return MediaResponse(
               url: publicUrl,
@@ -106,21 +116,49 @@ class MediaRemoteDataSourceImpl implements MediaRemoteDataSource {
                 'id': mediaId,
                 'isPublic': data['isPublic'],
                 'isProcessed': data['isProcessed'],
+                'virusScanStatus': data['virusScanStatus'],
+                'category': data['category'], // <-- Add category if present
+                'width': data['metadata']?['width'],
+                'height': data['metadata']?['height'],
                 ...?data['metadata'] as Map<String, dynamic>?,
               },
             );
           } else {
             print('❌ [MEDIA API] No publicUrl found in response');
+            print('❌ [MEDIA API] Available fields: ${data.keys.toList()}');
+            
+            // 🔧 DEBUG: Mostrar todo el data para entender la estructura
+            print('🔍 [MEDIA API] Full data object: $data');
+            
             return null;
           }
+        } else {
+          print('❌ [MEDIA API] Response is not a Map: ${response.data.runtimeType}');
+          print('🔍 [MEDIA API] Response content: ${response.data}');
+          return null;
         }
       }
       
-      print('❌ [MEDIA API] Invalid response for media ID: $mediaId');
+      print('❌ [MEDIA API] Invalid response status: ${response.statusCode}');
       return null;
       
     } catch (e, stackTrace) {
-      print('❌ [MEDIA API] Error fetching media: $e');
+      print('❌ [MEDIA API] === ERROR FETCHING MEDIA ===');
+      print('❌ [MEDIA API] Media ID: $mediaId');
+      print('❌ [MEDIA API] Error: $e');
+      
+      // 🔧 MANEJO ESPECÍFICO DE ERRORES DE AUTENTICACIÓN
+      if (e.toString().contains('401')) {
+        print('🔑 [MEDIA API] Authentication required - check if user is logged in');
+        print('🔑 [MEDIA API] Media service requires valid token');
+      } else if (e.toString().contains('403')) {
+        print('🚫 [MEDIA API] Access forbidden - user may not have permission');
+      } else if (e.toString().contains('404')) {
+        print('🔍 [MEDIA API] Media not found - ID may not exist: $mediaId');
+      } else {
+        print('🔍 [MEDIA API] Stack trace: $stackTrace');
+      }
+      
       return null;
     }
   }
