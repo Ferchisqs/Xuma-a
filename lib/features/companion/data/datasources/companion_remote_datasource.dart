@@ -559,82 +559,101 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
 
   // ==================== TIENDA (MASCOTAS DISPONIBLES - NO ADOPTADAS) ====================
   @override
-  Future<List<CompanionModel>> getStoreCompanions({required String userId}) async {
-    try {
-      debugPrint('🏪 [API] === OBTENIENDO TIENDA CON USER ID REAL ===');
-      debugPrint('👤 [API] Usuario: $userId');
+Future<List<CompanionModel>> getStoreCompanions({required String userId}) async {
+  try {
+    debugPrint('🏪 [API] === OBTENIENDO TIENDA REAL SIN DATOS LOCALES ===');
+    debugPrint('👤 [API] Usuario: $userId');
 
-      if (userId.isEmpty) {
-        debugPrint('❌ [API] User ID vacío, no se puede obtener tienda');
-        throw Exception('User ID requerido para obtener tienda');
-      }
-
-      debugPrint('📡 [API] Obteniendo mascotas disponibles...');
-      final allCompanions = await getAvailableCompanions();
-      debugPrint('✅ [API] Mascotas disponibles: ${allCompanions.length}');
-
-      debugPrint('📡 [API] Obteniendo mascotas del usuario...');
-      final userCompanions = await getUserCompanions(userId);
-      debugPrint('✅ [API] Mascotas del usuario: ${userCompanions.length}');
-
-      // Crear set de IDs adoptados para filtrar
-      final adoptedIds = <String>{};
-      
-      for (final companion in userCompanions) {
-        adoptedIds.add(companion.id);
-        final localId = '${companion.type.name}_${companion.stage.name}';
-        adoptedIds.add(localId);
-        debugPrint('🔍 [API] Mascota adoptada: ${companion.id} (${companion.displayName})');
-      }
-      
-      debugPrint('🔍 [API] Total IDs adoptados: $adoptedIds');
-
-      // Filtrar mascotas no adoptadas para la tienda
-      final storeCompanions = <CompanionModel>[];
-      
-      for (final companion in allCompanions) {
-        final isNotAdopted = !adoptedIds.contains(companion.id);
-        debugPrint('🔍 [API] ${companion.id}: ${isNotAdopted ? "EN TIENDA" : "YA ADOPTADO"}');
-        
-        if (isNotAdopted) {
-          storeCompanions.add(companion);
-        }
-      }
-
-      // Agregar Dexter joven gratis si no lo tiene
-      final hasDexterYoung = userCompanions.any((c) =>
-          c.type == CompanionType.dexter && c.stage == CompanionStage.young);
-
-      if (!hasDexterYoung) {
-        debugPrint('🎁 [API] Usuario no tiene Dexter joven, agregándolo gratis a la tienda');
-        
-        final existingDexterYoung = storeCompanions.firstWhere(
-          (c) => c.type == CompanionType.dexter && c.stage == CompanionStage.young,
-          orElse: () => _createDexterYoungForStore(),
-        );
-        
-        if (!storeCompanions.any((c) => c.type == CompanionType.dexter && c.stage == CompanionStage.young)) {
-          storeCompanions.insert(0, existingDexterYoung);
-        }
-      }
-
-      // Ordenar por precio (más baratos primero)
-      storeCompanions.sort((a, b) => a.purchasePrice.compareTo(b.purchasePrice));
-
-      debugPrint('🛍️ [API] === TIENDA FINAL ===');
-      debugPrint('🛒 [API] Mascotas en tienda: ${storeCompanions.length}');
-
-      for (final companion in storeCompanions) {
-        debugPrint('🏪 [API] - ${companion.displayName} (${companion.id}): ${companion.purchasePrice}★');
-      }
-
-      return storeCompanions;
-      
-    } catch (e) {
-      debugPrint('❌ [API] Error obteniendo tienda: $e');
-      throw ServerException('Error obteniendo tienda: ${e.toString()}');
+    if (userId.isEmpty) {
+      debugPrint('❌ [API] User ID vacío, no se puede obtener tienda');
+      throw Exception('User ID requerido para obtener tienda');
     }
+
+    // 🔥 1. OBTENER TODAS LAS MASCOTAS DISPONIBLES DE LA API
+    debugPrint('📡 [API] Obteniendo mascotas disponibles...');
+    final allCompanions = await getAvailableCompanions();
+    debugPrint('✅ [API] Mascotas disponibles desde API: ${allCompanions.length}');
+
+    // 🔥 2. OBTENER MASCOTAS YA ADOPTADAS POR EL USUARIO
+    debugPrint('📡 [API] Obteniendo mascotas del usuario...');
+    final userCompanions = await getUserCompanions(userId);
+    debugPrint('✅ [API] Mascotas del usuario: ${userCompanions.length}');
+
+    // 🔥 3. CREAR SET DE IDs YA ADOPTADOS PARA FILTRAR
+    final adoptedIds = <String>{};
+    final adoptedLocalIds = <String>{};
+    
+    for (final companion in userCompanions) {
+      // Agregar tanto el Pet ID como el ID local
+      if (companion is CompanionModelWithPetId) {
+        adoptedIds.add(companion.petId);
+      }
+      adoptedLocalIds.add(companion.id);
+      
+      final localId = '${companion.type.name}_${companion.stage.name}';
+      adoptedLocalIds.add(localId);
+      
+      debugPrint('🔍 [API] Mascota adoptada: ${companion.displayName} (${companion.id})');
+    }
+    
+    debugPrint('🔍 [API] IDs adoptados: $adoptedIds');
+    debugPrint('🔍 [API] IDs locales adoptados: $adoptedLocalIds');
+
+    // 🔥 4. MARCAR MASCOTAS COMO ADOPTADAS O DISPONIBLES
+    final storeCompanions = <CompanionModel>[];
+    
+    for (final companion in allCompanions) {
+      // Verificar si ya está adoptada
+      bool isAdopted = false;
+      
+      // Verificar por Pet ID si es CompanionModelWithPetId
+      if (companion is CompanionModelWithPetId) {
+        isAdopted = adoptedIds.contains(companion.petId);
+      }
+      
+      // También verificar por ID local
+      if (!isAdopted) {
+        isAdopted = adoptedLocalIds.contains(companion.id);
+      }
+      
+      // Marcar correctamente el estado
+      final companionForStore = companion.copyWith(
+        isOwned: isAdopted,
+        isSelected: false, // Ninguna está seleccionada en la tienda
+      );
+      
+      storeCompanions.add(companionForStore);
+      
+      final status = isAdopted ? "YA ADOPTADA" : "DISPONIBLE";
+      debugPrint('🏪 [API] ${companion.displayName} ${companion.stage.name}: ${companion.purchasePrice}★ ($status)');
+    }
+
+    // 🔥 5. ORDENAR: Disponibles primero, luego por precio
+    storeCompanions.sort((a, b) {
+      // Primero por disponibilidad (disponibles primero)
+      if (a.isOwned != b.isOwned) {
+        return a.isOwned ? 1 : -1; // Disponibles (false) primero
+      }
+      
+      // Luego por precio (más baratos primero)
+      return a.purchasePrice.compareTo(b.purchasePrice);
+    });
+
+    debugPrint('🛍️ [API] === TIENDA FINAL (SOLO API) ===');
+    debugPrint('🛒 [API] Total mascotas en tienda: ${storeCompanions.length}');
+
+    for (final companion in storeCompanions) {
+      final status = companion.isOwned ? "YA TIENES" : "DISPONIBLE";
+      debugPrint('🏪 [API] ${companion.displayName} ${companion.stage.name}: ${companion.purchasePrice}★ ($status)');
+    }
+
+    return storeCompanions;
+    
+  } catch (e) {
+    debugPrint('❌ [API] Error obteniendo tienda: $e');
+    throw ServerException('Error obteniendo tienda: ${e.toString()}');
   }
+}
 
   // ==================== 🔥 ADOPCIÓN CON MANEJO MEJORADO DE ERRORES ====================
   @override

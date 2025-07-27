@@ -1,4 +1,6 @@
-// lib/features/companion/presentation/widgets/companion_shop_item_widget.dart - CORREGIDO
+// lib/features/companion/presentation/widgets/companion_shop_item_widget.dart
+// 🔥 CORREGIDO: Sin lógica de Dexter gratis, todos se compran según la API
+
 import 'package:flutter/material.dart';
 import '../../domain/entities/companion_entity.dart';
 
@@ -16,22 +18,16 @@ class CompanionShopItemWidget extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    // 🔧 VERIFICAR SI ES DEXTER JOVEN (YA DESBLOQUEADO)
-    final isDexterYoung = _isDexterYoung(companion);
     final canAfford = userPoints >= companion.purchasePrice;
     final isAlreadyOwned = companion.isOwned;
     
-    debugPrint('🏪 [SHOP_ITEM] Renderizando: ${companion.displayName}');
-    debugPrint('🔧 [SHOP_ITEM] Es Dexter joven: $isDexterYoung');
+    debugPrint('🏪 [SHOP_ITEM] Renderizando: ${companion.displayName} ${companion.stage.name}');
     debugPrint('💰 [SHOP_ITEM] Puntos usuario: $userPoints, Precio: ${companion.purchasePrice}');
     debugPrint('✅ [SHOP_ITEM] Puede comprar: $canAfford, Ya poseído: $isAlreadyOwned');
     
     return GestureDetector(
       onTap: () {
-        if (isDexterYoung) {
-          debugPrint('🔧 [SHOP_ITEM] Dexter joven tocado - ya desbloqueado');
-          _showAlreadyUnlockedMessage(context);
-        } else if (isAlreadyOwned) {
+        if (isAlreadyOwned) {
           debugPrint('✅ [SHOP_ITEM] Companion ya poseído');
           _showAlreadyOwnedMessage(context);
         } else if (canAfford) {
@@ -52,12 +48,12 @@ class CompanionShopItemWidget extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: _getGradientColors(isDexterYoung, canAfford, isAlreadyOwned),
+            colors: _getGradientColors(canAfford, isAlreadyOwned),
           ),
           boxShadow: [
             BoxShadow(
-              color: _getShadowColor(isDexterYoung, canAfford, isAlreadyOwned),
-              blurRadius: isDexterYoung || canAfford ? 10 : 5,
+              color: _getShadowColor(canAfford, isAlreadyOwned),
+              blurRadius: canAfford && !isAlreadyOwned ? 10 : 5,
               offset: const Offset(0, 4),
             ),
           ],
@@ -71,7 +67,7 @@ class CompanionShopItemWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Badge de etapa
-                  _buildStageBadge(isDexterYoung),
+                  _buildStageBadge(),
                   
                   // Imagen del companion
                   Expanded(
@@ -87,23 +83,17 @@ class CompanionShopItemWidget extends StatelessWidget {
                   const SizedBox(height: 8),
                   
                   // Botón de acción
-                  _buildActionButton(context, isDexterYoung, canAfford, isAlreadyOwned),
+                  _buildActionButton(context, canAfford, isAlreadyOwned),
                 ],
               ),
             ),
             
             // Overlays especiales
-            ..._buildOverlays(isDexterYoung, canAfford, isAlreadyOwned),
+            ..._buildOverlays(canAfford, isAlreadyOwned),
           ],
         ),
       ),
     );
-  }
-  
-  /// Verificar si es Dexter joven
-  bool _isDexterYoung(CompanionEntity companion) {
-    return companion.type == CompanionType.dexter && 
-           companion.stage == CompanionStage.young;
   }
   
   /// Widget para mostrar solo la imagen del companion
@@ -168,44 +158,8 @@ class CompanionShopItemWidget extends StatelessWidget {
     );
   }
   
-  /// Badge de etapa con indicadores especiales
-  Widget _buildStageBadge(bool isDexterYoung) {
-    if (isDexterYoung) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.green,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.green.withOpacity(0.3),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.star,
-              color: Colors.white,
-              size: 12,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              'INICIAL',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    
+  /// Badge de etapa simple
+  Widget _buildStageBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -248,16 +202,12 @@ class CompanionShopItemWidget extends StatelessWidget {
   }
   
   /// Botón de acción principal
-  Widget _buildActionButton(BuildContext context, bool isDexterYoung, bool canAfford, bool isAlreadyOwned) {
+  Widget _buildActionButton(BuildContext context, bool canAfford, bool isAlreadyOwned) {
     String buttonText;
     IconData buttonIcon;
     Color? buttonColor;
     
-    if (isDexterYoung) {
-      buttonText = '¡YA TIENES!';
-      buttonIcon = Icons.star;
-      buttonColor = Colors.green;
-    } else if (isAlreadyOwned) {
+    if (isAlreadyOwned) {
       buttonText = 'YA TUYO';
       buttonIcon = Icons.check_circle;
       buttonColor = Colors.blue;
@@ -275,10 +225,7 @@ class CompanionShopItemWidget extends StatelessWidget {
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: () {
-          if (isDexterYoung) {
-            debugPrint('🔧 [SHOP_ITEM] Botón Dexter joven presionado');
-            _showAlreadyUnlockedMessage(context);
-          } else if (isAlreadyOwned) {
+          if (isAlreadyOwned) {
             debugPrint('✅ [SHOP_ITEM] Botón companion ya poseído presionado');
             _showAlreadyOwnedMessage(context);
           } else if (canAfford) {
@@ -297,7 +244,7 @@ class CompanionShopItemWidget extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
-          elevation: isDexterYoung || canAfford ? 4 : 1,
+          elevation: canAfford && !isAlreadyOwned ? 4 : 1,
         ),
         icon: Icon(
           buttonIcon,
@@ -317,54 +264,11 @@ class CompanionShopItemWidget extends StatelessWidget {
   }
   
   /// Overlays especiales para diferentes estados
-  List<Widget> _buildOverlays(bool isDexterYoung, bool canAfford, bool isAlreadyOwned) {
+  List<Widget> _buildOverlays(bool canAfford, bool isAlreadyOwned) {
     final overlays = <Widget>[];
     
-    // Overlay para Dexter joven (ya desbloqueado)
-    if (isDexterYoung) {
-      overlays.add(
-        Positioned(
-          top: 8,
-          right: 8,
-          child: Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Colors.green,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.green.withOpacity(0.3),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.star,
-                  color: Colors.white,
-                  size: 12,
-                ),
-                const SizedBox(width: 2),
-                Text(
-                  'GRATIS',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    
     // Overlay para ya poseído
-    else if (isAlreadyOwned) {
+    if (isAlreadyOwned) {
       overlays.add(
         Positioned(
           top: 8,
@@ -423,10 +327,8 @@ class CompanionShopItemWidget extends StatelessWidget {
   }
   
   /// Obtener colores del gradiente según el estado
-  List<Color> _getGradientColors(bool isDexterYoung, bool canAfford, bool isAlreadyOwned) {
-    if (isDexterYoung) {
-      return [Colors.green[300]!, Colors.green[600]!];
-    } else if (isAlreadyOwned) {
+  List<Color> _getGradientColors(bool canAfford, bool isAlreadyOwned) {
+    if (isAlreadyOwned) {
       return [Colors.blue[300]!, Colors.blue[600]!];
     } else if (canAfford) {
       final baseColor = _getCompanionColor();
@@ -437,38 +339,14 @@ class CompanionShopItemWidget extends StatelessWidget {
   }
   
   /// Obtener color de sombra según el estado
-  Color _getShadowColor(bool isDexterYoung, bool canAfford, bool isAlreadyOwned) {
-    if (isDexterYoung) {
-      return Colors.green.withOpacity(0.3);
-    } else if (isAlreadyOwned) {
+  Color _getShadowColor(bool canAfford, bool isAlreadyOwned) {
+    if (isAlreadyOwned) {
       return Colors.blue.withOpacity(0.3);
     } else if (canAfford) {
       return Colors.black.withOpacity(0.15);
     } else {
       return Colors.black.withOpacity(0.05);
     }
-  }
-  
-  /// Mostrar mensaje para Dexter joven
-  void _showAlreadyUnlockedMessage(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.star, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                '¡${companion.displayName} es tu primer compañero! Ya lo tienes desbloqueado.',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 3),
-      ),
-    );
   }
   
   /// Mostrar mensaje para companion ya poseído

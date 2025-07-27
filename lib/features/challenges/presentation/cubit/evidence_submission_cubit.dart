@@ -87,67 +87,113 @@ class EvidenceSubmissionCubit extends Cubit<EvidenceSubmissionState> {
   }
 
   Future<void> submitEvidence(SubmitEvidenceParams params) async {
-    try {
-      print('🎯 [EVIDENCE SUBMISSION CUBIT] === STARTING EVIDENCE SUBMISSION ===');
-      print('🎯 [EVIDENCE SUBMISSION CUBIT] User Challenge ID: ${params.userChallengeId}');
-      print('🎯 [EVIDENCE SUBMISSION CUBIT] Submission Type: ${params.submissionType}');
-      print('🎯 [EVIDENCE SUBMISSION CUBIT] Media Files: ${params.mediaUrls.length}');
+  try {
+    print('🎯 [EVIDENCE SUBMISSION CUBIT] === STARTING EVIDENCE SUBMISSION WITH REAL PHOTOS ===');
+    print('🎯 [EVIDENCE SUBMISSION CUBIT] User Challenge ID: ${params.userChallengeId}');
+    print('🎯 [EVIDENCE SUBMISSION CUBIT] Submission Type: ${params.submissionType}');
+    print('🎯 [EVIDENCE SUBMISSION CUBIT] Media Files: ${params.mediaUrls.length}');
+    print('🎯 [EVIDENCE SUBMISSION CUBIT] Photo URLs: ${params.mediaUrls}');
 
-      // Fase 1: Validación inicial
-      emit(const EvidenceSubmissionValidating(message: 'Validando evidencia...'));
-      await Future.delayed(const Duration(milliseconds: 800)); // Simular validación
+    // Fase 1: Validación inicial
+    emit(const EvidenceSubmissionValidating(message: 'Validando evidencia...'));
+    await Future.delayed(const Duration(milliseconds: 500));
 
-      // Validar parámetros
-      final validationError = _validateSubmissionParams(params);
-      if (validationError != null) {
-        emit(EvidenceSubmissionError(message: validationError));
+    // Validar parámetros
+    final validationError = _validateSubmissionParams(params);
+    if (validationError != null) {
+      emit(EvidenceSubmissionError(message: validationError));
+      return;
+    }
+
+    // Fase 2: Verificar que las URLs de fotos sean válidas
+    if (params.mediaUrls.isNotEmpty) {
+      emit(const EvidenceSubmissionValidating(message: 'Verificando fotos subidas...'));
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      final invalidUrls = _validatePhotoUrls(params.mediaUrls);
+      if (invalidUrls.isNotEmpty) {
+        emit(EvidenceSubmissionError(
+          message: 'URLs de fotos inválidas: ${invalidUrls.join(', ')}',
+        ));
         return;
       }
+    }
 
-      // Fase 2: Simulación de subida de archivos
-      if (params.mediaUrls.isNotEmpty) {
-        await _simulateFileUpload(params.mediaUrls);
-      }
+    // Fase 3: Envío de evidencia al quiz challenge service
+    emit(EvidenceSubmissionLoading());
 
-      // Fase 3: Envío de evidencia al servidor
-      emit(EvidenceSubmissionLoading());
+    final result = await submitEvidenceUseCase(params);
 
-      final result = await submitEvidenceUseCase(params);
+    result.fold(
+      (failure) {
+        print('❌ [EVIDENCE SUBMISSION CUBIT] Failed to submit evidence: ${failure.message}');
+        emit(EvidenceSubmissionError(message: _getErrorMessage(failure.message)));
+      },
+      (_) {
+        print('✅ [EVIDENCE SUBMISSION CUBIT] Evidence submitted successfully to quiz service');
+        
+        // Generar ID de submisión simulado
+        final submissionId = 'submission_${DateTime.now().millisecondsSinceEpoch}';
+        
+        emit(EvidenceSubmissionValidationPending(
+          submissionId: submissionId,
+          submissionDate: DateTime.now(),
+        ));
 
-      result.fold(
-        (failure) {
-          print('❌ [EVIDENCE SUBMISSION CUBIT] Failed to submit evidence: ${failure.message}');
-          emit(EvidenceSubmissionError(message: _getErrorMessage(failure.message)));
-        },
-        (_) {
-          print('✅ [EVIDENCE SUBMISSION CUBIT] Evidence submitted successfully');
-          
-          // Generar ID de submisión simulado
-          final submissionId = 'submission_${DateTime.now().millisecondsSinceEpoch}';
-          
-          emit(EvidenceSubmissionValidationPending(
-            submissionId: submissionId,
-            submissionDate: DateTime.now(),
-          ));
+        // Después de un breve delay, mostrar mensaje de éxito
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (!isClosed) {
+            emit(EvidenceSubmissionSuccess(
+              message: '¡Evidencia enviada exitosamente! Tu desafío está en proceso de validación.',
+            ));
+          }
+        });
+      },
+    );
 
-          // Después de un breve delay, mostrar mensaje de éxito
-          Future.delayed(const Duration(milliseconds: 1500), () {
-            if (!isClosed) {
-              emit(const EvidenceSubmissionSuccess(
-                message: '¡Evidencia enviada exitosamente! Tu desafío está en proceso de validación.',
-              ));
-            }
-          });
-        },
-      );
+  } catch (e) {
+    print('❌ [EVIDENCE SUBMISSION CUBIT] Unexpected error: $e');
+    emit(EvidenceSubmissionError(
+      message: 'Error inesperado al enviar la evidencia. Por favor, intenta nuevamente.',
+    ));
+  }
+}
 
-    } catch (e) {
-      print('❌ [EVIDENCE SUBMISSION CUBIT] Unexpected error: $e');
-      emit(EvidenceSubmissionError(
-        message: 'Error inesperado al enviar la evidencia. Por favor, intenta nuevamente.',
-      ));
+List<String> _validatePhotoUrls(List<String> photoUrls) {
+  final invalidUrls = <String>[];
+  
+  for (final url in photoUrls) {
+    if (!_isValidPhotoUrl(url)) {
+      invalidUrls.add(url);
     }
   }
+  
+  return invalidUrls;
+}
+bool _isValidPhotoUrl(String url) {
+  if (url.isEmpty) return false;
+  
+  try {
+    final uri = Uri.parse(url);
+    if (!uri.isAbsolute) return false;
+    if (uri.scheme != 'http' && uri.scheme != 'https') return false;
+    
+    // Verificar que sea una URL de imagen (opcional, pero recomendado)
+    final path = uri.path.toLowerCase();
+    final validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+    
+    // Si tiene extensión, verificar que sea válida
+    if (path.contains('.')) {
+      return validExtensions.any((ext) => path.endsWith(ext));
+    }
+    
+    // Si no tiene extensión, asumir que es válida (puede ser una URL dinámica)
+    return true;
+    
+  } catch (e) {
+    return false;
+  }
+}
 
   Future<void> _simulateFileUpload(List<String> mediaUrls) async {
     emit(const EvidenceSubmissionUploading(progress: 0.0, message: 'Preparando archivos...'));

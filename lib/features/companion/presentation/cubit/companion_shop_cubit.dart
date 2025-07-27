@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -89,7 +90,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
 
   Future<void> loadShop() async {
     try {
-      debugPrint('🏪 [SHOP_CUBIT] === CARGANDO TIENDA COMPLETA ===');
+      debugPrint('🏪 [SHOP_CUBIT] === CARGANDO TIENDA SOLO CON DATOS DE API ===');
       emit(CompanionShopLoading());
 
       final userId = await tokenManager.getUserId();
@@ -110,21 +111,33 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
         (shopData) {
           debugPrint('✅ [SHOP_CUBIT] === TIENDA API CARGADA ===');
           
-          // 🔥 OBTENER MASCOTAS DEL USUARIO
-          _userOwnedCompanions = _extractUserOwnedCompanions(shopData.availableCompanions);
-          debugPrint('🏠 [SHOP_CUBIT] Mascotas del usuario: ${_userOwnedCompanions.length}');
+          // 🔥 USAR SOLO LOS DATOS QUE VIENEN DE LA API - SIN AGREGAR NADA LOCAL
+          final availableCompanions = shopData.availableCompanions;
           
-          // 🔥 CONSTRUIR MAPEO DINÁMICO
-          _buildDynamicMapping(shopData.availableCompanions);
+          debugPrint('🛍️ [SHOP_CUBIT] Mascotas disponibles desde API: ${availableCompanions.length}');
+          
+          // 🔥 EXTRAER MASCOTAS YA ADOPTADAS (MARCAR COMO isOwned = true)
+          _userOwnedCompanions = availableCompanions.where((c) => c.isOwned).toList();
+          debugPrint('🏠 [SHOP_CUBIT] Mascotas ya adoptadas: ${_userOwnedCompanions.length}');
+          
+          // 🔥 MASCOTAS DISPONIBLES PARA COMPRAR (isOwned = false)
+          final purchasableCompanions = availableCompanions.where((c) => !c.isOwned).toList();
+          debugPrint('🛒 [SHOP_CUBIT] Mascotas disponibles para comprar: ${purchasableCompanions.length}');
 
-          // 🔥 NUEVA LÓGICA: MOSTRAR TODAS LAS ETAPAS CON ESTADOS
-          final completePurchasableCompanions = _buildCompleteShop(_userOwnedCompanions);
+          // 🔥 CONSTRUIR MAPEO DE PET IDS (SOLO SI ES NECESARIO)
+          _buildPetIdMapping(availableCompanions);
 
-          debugPrint('🛒 [SHOP_CUBIT] Tienda completa: ${completePurchasableCompanions.length} items');
+          // 🔥 ORDENAR POR PRECIO (MÁS BARATOS PRIMERO)
+          purchasableCompanions.sort((a, b) => a.purchasePrice.compareTo(b.purchasePrice));
+
+          debugPrint('🛒 [SHOP_CUBIT] === TIENDA FINAL (SOLO API) ===');
+          for (final companion in purchasableCompanions) {
+            debugPrint('🏪 [SHOP_CUBIT] ${companion.displayName} ${companion.stage.name}: ${companion.purchasePrice}★ (${companion.isOwned ? "YA TIENE" : "DISPONIBLE"})');
+          }
 
           emit(CompanionShopLoaded(
-            availableCompanions: shopData.availableCompanions,
-            purchasableCompanions: completePurchasableCompanions,
+            availableCompanions: availableCompanions,
+            purchasableCompanions: purchasableCompanions,
             userStats: shopData.userStats,
             availablePetIds: Map.from(_localIdToApiPetId),
             userOwnedCompanions: _userOwnedCompanions,
@@ -137,206 +150,9 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     }
   }
 
-  // 🔥 NUEVA LÓGICA: MOSTRAR TODAS LAS ETAPAS (DESBLOQUEADAS Y BLOQUEADAS)
-  List<CompanionEntity> _buildCompleteShop(List<CompanionEntity> userOwnedCompanions) {
-    debugPrint('🏗️ [COMPLETE_SHOP] === CONSTRUYENDO TIENDA COMPLETA ===');
-    
-    final shopCompanions = <CompanionEntity>[];
-    
-    // 🎁 1. DEXTER JOVEN GRATIS - SIEMPRE DISPONIBLE SI NO LO TIENE
-    final hasDexterYoung = userOwnedCompanions.any((c) =>
-        c.type == CompanionType.dexter && c.stage == CompanionStage.young);
-
-    if (!hasDexterYoung) {
-      debugPrint('🎁 [COMPLETE_SHOP] Agregando Dexter joven GRATIS');
-      shopCompanions.add(_createDexterYoungFree());
-    }
-
-    // 🔥 2. PARA CADA TIPO, MOSTRAR TODAS LAS ETAPAS CON SU ESTADO
-    for (final type in [CompanionType.dexter, CompanionType.elly, CompanionType.paxolotl, CompanionType.yami]) {
-      // Obtener qué etapas tiene el usuario de este tipo
-      final userStagesOfType = userOwnedCompanions
-          .where((c) => c.type == type)
-          .map((c) => c.stage)
-          .toSet();
-      
-      debugPrint('🔍 [COMPLETE_SHOP] ${type.name}: Usuario tiene etapas: $userStagesOfType');
-      
-      // 🔥 MOSTRAR TODAS LAS ETAPAS (BABY, YOUNG, ADULT)
-      for (final stage in CompanionStage.values) {
-        final companion = _createCompanionForShop(type, stage, userStagesOfType);
-        
-        // 🔥 SKIP DEXTER YOUNG SI YA LO AGREGAMOS GRATIS
-        if (type == CompanionType.dexter && stage == CompanionStage.young && !hasDexterYoung) {
-          continue; // Ya lo agregamos gratis arriba
-        }
-        
-        shopCompanions.add(companion);
-        
-        final statusIcon = _getCompanionStatusIcon(companion);
-        debugPrint('$statusIcon [COMPLETE_SHOP] ${type.name} ${stage.name}: ${_getCompanionStatus(companion)}');
-      }
-    }
-
-    // 🔥 ORDENAR: Desbloqueadas primero, luego por tipo y etapa
-    shopCompanions.sort((a, b) {
-      // Primero por disponibilidad
-      final aCanBuy = _canBuyCompanion(a, userOwnedCompanions);
-      final bCanBuy = _canBuyCompanion(b, userOwnedCompanions);
-      
-      if (aCanBuy != bCanBuy) {
-        return aCanBuy ? -1 : 1; // Disponibles primero
-      }
-      
-      // Luego por tipo
-      final typeComparison = a.type.index.compareTo(b.type.index);
-      if (typeComparison != 0) return typeComparison;
-      
-      // Finalmente por etapa
-      return a.stage.index.compareTo(b.stage.index);
-    });
-
-    debugPrint('🏪 [COMPLETE_SHOP] === TIENDA FINAL COMPLETA ===');
-    debugPrint('🛒 [COMPLETE_SHOP] Total items: ${shopCompanions.length}');
-    
-    for (final companion in shopCompanions) {
-      final status = _getCompanionStatus(companion);
-      final icon = _getCompanionStatusIcon(companion);
-      debugPrint('$icon ${companion.displayName} ${companion.stage.name}: $status');
-    }
-
-    return shopCompanions;
-  }
-
-  // 🔥 CREAR COMPANION PARA TIENDA CON ESTADO CORRECTO
-  CompanionEntity _createCompanionForShop(
-    CompanionType type, 
-    CompanionStage stage, 
-    Set<CompanionStage> userStages
-  ) {
-    final prices = _getPricesForType(type);
-    final hasThisStage = userStages.contains(stage);
-    final canBuy = _canBuyStage(stage, userStages);
-    
-    return CompanionModel(
-      id: '${type.name}_${stage.name}',
-      type: type,
-      stage: stage,
-      name: _getNameForType(type),
-      description: _getDescriptionForShop(type, stage, hasThisStage, canBuy),
-      level: 1,
-      experience: 0,
-      happiness: 100,
-      hunger: 100,
-      energy: 100,
-      isOwned: hasThisStage, // 🔥 MARCAR SI YA LO TIENE
-      isSelected: false,
-      purchasedAt: hasThisStage ? DateTime.now() : null,
-      currentMood: CompanionMood.happy,
-      purchasePrice: prices[stage]!,
-      evolutionPrice: 50,
-      unlockedAnimations: ['idle', 'blink', 'happy'],
-      createdAt: DateTime.now(),
-    );
-  }
-
-  // 🔥 LÓGICA PARA DETERMINAR SI PUEDE COMPRAR UNA ETAPA
-  bool _canBuyStage(CompanionStage targetStage, Set<CompanionStage> userStages) {
-    switch (targetStage) {
-      case CompanionStage.baby:
-        return !userStages.contains(CompanionStage.baby); // Puede comprar si no la tiene
-      
-      case CompanionStage.young:
-        return userStages.contains(CompanionStage.baby) && // Debe tener baby
-               !userStages.contains(CompanionStage.young);  // Y no tener young
-      
-      case CompanionStage.adult:
-        return userStages.contains(CompanionStage.young) && // Debe tener young
-               !userStages.contains(CompanionStage.adult);  // Y no tener adult
-    }
-  }
-
-  // 🔥 VERIFICAR SI PUEDE COMPRAR UN COMPANION
-  bool _canBuyCompanion(CompanionEntity companion, List<CompanionEntity> userOwnedCompanions) {
-    // Si ya lo tiene, no puede comprarlo
-    if (companion.isOwned) return false;
-    
-    // Dexter gratis siempre se puede
-    if (companion.type == CompanionType.dexter && 
-        companion.stage == CompanionStage.young && 
-        companion.purchasePrice == 0) {
-      return true;
-    }
-    
-    // Obtener etapas que tiene de este tipo
-    final userStagesOfType = userOwnedCompanions
-        .where((c) => c.type == companion.type)
-        .map((c) => c.stage)
-        .toSet();
-    
-    return _canBuyStage(companion.stage, userStagesOfType);
-  }
-
-  // 🔥 OBTENER ESTADO DEL COMPANION PARA DISPLAY
-  String _getCompanionStatus(CompanionEntity companion) {
-    if (companion.isOwned) {
-      return 'YA TIENES';
-    }
-    
-    if (companion.type == CompanionType.dexter && 
-        companion.stage == CompanionStage.young && 
-        companion.purchasePrice == 0) {
-      return 'GRATIS';
-    }
-    
-    if (_canBuyCompanion(companion, _userOwnedCompanions)) {
-      return 'DISPONIBLE';
-    } else {
-      switch (companion.stage) {
-        case CompanionStage.baby:
-          return 'DISPONIBLE';
-        case CompanionStage.young:
-          return 'NECESITAS BABY';
-        case CompanionStage.adult:
-          return 'NECESITAS YOUNG';
-      }
-    }
-  }
-
-  String _getCompanionStatusIcon(CompanionEntity companion) {
-    if (companion.isOwned) return '✅';
-    if (companion.purchasePrice == 0) return '🎁';
-    if (_canBuyCompanion(companion, _userOwnedCompanions)) return '🔓';
-    return '🔒';
-  }
-
-  // 🔥 CREAR DEXTER JOVEN GRATIS
-  CompanionEntity _createDexterYoungFree() {
-    return CompanionModel(
-      id: 'dexter_young_free',
-      type: CompanionType.dexter,
-      stage: CompanionStage.young,
-      name: 'Dexter',
-      description: '🎁 Tu primer compañero gratuito',
-      level: 1,
-      experience: 0,
-      happiness: 100,
-      hunger: 100,
-      energy: 100,
-      isOwned: false,
-      isSelected: false,
-      purchasedAt: null,
-      currentMood: CompanionMood.happy,
-      purchasePrice: 0, // 🔥 GRATIS
-      evolutionPrice: 50,
-      unlockedAnimations: ['idle', 'blink', 'happy'],
-      createdAt: DateTime.now(),
-    );
-  }
-
-  // 🔥 ADOPCIÓN CON VALIDACIONES MEJORADAS
+  // 🔥 ADOPCIÓN SIMPLIFICADA - USAR SOLO PET ID DE LA API
   Future<void> purchaseCompanion(CompanionEntity companion) async {
-    debugPrint('🛒 [SHOP_CUBIT] === INICIANDO ADOPCIÓN ===');
+    debugPrint('🛒 [SHOP_CUBIT] === ADOPTANDO MASCOTA DESDE API ===');
     debugPrint('🐾 [SHOP_CUBIT] Companion: ${companion.displayName} ${companion.stage.name}');
     debugPrint('💰 [SHOP_CUBIT] Precio: ${companion.purchasePrice}★');
 
@@ -352,13 +168,6 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
       emit(CompanionShopError(
         message: '✅ Ya tienes a ${companion.displayName} ${companion.stage.name}.',
       ));
-      return;
-    }
-
-    // 🔥 VALIDACIÓN: Puede comprarlo (etapa anterior)
-    if (!_canBuyCompanion(companion, currentState.userOwnedCompanions)) {
-      final requirement = _getRequirementMessage(companion);
-      emit(CompanionShopError(message: requirement));
       return;
     }
 
@@ -380,16 +189,11 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
         return;
       }
 
-      // 🔥 OBTENER PET ID
-      String apiPetId;
-      if (companion.id == 'dexter_young_free') {
-        apiPetId = 'dexter_young_free';
-      } else {
-        apiPetId = currentState.availablePetIds[companion.id] ?? 
-                   '${companion.type.name}_${companion.stage.index + 1}';
-      }
-
-      debugPrint('🗺️ [SHOP_CUBIT] Pet ID para API: $apiPetId');
+      // 🔥 USAR EL PET ID REAL DE LA API
+      String apiPetId = _extractRealPetId(companion);
+      
+      debugPrint('🗺️ [SHOP_CUBIT] Pet ID para adopción: $apiPetId');
+      debugPrint('🚀 [SHOP_CUBIT] Llamando API de adopción...');
 
       final result = await purchaseCompanionUseCase(
         PurchaseCompanionParams(
@@ -406,17 +210,16 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
         },
         (adoptedCompanion) {
           debugPrint('🎉 [SHOP_CUBIT] === ADOPCIÓN EXITOSA ===');
+          debugPrint('✅ [SHOP_CUBIT] Mascota adoptada: ${adoptedCompanion.displayName}');
           
-          final message = companion.purchasePrice == 0
-              ? '🎁 ¡Bienvenido ${adoptedCompanion.displayName}! Tu primer compañero'
-              : '🎉 ¡Has adoptado a ${adoptedCompanion.displayName} ${companion.stage.name}!';
+          final message = '🎉 ¡Has adoptado a ${adoptedCompanion.displayName} ${companion.stage.name}!';
           
           emit(CompanionShopPurchaseSuccess(
             purchasedCompanion: adoptedCompanion,
             message: message,
           ));
 
-          // Recargar tienda
+          // Recargar tienda después de adopción exitosa
           _reloadShopAfterPurchase();
         },
       );
@@ -426,102 +229,80 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     }
   }
 
-  String _getRequirementMessage(CompanionEntity companion) {
-    switch (companion.stage) {
-      case CompanionStage.baby:
-        return '🔓 Puedes adoptar a ${companion.displayName} baby';
-      case CompanionStage.young:
-        return '🔒 Necesitas tener ${companion.displayName} baby primero';
-      case CompanionStage.adult:
-        return '🔒 Necesitas tener ${companion.displayName} young primero';
-    }
-  }
-
-  // 🔧 MÉTODOS HELPER
-  Map<CompanionStage, int> _getPricesForType(CompanionType type) {
-    final basePrices = {
-      CompanionType.dexter: {
-        CompanionStage.baby: 50,
-        CompanionStage.young: 100,
-        CompanionStage.adult: 150,
-      },
-      CompanionType.elly: {
-        CompanionStage.baby: 200,
-        CompanionStage.young: 300,
-        CompanionStage.adult: 400,
-      },
-      CompanionType.paxolotl: {
-        CompanionStage.baby: 600,
-        CompanionStage.young: 800,
-        CompanionStage.adult: 1000,
-      },
-      CompanionType.yami: {
-        CompanionStage.baby: 2500,
-        CompanionStage.young: 3000,
-        CompanionStage.adult: 3500,
-      },
-    };
+  // 🔥 EXTRAER PET ID REAL DE LA API (SIN FALLBACKS LOCALES)
+  String _extractRealPetId(CompanionEntity companion) {
+    debugPrint('🔍 [SHOP_CUBIT] === EXTRAYENDO PET ID REAL ===');
+    debugPrint('🐾 [SHOP_CUBIT] Companion: ${companion.displayName}');
+    debugPrint('🆔 [SHOP_CUBIT] Local ID: ${companion.id}');
     
-    return basePrices[type]!;
-  }
-
-  String _getNameForType(CompanionType type) {
-    switch (type) {
-      case CompanionType.dexter: return 'Dexter';
-      case CompanionType.elly: return 'Elly';
-      case CompanionType.paxolotl: return 'Paxolotl';
-      case CompanionType.yami: return 'Yami';
-    }
-  }
-
-  String _getDescriptionForShop(CompanionType type, CompanionStage stage, bool hasStage, bool canBuy) {
-    final name = _getNameForType(type);
-    final stageName = stage.name;
-    
-    if (hasStage) {
-      return '✅ Ya tienes $name $stageName';
-    } else if (canBuy) {
-      return '🔓 $name $stageName - Disponible para adoptar';
-    } else {
-      switch (stage) {
-        case CompanionStage.baby:
-          return '$name $stageName - Primera etapa';
-        case CompanionStage.young:
-          return '🔒 $name $stageName - Necesitas baby primero';
-        case CompanionStage.adult:
-          return '🔒 $name $stageName - Necesitas young primero';
-      }
-    }
-  }
-
-  // Métodos helper existentes (sin cambios importantes)
-  List<CompanionEntity> _extractUserOwnedCompanions(List<CompanionEntity> allCompanions) {
-    return allCompanions.where((c) => c.isOwned).toList();
-  }
-
-  void _buildDynamicMapping(List<CompanionEntity> companions) {
-    _localIdToApiPetId.clear();
-    for (final companion in companions) {
-      final apiPetId = _extractApiPetIdFromCompanion(companion);
-      if (apiPetId != null && apiPetId.isNotEmpty) {
-        _localIdToApiPetId[companion.id] = apiPetId;
-      }
-    }
-  }
-
-  String? _extractApiPetIdFromCompanion(CompanionEntity companion) {
+    // 1. 🔥 INTENTAR EXTRAER DE CompanionModelWithPetId
     if (companion is CompanionModelWithPetId) {
-      return companion.petId;
+      final apiPetId = companion.petId;
+      debugPrint('✅ [SHOP_CUBIT] Pet ID desde CompanionModelWithPetId: $apiPetId');
+      
+      if (apiPetId.isNotEmpty && apiPetId != 'unknown') {
+        return apiPetId;
+      }
     }
+    
+    // 2. 🔥 BUSCAR EN EL MAPEO
+    if (_localIdToApiPetId.containsKey(companion.id)) {
+      final mappedPetId = _localIdToApiPetId[companion.id]!;
+      debugPrint('✅ [SHOP_CUBIT] Pet ID desde mapeo: $mappedPetId');
+      return mappedPetId;
+    }
+    
+    // 3. 🔥 INTENTAR EXTRAER DEL JSON
     if (companion is CompanionModel) {
       try {
         final json = companion.toJson();
-        return json['petId'] as String?;
+        if (json.containsKey('petId') && json['petId'] != null) {
+          final jsonPetId = json['petId'] as String;
+          debugPrint('✅ [SHOP_CUBIT] Pet ID desde JSON: $jsonPetId');
+          
+          if (jsonPetId.isNotEmpty && jsonPetId != 'unknown') {
+            return jsonPetId;
+          }
+        }
       } catch (e) {
-        return null;
+        debugPrint('❌ [SHOP_CUBIT] Error extrayendo del JSON: $e');
       }
     }
-    return null;
+    
+    // 4. 🆘 SI NO SE ENCUENTRA, USAR EL ID LOCAL COMO ÚLTIMO RECURSO
+    debugPrint('⚠️ [SHOP_CUBIT] No se encontró Pet ID específico, usando ID local: ${companion.id}');
+    return companion.id;
+  }
+
+  // 🔥 CONSTRUIR MAPEO DE PET IDS DESDE LA API
+  void _buildPetIdMapping(List<CompanionEntity> companions) {
+    _localIdToApiPetId.clear();
+    debugPrint('🗺️ [SHOP_CUBIT] === CONSTRUYENDO MAPEO DE PET IDS ===');
+    
+    for (final companion in companions) {
+      String? apiPetId;
+      
+      // Extraer Pet ID real
+      if (companion is CompanionModelWithPetId) {
+        apiPetId = companion.petId;
+      } else if (companion is CompanionModel) {
+        try {
+          final json = companion.toJson();
+          apiPetId = json['petId'] as String?;
+        } catch (e) {
+          debugPrint('❌ [SHOP_CUBIT] Error extrayendo Pet ID de JSON: $e');
+        }
+      }
+      
+      if (apiPetId != null && apiPetId.isNotEmpty && apiPetId != 'unknown') {
+        _localIdToApiPetId[companion.id] = apiPetId;
+        debugPrint('🗺️ [SHOP_CUBIT] Mapeo: ${companion.id} -> $apiPetId');
+      } else {
+        debugPrint('⚠️ [SHOP_CUBIT] Sin Pet ID para: ${companion.id}');
+      }
+    }
+    
+    debugPrint('✅ [SHOP_CUBIT] Mapeo completado: ${_localIdToApiPetId.length} entries');
   }
 
   Future<void> _reloadShopAfterPurchase() async {

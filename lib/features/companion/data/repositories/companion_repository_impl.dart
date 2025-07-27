@@ -41,6 +41,9 @@ class CompanionRepositoryImpl implements CompanionRepository {
     }
     return userId;
   }
+
+
+  
  @override
   Future<Either<Failure, CompanionEntity>> increasePetStats({
     required String userId,

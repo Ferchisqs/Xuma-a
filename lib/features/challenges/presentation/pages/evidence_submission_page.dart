@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:xuma_a/core/services/media_upload_service.dart';
 import 'dart:io';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
@@ -43,10 +44,12 @@ class _EvidenceSubmissionContent extends StatefulWidget {
   });
 
   @override
-  State<_EvidenceSubmissionContent> createState() => _EvidenceSubmissionContentState();
+  State<_EvidenceSubmissionContent> createState() =>
+      _EvidenceSubmissionContentState();
 }
 
-class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> {
+class _EvidenceSubmissionContentState
+    extends State<_EvidenceSubmissionContent> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
   final _weightController = TextEditingController();
@@ -95,7 +98,8 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
           if (state is EvidenceSubmissionSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('¡Evidencia enviada exitosamente! Espera la validación.'),
+                content: Text(
+                    '¡Evidencia enviada exitosamente! Espera la validación.'),
                 backgroundColor: AppColors.success,
                 duration: Duration(seconds: 3),
               ),
@@ -123,40 +127,40 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
                 children: [
                   // Header del desafío
                   _buildChallengeHeader(),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Tipo de evidencia
                   _buildSubmissionTypeSelector(),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Descripción
                   _buildDescriptionField(),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Selección de imágenes
                   _buildImageSelection(),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Opciones adicionales
                   _buildAdditionalOptions(),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Campos condicionales
                   if (_includeMeasurements) _buildMeasurementFields(),
                   if (_includeLocation) _buildLocationField(),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Botón de envío
                   _buildSubmitButton(isLoading),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Información adicional
                   _buildSubmissionInfo(),
                 ],
@@ -189,7 +193,8 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
           Row(
             children: [
               Icon(
-                IconData(widget.challenge.iconCode, fontFamily: 'MaterialIcons'),
+                IconData(widget.challenge.iconCode,
+                    fontFamily: 'MaterialIcons'),
                 color: AppColors.primary,
                 size: 24,
               ),
@@ -237,9 +242,12 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
           ),
           child: Column(
             children: [
-              _buildTypeOption('photo', 'Fotografía', Icons.camera_alt, 'Evidencia visual del desafío'),
-              _buildTypeOption('measurement', 'Medición', Icons.straighten, 'Con datos de peso/volumen'),
-              _buildTypeOption('activity', 'Actividad', Icons.directions_run, 'Actividad realizada'),
+              _buildTypeOption('photo', 'Fotografía', Icons.camera_alt,
+                  'Evidencia visual del desafío'),
+              _buildTypeOption('measurement', 'Medición', Icons.straighten,
+                  'Con datos de peso/volumen'),
+              _buildTypeOption('activity', 'Actividad', Icons.directions_run,
+                  'Actividad realizada'),
             ],
           ),
         ),
@@ -247,9 +255,10 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
     );
   }
 
-  Widget _buildTypeOption(String value, String title, IconData icon, String description) {
+  Widget _buildTypeOption(
+      String value, String title, IconData icon, String description) {
     final isSelected = _selectedSubmissionType == value;
-    
+
     return InkWell(
       onTap: () {
         setState(() {
@@ -259,10 +268,14 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
-          border: value != 'activity' ? Border(
-            bottom: BorderSide(color: AppColors.primary.withOpacity(0.2)),
-          ) : null,
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.1)
+              : Colors.transparent,
+          border: value != 'activity'
+              ? Border(
+                  bottom: BorderSide(color: AppColors.primary.withOpacity(0.2)),
+                )
+              : null,
         ),
         child: Row(
           children: [
@@ -288,7 +301,9 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
                   Text(
                     title,
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -371,13 +386,15 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
           ],
         ),
         const SizedBox(height: 12),
-        
+
         // Botones para agregar fotos
         Row(
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _selectedImages.length < 5 ? () => _pickImage(ImageSource.camera) : null,
+                onPressed: _selectedImages.length < 5
+                    ? () => _pickImage(ImageSource.camera)
+                    : null,
                 icon: const Icon(Icons.camera_alt),
                 label: const Text('Cámara'),
                 style: OutlinedButton.styleFrom(
@@ -389,7 +406,9 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _selectedImages.length < 5 ? () => _pickImage(ImageSource.gallery) : null,
+                onPressed: _selectedImages.length < 5
+                    ? () => _pickImage(ImageSource.gallery)
+                    : null,
                 icon: const Icon(Icons.photo_library),
                 label: const Text('Galería'),
                 style: OutlinedButton.styleFrom(
@@ -400,12 +419,12 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
             ),
           ],
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Previsualización de imágenes
         if (_selectedImages.isNotEmpty) _buildImagePreview(),
-        
+
         // Mensaje si no hay imágenes
         if (_selectedImages.isEmpty)
           Container(
@@ -443,47 +462,101 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
 
   Widget _buildImagePreview() {
     return Container(
-      height: 120,
+      height: 140, // Altura aumentada para mostrar más info
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _selectedImages.length,
         itemBuilder: (context, index) {
-          return Container(
-            margin: const EdgeInsets.only(right: 12),
-            child: Stack(
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    image: DecorationImage(
-                      image: FileImage(_selectedImages[index]),
-                      fit: BoxFit.cover,
+          return FutureBuilder<Map<String, dynamic>>(
+            future: getIt<MediaUploadService>().getFileInfo(_selectedImages[index]),
+            builder: (context, snapshot) {
+              final fileInfo = snapshot.data;
+              
+              return Container(
+                margin: const EdgeInsets.only(right: 12),
+                child: Stack(
+                  children: [
+                    Column(
+                      children: [
+                        // Imagen
+                        Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            image: DecorationImage(
+                              image: FileImage(_selectedImages[index]),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        // Info del archivo
+                        if (fileInfo != null) ...[
+                          SizedBox(
+                            width: 100,
+                            child: Text(
+                              fileInfo['sizeFormatted'] ?? '',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textHint,
+                                fontSize: 10,
+                              ),
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                ),
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: GestureDetector(
-                    onTap: () => _removeImage(index),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                        size: 16,
+                    // Botón eliminar
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: GestureDetector(
+                        onTap: () => _removeImage(index),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppColors.error,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    // Indicador de validación
+                    if (fileInfo != null && fileInfo['isValidImage'] == true)
+                      Positioned(
+                        bottom: 30,
+                        left: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: AppColors.success,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
@@ -502,7 +575,6 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
           ),
         ),
         const SizedBox(height: 12),
-        
         CheckboxListTile(
           title: const Text('Incluir mediciones'),
           subtitle: const Text('Peso, volumen, cantidad'),
@@ -515,7 +587,6 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
           activeColor: AppColors.primary,
           controlAffinity: ListTileControlAffinity.leading,
         ),
-        
         CheckboxListTile(
           title: const Text('Incluir ubicación'),
           subtitle: const Text('Dónde realizaste el desafío'),
@@ -552,7 +623,6 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
             ),
           ),
           const SizedBox(height: 12),
-          
           Row(
             children: [
               Expanded(
@@ -576,9 +646,7 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
               ),
             ],
           ),
-          
           const SizedBox(height: 12),
-          
           TextFormField(
             controller: _quantityController,
             decoration: const InputDecoration(
@@ -611,7 +679,6 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
             ),
           ),
           const SizedBox(height: 12),
-          
           TextFormField(
             controller: _locationController,
             decoration: const InputDecoration(
@@ -620,9 +687,7 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
               prefixIcon: Icon(Icons.location_on),
             ),
           ),
-          
           const SizedBox(height: 12),
-          
           ElevatedButton.icon(
             onPressed: _getCurrentLocation,
             icon: const Icon(Icons.my_location),
@@ -718,6 +783,12 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
 
   Future<void> _pickImage(ImageSource source) async {
     try {
+      // Verificar límite de fotos
+      if (_selectedImages.length >= 5) {
+        _showValidationError('Máximo 5 fotos permitidas');
+        return;
+      }
+
       final XFile? image = await _picker.pickImage(
         source: source,
         maxWidth: 1080,
@@ -726,25 +797,42 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
       );
       
       if (image != null) {
+        final file = File(image.path);
+        
+        // Validar archivo antes de agregarlo
+        final mediaUploadService = getIt<MediaUploadService>();
+        final validation = mediaUploadService.validateFile(file);
+        
+        if (validation != null) {
+          _showValidationError(validation);
+          return;
+        }
+
+        // Verificar información del archivo
+        final fileInfo = await mediaUploadService.getFileInfo(file);
+        print('📷 [PHOTO SELECTION] File info: $fileInfo');
+
         setState(() {
-          _selectedImages.add(File(image.path));
+          _selectedImages.add(file);
         });
+
+        // Mostrar información del archivo seleccionado
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Foto agregada: ${fileInfo['name']} (${fileInfo['sizeFormatted']})'
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al seleccionar imagen: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      print('❌ [PHOTO SELECTION] Error selecting image: $e');
+      _showValidationError('Error al seleccionar imagen: ${e.toString()}');
     }
   }
 
-  void _removeImage(int index) {
-    setState(() {
-      _selectedImages.removeAt(index);
-    });
-  }
 
   void _getCurrentLocation() {
     // TODO: Implementar obtención de ubicación GPS
@@ -756,7 +844,7 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
     );
   }
 
-  void _submitEvidence() {
+  void _submitEvidence() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -771,16 +859,156 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
       return;
     }
 
-    // Crear parámetros de evidencia
-    final evidenceParams = _buildEvidenceParams();
+    try {
+      print(
+          '🎯 [EVIDENCE SUBMISSION] === STARTING EVIDENCE SUBMISSION WITH REAL PHOTOS ===');
 
-    // Enviar evidencia
-    context.read<EvidenceSubmissionCubit>().submitEvidence(evidenceParams);
+      // 1. Primero subir las fotos al gamification service
+      final mediaUploadService = getIt<MediaUploadService>();
+
+      // Mostrar progreso de subida
+      final cubit = context.read<EvidenceSubmissionCubit>();
+
+      List<String> uploadedPhotoUrls = [];
+
+      try {
+        // Subir fotos con callback de progreso
+        uploadedPhotoUrls = await mediaUploadService.uploadMultiplePhotos(
+          photoFiles: _selectedImages,
+          category: 'challenge_evidence',
+          isPublic: true,
+          uploadPurpose: 'challenge_evidence',
+          onProgress: (current, total) {
+            // Emitir estado de progreso
+            final progress = current / total;
+            // El cubit ya maneja esto internamente
+          },
+        );
+
+        print(
+            '✅ [EVIDENCE SUBMISSION] Photos uploaded successfully: ${uploadedPhotoUrls.length} URLs');
+      } catch (uploadError) {
+        print('❌ [EVIDENCE SUBMISSION] Photo upload failed: $uploadError');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al subir las fotos: $uploadError'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+
+      // 2. Crear parámetros de evidencia con URLs reales
+      final evidenceParams =
+          _buildEvidenceParamsWithRealUrls(uploadedPhotoUrls);
+
+      // 3. Enviar evidencia al quiz service
+      cubit.submitEvidence(evidenceParams);
+    } catch (e) {
+      print('❌ [EVIDENCE SUBMISSION] Unexpected error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error inesperado: ${e.toString()}'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  SubmitEvidenceParams _buildEvidenceParamsWithRealUrls(
+      List<String> realPhotoUrls) {
+    print(
+        '🔧 [EVIDENCE SUBMISSION] Building evidence params with real photo URLs');
+    print('🔧 [EVIDENCE SUBMISSION] Photo URLs: $realPhotoUrls');
+
+    // Construir datos de ubicación
+    Map<String, dynamic>? locationData;
+    if (_includeLocation && _locationController.text.isNotEmpty) {
+      locationData = {
+        'locationName': _locationController.text,
+        // TODO: Agregar coordenadas GPS reales cuando implementes geolocalización
+        'latitude': 19.4326, // Ejemplo: Ciudad de México
+        'longitude': -99.1332,
+      };
+    }
+
+    // Construir datos de medición
+    Map<String, dynamic>? measurementData;
+    if (_includeMeasurements) {
+      measurementData = {};
+      if (_weightController.text.isNotEmpty) {
+        measurementData['weight'] = _weightController.text.trim();
+      }
+      if (_volumeController.text.isNotEmpty) {
+        measurementData['volume'] = _volumeController.text.trim();
+      }
+      if (_quantityController.text.isNotEmpty) {
+        measurementData['quantity'] = _quantityController.text.trim();
+      }
+    }
+
+    // Metadata adicional
+    final metadata = {
+      'submissionDate': DateTime.now().toIso8601String(),
+      'challengeCategory': widget.challenge.category,
+      'challengeTitle': widget.challenge.title,
+      'challengeId': widget.challenge.id,
+      'appVersion': '1.0.0',
+      'platform': 'mobile',
+      'totalPhotos': realPhotoUrls.length,
+      'submissionMethod': 'mobile_app',
+    };
+
+    return SubmitEvidenceParams(
+      userChallengeId: widget.userChallengeId,
+      submissionType: _selectedSubmissionType,
+      contentText: _descriptionController.text.trim(),
+      mediaUrls: realPhotoUrls, // 🔧 USAR URLs REALES DE FOTOS SUBIDAS
+      locationData: locationData,
+      measurementData: measurementData,
+      metadata: metadata,
+    );
+  }
+
+ bool _validateSelectedImages() {
+    if (_selectedImages.isEmpty) {
+      _showValidationError('Debes seleccionar al menos una foto de evidencia');
+      return false;
+    }
+
+    if (_selectedImages.length > 5) {
+      _showValidationError('Máximo 5 fotos permitidas');
+      return false;
+    }
+
+    // Validar cada archivo
+    final mediaUploadService = getIt<MediaUploadService>();
+    final validationErrors = mediaUploadService.validateMultipleFiles(_selectedImages);
+
+    if (validationErrors.isNotEmpty) {
+      _showValidationError(validationErrors.first);
+      return false;
+    }
+
+    return true;
+  }
+
+  void _showValidationError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   SubmitEvidenceParams _buildEvidenceParams() {
     // Por ahora usamos URLs de ejemplo, en producción deberías subir las imágenes primero
-    final mediaUrls = _selectedImages.map((file) => 'https://example.com/uploads/${file.path.split('/').last}').toList();
+    final mediaUrls = _selectedImages
+        .map((file) =>
+            'https://example.com/uploads/${file.path.split('/').last}')
+        .toList();
 
     // Construir datos de ubicación
     Map<String, dynamic>? locationData;
@@ -826,4 +1054,8 @@ class _EvidenceSubmissionContentState extends State<_EvidenceSubmissionContent> 
       metadata: metadata,
     );
   }
+}
+
+class _removeImage {
+  _removeImage(int index);
 }

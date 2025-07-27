@@ -286,6 +286,66 @@ class ApiClient {
     return _authDio;
   }
 
+  Future<Response> uploadToGamification(
+  String endpoint, {
+  required FormData formData,
+}) async {
+  await _checkConnection();
+  
+  print('📤 [API CLIENT] Gamification upload: $endpoint');
+  print('📤 [API CLIENT] Full URL: ${ApiEndpoints.gamificationServiceUrl}$endpoint');
+  
+  try {
+    final response = await _gamificationDio.post(
+      endpoint,
+      data: formData,
+      options: Options(
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          ...ApiEndpoints.gamificationHeaders,
+        },
+      ),
+    );
+    
+    print('✅ [API CLIENT] Gamification upload successful: ${response.statusCode}');
+    return response;
+  } on DioException catch (e) {
+    print('❌ [API CLIENT] Gamification upload error: $e');
+    throw _handleDioError(e);
+  }
+}
+
+// 🆕 MÉTODO ESPECÍFICO PARA POST CON FORMDATA AL GAMIFICATION SERVICE  
+Future<Response> postGamificationWithFormData(
+  String endpoint, {
+  required FormData formData,
+  Map<String, dynamic>? queryParameters,
+}) async {
+  await _checkConnection();
+  
+  print('📤 [API CLIENT] Gamification FormData post: $endpoint');
+  
+  try {
+    final response = await _gamificationDio.post(
+      endpoint,
+      data: formData,
+      queryParameters: queryParameters,
+      options: Options(
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          ...ApiEndpoints.gamificationHeaders,
+        },
+      ),
+    );
+    
+    print('✅ [API CLIENT] Gamification FormData post successful: ${response.statusCode}');
+    return response;
+  } on DioException catch (e) {
+    print('❌ [API CLIENT] Gamification FormData post error: $e');
+    throw _handleDioError(e);
+  }
+}
+
   Future<void> _addAuthToken(RequestOptions options, String serviceName) async {
     final authEndpoints = [
       ApiEndpoints.login,
@@ -395,21 +455,29 @@ class ApiClient {
     Map<String, dynamic>? queryParameters,
     bool requireAuth = true,
   }) async {
-    print('🧠 [API CLIENT] Quiz GET request: $endpoint');
-    print('🧠 [API CLIENT] Full URL: ${ApiEndpoints.quizServiceUrl}$endpoint');
+    print('🧠 [API CLIENT] === QUIZ GET REQUEST ===');
+    print('🧠 [API CLIENT] Raw endpoint: $endpoint');
     
     try {
-      // Asegurar que el endpoint siempre tenga el prefijo correcto
+      // Corregir endpoint para que SIEMPRE tenga el prefijo correcto
       String correctedEndpoint = endpoint;
       if (!endpoint.startsWith('/api/quiz/')) {
-        if (endpoint.startsWith('/')) {
-          correctedEndpoint = '/api/quiz${endpoint}';
+        if (endpoint.startsWith('/api/')) {
+          // Si ya tiene /api/ pero no /api/quiz/, reemplazar
+          correctedEndpoint = endpoint.replaceFirst('/api/', '/api/quiz/');
+        } else if (endpoint.startsWith('/')) {
+          // Si empieza con /, agregar /api/quiz
+          correctedEndpoint = '/api/quiz$endpoint';
         } else {
+          // Si no tiene /, agregar /api/quiz/
           correctedEndpoint = '/api/quiz/$endpoint';
         }
       }
       
       print('🧠 [API CLIENT] Corrected endpoint: $correctedEndpoint');
+      print('🧠 [API CLIENT] Full URL: ${ApiEndpoints.quizServiceUrl}$correctedEndpoint');
+      print('🧠 [API CLIENT] Query params: $queryParameters');
+      print('🧠 [API CLIENT] Require auth: $requireAuth');
       
       final response = await get(
         correctedEndpoint,
@@ -423,10 +491,35 @@ class ApiClient {
         ),
       );
       
-      print('✅ [API CLIENT] Quiz GET successful: ${response.statusCode}');
+      print('✅ [API CLIENT] Quiz GET successful');
+      print('✅ [API CLIENT] Status: ${response.statusCode}');
+      print('✅ [API CLIENT] Response type: ${response.data.runtimeType}');
+      
+      // Debug response structure
+      if (response.data is Map<String, dynamic>) {
+        final data = response.data as Map<String, dynamic>;
+        print('✅ [API CLIENT] Response keys: ${data.keys.take(10).toList()}');
+      } else if (response.data is List) {
+        final data = response.data as List;
+        print('✅ [API CLIENT] Response items: ${data.length}');
+      }
+      
       return response;
     } catch (e) {
       print('❌ [API CLIENT] Quiz GET error: $e');
+      
+      // Debug específico para errores
+      if (e.toString().contains('404')) {
+        print('💡 [API CLIENT] 404 Error - Check if endpoint exists on Quiz Service');
+        print('💡 [API CLIENT] Expected URL: ${ApiEndpoints.quizServiceUrl}');
+      } else if (e.toString().contains('401')) {
+        print('💡 [API CLIENT] 401 Error - Check authentication token');
+      } else if (e.toString().contains('500')) {
+        print('💡 [API CLIENT] 500 Error - Quiz Service internal error');
+      } else if (e.toString().contains('connection')) {
+        print('💡 [API CLIENT] Connection Error - Check if Quiz Service is running');
+      }
+      
       rethrow;
     }
   }
@@ -436,22 +529,25 @@ class ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
   }) async {
-    print('🧠 [API CLIENT] Quiz POST request: $endpoint');
-    print('🧠 [API CLIENT] Full URL: ${ApiEndpoints.quizServiceUrl}$endpoint');
+    print('🧠 [API CLIENT] === QUIZ POST REQUEST ===');
+    print('🧠 [API CLIENT] Raw endpoint: $endpoint');
     print('🧠 [API CLIENT] Data: $data');
     
     try {
-      // Asegurar que el endpoint siempre tenga el prefijo correcto
+      // Corregir endpoint igual que en GET
       String correctedEndpoint = endpoint;
       if (!endpoint.startsWith('/api/quiz/')) {
-        if (endpoint.startsWith('/')) {
-          correctedEndpoint = '/api/quiz${endpoint}';
+        if (endpoint.startsWith('/api/')) {
+          correctedEndpoint = endpoint.replaceFirst('/api/', '/api/quiz/');
+        } else if (endpoint.startsWith('/')) {
+          correctedEndpoint = '/api/quiz$endpoint';
         } else {
           correctedEndpoint = '/api/quiz/$endpoint';
         }
       }
       
       print('🧠 [API CLIENT] Corrected endpoint: $correctedEndpoint');
+      print('🧠 [API CLIENT] Full URL: ${ApiEndpoints.quizServiceUrl}$correctedEndpoint');
       
       final response = await post(
         correctedEndpoint,
@@ -463,14 +559,25 @@ class ApiClient {
         ),
       );
       
-      print('✅ [API CLIENT] Quiz POST successful: ${response.statusCode}');
+      print('✅ [API CLIENT] Quiz POST successful');
+      print('✅ [API CLIENT] Status: ${response.statusCode}');
+      print('✅ [API CLIENT] Response: ${response.data}');
+      
       return response;
     } catch (e) {
       print('❌ [API CLIENT] Quiz POST error: $e');
+      
+      // Debug específico para errores POST
+      if (e.toString().contains('400')) {
+        print('💡 [API CLIENT] 400 Error - Check request data format');
+        print('💡 [API CLIENT] Sent data: $data');
+      } else if (e.toString().contains('422')) {
+        print('💡 [API CLIENT] 422 Error - Validation failed');
+      }
+      
       rethrow;
     }
   }
-
   // Métodos específicos para Gamificación
   Future<Response> getGamification(
     String endpoint, {

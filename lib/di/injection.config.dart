@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart' as _i460;
 import '../core/network/api_client.dart' as _i510;
 import '../core/network/network_info.dart' as _i6;
 import '../core/services/cache_service.dart' as _i800;
+import '../core/services/media_upload_service.dart' as _i940;
 import '../core/services/token_manager.dart' as _i497;
 import '../features/auth/data/datasources/auth_local_datasource.dart' as _i182;
 import '../features/auth/data/datasources/auth_remote_datasource.dart' as _i130;
@@ -93,6 +94,8 @@ import '../features/companion/domain/usecases/love_companion_via_api_usecase.dar
     as _i233;
 import '../features/companion/domain/usecases/purchase_companion_usecase.dart'
     as _i395;
+import '../features/companion/domain/usecases/refresh_companion_stats_usecase.dart'
+    as _i475;
 import '../features/companion/domain/usecases/simulate_time_passage_usecase.dart'
     as _i380;
 import '../features/companion/presentation/cubit/companion_actions_cubit.dart'
@@ -285,6 +288,8 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i510.ApiClient>(),
               gh<_i497.TokenManager>(),
             ));
+    gh.lazySingleton<_i940.MediaUploadService>(
+        () => _i940.MediaUploadService(gh<_i510.ApiClient>()));
     gh.lazySingleton<_i75.HomeRemoteDataSource>(
         () => _i75.HomeRemoteDataSourceImpl(gh<_i510.ApiClient>()));
     gh.factory<_i614.TriviaRemoteDataSource>(
@@ -324,6 +329,11 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i406.LoginUseCase(gh<_i869.AuthRepository>()));
     gh.lazySingleton<_i819.RegisterUseCase>(
         () => _i819.RegisterUseCase(gh<_i869.AuthRepository>()));
+    gh.factory<_i475.RefreshCompanionStatsUseCase>(
+        () => _i475.RefreshCompanionStatsUseCase(
+              remoteDataSource: gh<_i115.CompanionRemoteDataSource>(),
+              tokenManager: gh<_i497.TokenManager>(),
+            ));
     gh.lazySingleton<_i957.GetDailyTipUseCase>(
         () => _i957.GetDailyTipUseCase(gh<_i66.HomeRepository>()));
     gh.lazySingleton<_i762.GetUserStatsUseCase>(
@@ -429,6 +439,8 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i510.ApiClient>(),
               gh<_i807.MediaRemoteDataSource>(),
             ));
+    gh.factory<_i116.DecreasePetStatsUseCase>(
+        () => _i116.DecreasePetStatsUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i108.EvolveCompanionUseCase>(
         () => _i108.EvolveCompanionUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i711.EvolveCompanionViaApiUseCase>(() =>
@@ -437,24 +449,24 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i913.FeatureCompanionUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i960.FeedCompanionUseCase>(
         () => _i960.FeedCompanionUseCase(gh<_i770.CompanionRepository>()));
+    gh.factory<_i901.FeedCompanionViaApiUseCase>(() =>
+        _i901.FeedCompanionViaApiUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i720.GetAvailableCompanionsUseCase>(() =>
         _i720.GetAvailableCompanionsUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i76.GetCompanionShopUseCase>(
         () => _i76.GetCompanionShopUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i574.GetUserCompanionsUseCase>(
         () => _i574.GetUserCompanionsUseCase(gh<_i770.CompanionRepository>()));
-    gh.factory<_i820.LoveCompanionUseCase>(
-        () => _i820.LoveCompanionUseCase(gh<_i770.CompanionRepository>()));
-    gh.factory<_i395.PurchaseCompanionUseCase>(
-        () => _i395.PurchaseCompanionUseCase(gh<_i770.CompanionRepository>()));
-    gh.factory<_i116.DecreasePetStatsUseCase>(
-        () => _i116.DecreasePetStatsUseCase(gh<_i770.CompanionRepository>()));
-    gh.factory<_i901.FeedCompanionViaApiUseCase>(() =>
-        _i901.FeedCompanionViaApiUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i428.IncreasePetStatsUseCase>(
         () => _i428.IncreasePetStatsUseCase(gh<_i770.CompanionRepository>()));
+    gh.factory<_i820.LoveCompanionUseCase>(
+        () => _i820.LoveCompanionUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i233.LoveCompanionViaApiUseCase>(() =>
         _i233.LoveCompanionViaApiUseCase(gh<_i770.CompanionRepository>()));
+    gh.factory<_i395.PurchaseCompanionUseCase>(
+        () => _i395.PurchaseCompanionUseCase(gh<_i770.CompanionRepository>()));
+    gh.factory<_i475.RefreshAllUserCompanionsUseCase>(() =>
+        _i475.RefreshAllUserCompanionsUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i380.SimulateTimePassageUseCase>(() =>
         _i380.SimulateTimePassageUseCase(gh<_i770.CompanionRepository>()));
     gh.factory<_i1017.HomeCubit>(() => _i1017.HomeCubit(

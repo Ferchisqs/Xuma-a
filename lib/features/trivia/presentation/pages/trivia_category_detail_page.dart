@@ -1,4 +1,4 @@
-// lib/features/trivia/presentation/pages/trivia_category_detail_page.dart - LIMPIO
+// lib/features/trivia/presentation/pages/trivia_category_detail_page.dart - NAVEGACIÓN CORREGIDA
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -7,7 +7,7 @@ import '../../../../di/injection.dart';
 import '../../domain/entities/trivia_category_entity.dart';
 import '../cubit/trivia_game_cubit.dart';
 import '../widgets/trivia_difficulty_badge.dart';
-import 'trivia_game_page.dart';
+import 'trivia_quiz_selection_page.dart'; // 🔧 CAMBIO: Ir a selección de quizzes
 
 class TriviaCategoryDetailPage extends StatelessWidget {
   final TriviaCategoryEntity category;
@@ -132,8 +132,8 @@ class _CategoryDetailContent extends StatelessWidget {
                   
                   const SizedBox(height: 24),
                   
-                  // Botón principal para iniciar trivia
-                  _buildStartTriviaButton(context),
+                  // 🔧 CAMBIO: Botón para ver quizzes en lugar de iniciar trivia directamente
+                  _buildViewQuizzesButton(context),
                   
                   const SizedBox(height: 24),
                   
@@ -200,12 +200,12 @@ class _CategoryDetailContent extends StatelessWidget {
                   runSpacing: 4,
                   children: [
                     _buildStatChip(
-                      '${category.questionsCount} preguntas',
+                      'Ver quizzes disponibles',
                       Icons.quiz,
                       AppColors.info,
                     ),
                     _buildStatChip(
-                      '${category.pointsPerQuestion} pts',
+                      '${category.pointsPerQuestion} pts por pregunta',
                       Icons.eco,
                       AppColors.success,
                     ),
@@ -235,11 +235,13 @@ class _CategoryDetailContent extends StatelessWidget {
             color: color,
           ),
           const SizedBox(width: 4),
-          Text(
-            text,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
+          Flexible(
+            child: Text(
+              text,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -247,7 +249,8 @@ class _CategoryDetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildStartTriviaButton(BuildContext context) {
+  // 🔧 CAMBIO PRINCIPAL: Botón para ver quizzes
+  Widget _buildViewQuizzesButton(BuildContext context) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -266,11 +269,17 @@ class _CategoryDetailContent extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            // Ir directamente al juego de trivia
+            print('🎯 [CATEGORY DETAIL] Navigating to quiz selection for: ${category.id}');
+            print('🎯 [CATEGORY DETAIL] Category title: ${category.title}');
+            
+            // 🔧 CAMBIO: Ir a la página de selección de quizzes
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => TriviaGamePage(category: category),
+                builder: (context) => TriviaQuizSelectionPage(
+                  topicId: category.id,
+                  categoryTitle: category.title,
+                ),
               ),
             );
           },
@@ -289,7 +298,7 @@ class _CategoryDetailContent extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
-                    Icons.play_arrow,
+                    Icons.list_alt, // 🔧 CAMBIO: Icono de lista
                     color: Colors.white,
                     size: 24,
                   ),
@@ -300,14 +309,14 @@ class _CategoryDetailContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '¡Comenzar Trivia!',
+                        '¡Ver Quizzes Disponibles!', // 🔧 CAMBIO: Texto más claro
                         style: AppTextStyles.h4.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        'Responde y gana puntos',
+                        'Explora las opciones de trivia', // 🔧 CAMBIO: Descripción más clara
                         style: AppTextStyles.bodySmall.copyWith(
                           color: Colors.white.withOpacity(0.9),
                         ),
@@ -334,7 +343,7 @@ class _CategoryDetailContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Información del Quiz',
+          'Acerca de esta Categoría',
           style: AppTextStyles.h4.copyWith(
             color: AppColors.primary,
             fontWeight: FontWeight.bold,
@@ -344,10 +353,10 @@ class _CategoryDetailContent extends StatelessWidget {
         
         // Cards de información
         _buildInfoCard(
-          icon: Icons.timer,
-          title: 'Tiempo por pregunta',
-          value: '${category.timePerQuestion} segundos',
-          color: AppColors.warning,
+          icon: Icons.quiz_rounded,
+          title: 'Quizzes variados',
+          value: 'Diferentes niveles de dificultad',
+          color: AppColors.info,
         ),
         const SizedBox(height: 12),
         
@@ -360,10 +369,10 @@ class _CategoryDetailContent extends StatelessWidget {
         const SizedBox(height: 12),
         
         _buildInfoCard(
-          icon: Icons.quiz,
-          title: 'Total de preguntas',
-          value: '${category.questionsCount} preguntas',
-          color: AppColors.info,
+          icon: Icons.explore,
+          title: 'Contenido educativo',
+          value: 'Aprende mientras juegas',
+          color: AppColors.primary,
         ),
       ],
     );
@@ -425,33 +434,34 @@ class _CategoryDetailContent extends StatelessWidget {
   }
 
   LinearGradient _getCategoryGradient() {
-    switch (category.id) {
-      case 'trivia_cat_1': // Composta
-        return const LinearGradient(
-          colors: [Color(0xFF795548), Color(0xFF8D6E63)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-      case 'trivia_cat_2': // Reciclaje
-        return const LinearGradient(
-          colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-      case 'trivia_cat_3': // Energía
-        return const LinearGradient(
-          colors: [Color(0xFFFF9800), Color(0xFFFFB74D)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-      case 'trivia_cat_4': // Agua
-        return const LinearGradient(
-          colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-      default:
-        return AppColors.primaryGradient;
+    final title = category.title.toLowerCase();
+    
+    if (title.contains('agua') || title.contains('water')) {
+      return const LinearGradient(
+        colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    } else if (title.contains('reciclaje') || title.contains('residuo')) {
+      return const LinearGradient(
+        colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    } else if (title.contains('energia') || title.contains('energy')) {
+      return const LinearGradient(
+        colors: [Color(0xFFFF9800), Color(0xFFFFB74D)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    } else if (title.contains('clima') || title.contains('climate')) {
+      return const LinearGradient(
+        colors: [Color(0xFF9C27B0), Color(0xFFBA68C8)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    } else {
+      return AppColors.primaryGradient;
     }
   }
 }

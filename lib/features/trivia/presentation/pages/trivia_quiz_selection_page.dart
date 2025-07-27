@@ -1,4 +1,4 @@
-// lib/features/trivia/presentation/pages/trivia_quiz_selection_page.dart - ACTUALIZADA
+// lib/features/trivia/presentation/pages/trivia_quiz_selection_page.dart - CORREGIDA
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -50,6 +50,18 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
   void initState() {
     super.initState();
     print('🎯 [QUIZ SELECTION] Initializing for topic: ${widget.topicId}');
+    print('🎯 [QUIZ SELECTION] Category: ${widget.categoryTitle}');
+    
+    // Debug: Mostrar información de configuración
+    _debugApiConfiguration();
+  }
+
+  void _debugApiConfiguration() {
+    print('🔧 [QUIZ SELECTION] === API CONFIGURATION DEBUG ===');
+    print('🔧 [QUIZ SELECTION] Topics URL: https://content-service-xumaa-production.up.railway.app/api/content/topics');
+    print('🔧 [QUIZ SELECTION] Quiz URL: https://quiz-challenge-service-production.up.railway.app/api/quiz');
+    print('🔧 [QUIZ SELECTION] Expected endpoint: /api/quiz/by-topic/${widget.topicId}');
+    print('🔧 [QUIZ SELECTION] =====================================');
   }
 
   @override
@@ -74,8 +86,8 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
         actions: [
           IconButton(
             onPressed: () {
-              context.read<TriviaCubit>().debugCurrentState();
-              context.read<TriviaCubit>().printFlowStatus();
+              // Debug manual
+              _showDebugDialog(context);
             },
             icon: const Icon(Icons.info_outline, color: Colors.white),
           ),
@@ -94,49 +106,246 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
           }
           
           if (state is TriviaError) {
-            return Center(
-              child: EcoErrorWidget(
-                message: state.message,
-                onRetry: () {
-                  print('🔄 [QUIZ SELECTION] Retrying load quizzes for topic: ${widget.topicId}');
-                  context.read<TriviaCubit>().loadQuizzesByTopic(widget.topicId);
-                },
-              ),
-            );
+            return _buildErrorState(context, state.message);
           }
           
           if (state is TriviaQuizzesLoaded) {
             return _buildQuizzesList(context, state.quizzes);
           }
           
-          // Estado inicial o desconocido
-          return Center(
-            child: Column(
+          // Estado inicial - Mostrar información de debugging
+          return _buildInitialState(context);
+        },
+      ),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, String errorMessage) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.error.withOpacity(0.3)),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: AppColors.error,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error al cargar quizzes',
+                    style: core_styles.AppTextStyles.h4.copyWith(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    errorMessage,
+                    style: core_styles.AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Información de debugging
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Debug Info:',
+                          style: core_styles.AppTextStyles.bodySmall.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Topic ID: ${widget.topicId}',
+                          style: core_styles.AppTextStyles.bodySmall.copyWith(
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                        Text(
+                          'Category: ${widget.categoryTitle}',
+                          style: core_styles.AppTextStyles.bodySmall.copyWith(
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                        Text(
+                          'Expected URL: /api/quiz/by-topic/${widget.topicId}',
+                          style: core_styles.AppTextStyles.bodySmall.copyWith(
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.quiz_rounded,
-                  size: 64,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Preparando quizzes...',
-                  style: core_styles.AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
+                ElevatedButton.icon(
                   onPressed: () {
+                    print('🔄 [QUIZ SELECTION] Retrying load quizzes for topic: ${widget.topicId}');
                     context.read<TriviaCubit>().loadQuizzesByTopic(widget.topicId);
                   },
-                  child: const Text('Cargar Quizzes'),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reintentar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                OutlinedButton.icon(
+                  onPressed: () => _showDebugDialog(context),
+                  icon: const Icon(Icons.bug_report),
+                  label: const Text('Debug'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.warning,
+                  ),
                 ),
               ],
             ),
-          );
-        },
+            
+            const SizedBox(height: 16),
+            
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Volver a categorías',
+                style: core_styles.AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInitialState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Icono de carga
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(50),
+              ),
+              child: Icon(
+                Icons.quiz_rounded,
+                size: 48,
+                color: AppColors.primary,
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            Text(
+              'Preparando quizzes',
+              style: core_styles.AppTextStyles.h4.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            
+            const SizedBox(height: 8),
+            
+            Text(
+              'Categoría: ${widget.categoryTitle}',
+              style: core_styles.AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Información del endpoint
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.info.withOpacity(0.3)),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Conectando con:',
+                    style: core_styles.AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.info,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '/api/quiz/by-topic/${widget.topicId}',
+                    style: core_styles.AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.info,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            ElevatedButton.icon(
+              onPressed: () {
+                context.read<TriviaCubit>().loadQuizzesByTopic(widget.topicId);
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Cargar Quizzes'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+            
+            const SizedBox(height: 12),
+            
+            OutlinedButton.icon(
+              onPressed: () => _showDebugDialog(context),
+              icon: const Icon(Icons.settings),
+              label: const Text('Configuración Debug'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.secondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -153,8 +362,8 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header informativo
-          _buildInfoHeader(),
+          // Header informativo mejorado
+          _buildSuccessHeader(quizzes.length),
           
           const SizedBox(height: 24),
           
@@ -183,19 +392,33 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
     );
   }
 
-  Widget _buildInfoHeader() {
+  Widget _buildSuccessHeader(int quizCount) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: AppColors.primaryGradient,
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.quiz_rounded,
-            color: Colors.white,
-            size: 24,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.quiz_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -203,19 +426,33 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '¡Desafía tus conocimientos!',
+                  '¡Quizzes cargados exitosamente!',
                   style: core_styles.AppTextStyles.bodyMedium.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  'Topic: ${widget.categoryTitle}',
+                  'Categoría: ${widget.categoryTitle} • $quizCount quizzes',
                   style: core_styles.AppTextStyles.bodySmall.copyWith(
                     color: Colors.white.withOpacity(0.9),
                   ),
                 ),
               ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.success,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '✓ Conectado',
+              style: core_styles.AppTextStyles.bodySmall.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -224,7 +461,7 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
   }
 
   Widget _buildQuizCard(BuildContext context, Map<String, dynamic> quiz, int index) {
-    // Extraer datos del quiz con fallbacks
+    // Extraer datos del quiz con fallbacks mejorados
     final quizId = quiz['id']?.toString() ?? 'quiz_${widget.topicId}_$index';
     final title = quiz['title']?.toString() ?? 
                   quiz['name']?.toString() ?? 
@@ -237,12 +474,16 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
                           10;
     final duration = _extractInt(quiz['duration']) ?? 
                     _extractInt(quiz['estimatedTime']) ?? 
+                    _extractInt(quiz['timeLimitMinutes']) ?? 
                     5;
     final points = _extractInt(quiz['points']) ?? 
                   _extractInt(quiz['totalPoints']) ?? 
+                  _extractInt(quiz['pointsReward']) ?? 
                   questionsCount * 5;
+    final difficulty = quiz['difficultyLevel']?.toString() ?? 'medium';
+    final isPublished = quiz['isPublished'] ?? true;
 
-    print('🔍 [QUIZ SELECTION] Quiz $index: ID=$quizId, Title=$title, Questions=$questionsCount');
+    print('🔍 [QUIZ SELECTION] Quiz $index: ID=$quizId, Title=$title, Questions=$questionsCount, Published=$isPublished');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -256,6 +497,10 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
             offset: const Offset(0, 2),
           ),
         ],
+        border: isPublished ? null : Border.all(
+          color: AppColors.warning.withOpacity(0.5),
+          width: 1,
+        ),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
@@ -263,27 +508,55 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
+            gradient: isPublished ? AppColors.primaryGradient : LinearGradient(
+              colors: [AppColors.warning, AppColors.warning.withOpacity(0.7)],
+            ),
             borderRadius: BorderRadius.circular(25),
           ),
           child: Center(
-            child: Text(
+            child: isPublished ? Text(
               '${index + 1}',
               style: core_styles.AppTextStyles.bodyMedium.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
+            ) : const Icon(
+              Icons.edit,
+              color: Colors.white,
+              size: 20,
             ),
           ),
         ),
-        title: Text(
-          title,
-          style: core_styles.AppTextStyles.bodyLarge.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: core_styles.AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (!isPublished)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'BORRADOR',
+                  style: core_styles.AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.warning,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,25 +571,26 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 8),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
               children: [
                 _buildInfoChip(
                   '$questionsCount preguntas',
                   Icons.quiz,
                   AppColors.info,
                 ),
-                const SizedBox(width: 8),
                 _buildInfoChip(
                   '${duration} min',
                   Icons.timer,
                   AppColors.warning,
                 ),
-                const SizedBox(width: 8),
                 _buildInfoChip(
                   '+$points pts',
                   Icons.eco,
                   AppColors.success,
                 ),
+                _buildDifficultyChip(difficulty),
               ],
             ),
           ],
@@ -324,28 +598,44 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
+            color: isPublished ? AppColors.primary.withOpacity(0.1) : AppColors.warning.withOpacity(0.1),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
-            'JUGAR',
+            isPublished ? 'JUGAR' : 'VISTA PREVIA',
             style: core_styles.AppTextStyles.bodySmall.copyWith(
-              color: AppColors.primary,
+              color: isPublished ? AppColors.primary : AppColors.warning,
               fontWeight: FontWeight.bold,
             ),
           ),
         ),
         onTap: () {
-          print('🎯 [QUIZ SELECTION] Starting quiz: $quizId');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TriviaQuizGamePage(
-                quizId: quizId,
-                topicId: widget.topicId,
+          print('🎯 [QUIZ SELECTION] Starting quiz: $quizId (Published: $isPublished)');
+          
+          if (!isPublished) {
+            // Mostrar advertencia para quizzes no publicados
+            _showUnpublishedQuizDialog(context, title, () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TriviaQuizGamePage(
+                    quizId: quizId,
+                    topicId: widget.topicId,
+                  ),
+                ),
+              );
+            });
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => TriviaQuizGamePage(
+                  quizId: quizId,
+                  topicId: widget.topicId,
+                ),
               ),
-            ),
-          );
+            );
+          }
         },
       ),
     );
@@ -379,6 +669,31 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
     );
   }
 
+  Widget _buildDifficultyChip(String difficulty) {
+    Color color = AppColors.info;
+    String label = difficulty;
+    
+    switch (difficulty.toLowerCase()) {
+      case 'easy':
+      case 'fácil':
+        color = AppColors.success;
+        label = 'Fácil';
+        break;
+      case 'medium':
+      case 'medio':
+        color = AppColors.warning;
+        label = 'Medio';
+        break;
+      case 'hard':
+      case 'difícil':
+        color = AppColors.error;
+        label = 'Difícil';
+        break;
+    }
+    
+    return _buildInfoChip(label, Icons.bar_chart, color);
+  }
+
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
@@ -401,9 +716,10 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
             ),
             const SizedBox(height: 8),
             Text(
-              'No se encontraron quizzes para este tema. Intenta más tarde o selecciona otro tema.',
+              'No se encontraron quizzes para "${widget.categoryTitle}".\n\nEsto puede ser porque:\n• El topic no tiene quizzes asignados\n• Los quizzes no están publicados\n• Hay un problema de conectividad',
               style: core_styles.AppTextStyles.bodyMedium.copyWith(
                 color: AppColors.textHint,
+                height: 1.4,
               ),
               textAlign: TextAlign.center,
             ),
@@ -419,8 +735,191 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
                 foregroundColor: Colors.white,
               ),
             ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => _showDebugDialog(context),
+              icon: const Icon(Icons.bug_report),
+              label: const Text('Ver Información Debug'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.warning,
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showUnpublishedQuizDialog(BuildContext context, String quizTitle, VoidCallback onContinue) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber, color: AppColors.warning),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Quiz en desarrollo',
+                style: core_styles.AppTextStyles.h4.copyWith(
+                  color: AppColors.warning,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'El quiz "$quizTitle" está en modo borrador y puede tener contenido incompleto o en desarrollo.\n\n¿Quieres continuar de todas formas?',
+          style: core_styles.AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(
+              'Cancelar',
+              style: core_styles.AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              onContinue();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.warning,
+            ),
+            child: Text(
+              'Continuar',
+              style: core_styles.AppTextStyles.bodyMedium.copyWith(
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDebugDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(
+          children: [
+            Icon(Icons.settings, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Text(
+              'Información Debug',
+              style: core_styles.AppTextStyles.h4.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Container(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDebugItem('Topic ID', widget.topicId),
+              _buildDebugItem('Category', widget.categoryTitle),
+              _buildDebugItem('Expected Endpoint', '/api/quiz/by-topic/${widget.topicId}'),
+              _buildDebugItem('Quiz Service URL', 'quiz-challenge-service-production.up.railway.app'),
+              _buildDebugItem('Content Service URL', 'content-service-xumaa-production.up.railway.app'),
+              
+              const SizedBox(height: 16),
+              
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.info.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'Si continúas viendo errores, verifica:\n'
+                  '1. Que el Topic ID existe en el backend\n'
+                  '2. Que hay quizzes asignados a este topic\n'
+                  '3. Que los servicios están ejecutándose\n'
+                  '4. Que la autenticación es correcta',
+                  style: core_styles.AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.info,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              context.read<TriviaCubit>().debugCurrentState();
+              context.read<TriviaCubit>().printFlowStatus();
+            },
+            child: Text(
+              'Print Debug',
+              style: core_styles.AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.warning,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+            ),
+            child: Text(
+              'Cerrar',
+              style: core_styles.AppTextStyles.bodyMedium.copyWith(
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDebugItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: core_styles.AppTextStyles.bodySmall.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              value,
+              style: core_styles.AppTextStyles.bodySmall.copyWith(
+                fontFamily: 'monospace',
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
