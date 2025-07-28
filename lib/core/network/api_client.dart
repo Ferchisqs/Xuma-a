@@ -699,6 +699,79 @@ Future<void> _addAuthToken(RequestOptions options, String serviceName) async {
     // No lanzar error aquí, dejar que la request continúe
   }
 }
+
+Future<Response> uploadToMedia(
+  String endpoint, {
+  required FormData formData,
+}) async {
+  await _checkConnection();
+  
+  print('📤 [API CLIENT] === MEDIA SERVICE UPLOAD ===');
+  print('📤 [API CLIENT] Endpoint: $endpoint');
+  print('📤 [API CLIENT] Media service URL: ${ApiEndpoints.mediaServiceUrl}');
+  print('📤 [API CLIENT] Full URL: ${ApiEndpoints.mediaServiceUrl}$endpoint');
+  
+  try {
+    // 🔧 OBTENER TOKEN DE AUTENTICACIÓN
+    final token = await _tokenManager.getAccessToken();
+    print('📤 [API CLIENT] Has auth token: ${token != null}');
+    
+    if (token == null) {
+      throw Exception('No authentication token available for media service');
+    }
+    
+    final response = await _mediaDio.post(
+      endpoint,
+      data: formData,
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $token',
+          // 🔧 NO AGREGAR Content-Type manualmente para multipart
+          // Dio lo maneja automáticamente para FormData
+        },
+      ),
+    );
+    
+    print('✅ [API CLIENT] Media upload successful: ${response.statusCode}');
+    print('✅ [API CLIENT] Response data: ${response.data}');
+    
+    return response;
+    
+  } on DioException catch (e) {
+    print('❌ [API CLIENT] Media upload DioException: ${e.type}');
+    print('❌ [API CLIENT] Status code: ${e.response?.statusCode}');
+    print('❌ [API CLIENT] Error message: ${e.message}');
+    print('❌ [API CLIENT] Response data: ${e.response?.data}');
+    
+    // 🔧 MANEJO ESPECÍFICO DE ERRORES DE MEDIA
+    if (e.response?.statusCode == 401) {
+      print('🔑 [API CLIENT] Media service authentication failed');
+      
+      // Intentar refrescar token automáticamente
+      try {
+        print('🔄 [API CLIENT] Attempting to refresh token for media upload...');
+        final refreshed = await _retryWithRefreshToken(e, _mediaDio);
+        if (refreshed != null) {
+          print('✅ [API CLIENT] Token refreshed, media upload successful');
+          return refreshed;
+        }
+      } catch (refreshError) {
+        print('❌ [API CLIENT] Token refresh failed: $refreshError');
+      }
+    } else if (e.response?.statusCode == 403) {
+      print('🚫 [API CLIENT] Media service access forbidden');
+    } else if (e.response?.statusCode == 404) {
+      print('🔍 [API CLIENT] Media endpoint not found');
+    } else if (e.response?.statusCode == 413) {
+      print('📂 [API CLIENT] File too large for media service');
+    }
+    
+    throw _handleDioError(e);
+  } catch (e) {
+    print('❌ [API CLIENT] Unexpected media upload error: $e');
+    throw Exception('Error inesperado en upload de media: $e');
+  }
+}
   Future<Response> patchGamification(
     String endpoint, {
     dynamic data,
@@ -748,18 +821,7 @@ Future<void> _addAuthToken(RequestOptions options, String serviceName) async {
   }
 
   // Media service methods
-  Future<Response> getMedia(
-    String endpoint, {
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    print('📁 [API CLIENT] Media get: $endpoint');
-    
-    return await get(
-      endpoint,
-      queryParameters: queryParameters,
-      options: Options(extra: {'baseUrl': 'https://media-service-production-6446.up.railway.app'}),
-    );
-  }
+  
 
   Future<Response> postMedia(
     String endpoint, {

@@ -1,78 +1,109 @@
-// lib/core/services/media_upload_service.dart - NUEVO SERVICIO PARA SUBIR FOTOS
+// lib/core/services/media_upload_service.dart - CORREGIDO PARA USAR MEDIA SERVICE
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:injectable/injectable.dart';
 import '../network/api_client.dart';
-import '../config/api_endpoints.dart';
+import '../services/token_manager.dart';
 
 @lazySingleton
 class MediaUploadService {
   final ApiClient _apiClient;
+  final TokenManager _tokenManager;
 
-  MediaUploadService(this._apiClient) {
-    print('✅ [MEDIA UPLOAD SERVICE] Constructor - Ready to upload photos to gamification service');
+  MediaUploadService(this._apiClient, this._tokenManager) {
+    print('✅ [MEDIA UPLOAD SERVICE] Constructor - Ready to upload photos to MEDIA service');
   }
 
-  /// Subir una foto al gamification service y obtener la URL
+  /// Subir una foto al MEDIA service y obtener la URL
   Future<String> uploadPhoto({
-  required File photoFile,
-  String category = 'challenge_evidence',
-  bool isPublic = true,
-  String uploadPurpose = 'challenge_evidence',
-}) async {
-  try {
-    print('📤 [MEDIA UPLOAD] === UPLOADING PHOTO ===');
-    print('📤 [MEDIA UPLOAD] File path: ${photoFile.path}');
-    print('📤 [MEDIA UPLOAD] Category: $category');
-    print('📤 [MEDIA UPLOAD] Upload purpose: $uploadPurpose');
+    required File photoFile,
+    String category = 'image', // ✅ Categoría válida según servidor: image, video, audio, document, other
+    bool isPublic = true,
+    String uploadPurpose = 'challenge_evidence',
+  }) async {
+    try {
+      print('📤 [MEDIA UPLOAD] === UPLOADING PHOTO TO MEDIA SERVICE ===');
+      print('📤 [MEDIA UPLOAD] File path: ${photoFile.path}');
+      print('📤 [MEDIA UPLOAD] Category: $category');
+      print('📤 [MEDIA UPLOAD] Upload purpose: $uploadPurpose');
 
-    // Verificar que el archivo existe
-    if (!await photoFile.exists()) {
-      throw Exception('El archivo no existe: ${photoFile.path}');
+      // Verificar que el archivo existe
+      if (!await photoFile.exists()) {
+        throw Exception('El archivo no existe: ${photoFile.path}');
+      }
+
+      // Verificar el tamaño del archivo
+      final fileSize = await photoFile.length();
+      print('📤 [MEDIA UPLOAD] File size: ${fileSize} bytes');
+      
+      if (fileSize > 10 * 1024 * 1024) { // 10MB máximo
+        throw Exception('El archivo es demasiado grande. Máximo 10MB permitido.');
+      }
+
+      // Crear FormData para multipart
+      final originalFileName = photoFile.path.split('/').last;
+      
+      // 🔧 NORMALIZAR EXTENSIÓN: JPG -> JPEG para compatibilidad con servidor
+      String normalizedFileName = originalFileName;
+      String? contentType;
+      
+      if (originalFileName.toLowerCase().endsWith('.jpg')) {
+        normalizedFileName = originalFileName.replaceAll(RegExp(r'\.jpg$', caseSensitive: false), '.jpeg');
+        contentType = 'image/jpeg';
+      } else if (originalFileName.toLowerCase().endsWith('.jpeg')) {
+        contentType = 'image/jpeg';
+      } else if (originalFileName.toLowerCase().endsWith('.png')) {
+        contentType = 'image/png';
+      }
+      
+      print('📤 [MEDIA UPLOAD] Original filename: $originalFileName');
+      print('📤 [MEDIA UPLOAD] Normalized filename: $normalizedFileName');
+      print('📤 [MEDIA UPLOAD] Content type: $contentType');
+      
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          photoFile.path,
+          filename: normalizedFileName,
+          contentType: contentType != null ? MediaType.parse(contentType) : null,
+        ),
+        'category': category,
+        'isPublic': isPublic,
+        'uploadPurpose': uploadPurpose,
+      });
+
+      print('📤 [MEDIA UPLOAD] FormData created, uploading to MEDIA SERVICE...');
+
+      // 🔧 OBTENER USER ID DINÁMICAMENTE
+      final userId = await _tokenManager.getUserId();
+      if (userId == null) {
+        throw Exception('No se pudo obtener el ID del usuario para subir la foto');
+      }
+      print('📤 [MEDIA UPLOAD] User ID: $userId');
+
+      // 🔧 USAR EL ENDPOINT CORRECTO CON USER ID
+      final endpoint = '/api/media/upload/$userId';
+      print('📤 [MEDIA UPLOAD] Using endpoint: $endpoint');
+      
+      final response = await _apiClient.uploadToMedia(
+        endpoint,
+        formData: formData,
+      );
+
+      print('✅ [MEDIA UPLOAD] Upload successful: ${response.statusCode}');
+      print('✅ [MEDIA UPLOAD] Response data: ${response.data}');
+
+      // Extraer URL de la respuesta
+      final String photoUrl = _extractPhotoUrl(response.data);
+      
+      print('🔗 [MEDIA UPLOAD] Photo URL: $photoUrl');
+      return photoUrl;
+
+    } catch (e) {
+      print('❌ [MEDIA UPLOAD] Error uploading photo: $e');
+      throw Exception('Error al subir la foto: ${e.toString()}');
     }
-
-    // Verificar el tamaño del archivo
-    final fileSize = await photoFile.length();
-    print('📤 [MEDIA UPLOAD] File size: ${fileSize} bytes');
-    
-    if (fileSize > 10 * 1024 * 1024) { // 10MB máximo
-      throw Exception('El archivo es demasiado grande. Máximo 10MB permitido.');
-    }
-
-    // Crear FormData para multipart
-    final fileName = photoFile.path.split('/').last;
-    final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(
-        photoFile.path,
-        filename: fileName,
-      ),
-      'category': category,
-      'isPublic': isPublic,
-      'uploadPurpose': uploadPurpose,
-    });
-
-    print('📤 [MEDIA UPLOAD] FormData created, uploading...');
-
-    // 🔧 USAR EL SERVICIO MEDIA PARA SUBIR MEDIA
-    final response = await _apiClient.postMedia(
-      '/api/media/upload',
-      data: formData,
-    );
-
-    print('✅ [MEDIA UPLOAD] Upload successful: ${response.statusCode}');
-    print('✅ [MEDIA UPLOAD] Response data: ${response.data}');
-
-    // Extraer URL de la respuesta
-    final String photoUrl = _extractPhotoUrl(response.data);
-    
-    print('🔗 [MEDIA UPLOAD] Photo URL: $photoUrl');
-    return photoUrl;
-
-  } catch (e) {
-    print('❌ [MEDIA UPLOAD] Error uploading photo: $e');
-    throw Exception('Error al subir la foto: ${e.toString()}');
   }
-}
 
   /// Subir múltiples fotos
   Future<List<String>> uploadMultiplePhotos({
@@ -83,7 +114,7 @@ class MediaUploadService {
     Function(int, int)? onProgress,
   }) async {
     try {
-      print('📤 [MEDIA UPLOAD] === UPLOADING MULTIPLE PHOTOS ===');
+      print('📤 [MEDIA UPLOAD] === UPLOADING MULTIPLE PHOTOS TO MEDIA SERVICE ===');
       print('📤 [MEDIA UPLOAD] Total photos: ${photoFiles.length}');
 
       final List<String> uploadedUrls = [];
@@ -139,15 +170,14 @@ class MediaUploadService {
     }
 
     if (responseData is Map<String, dynamic>) {
-      // Buscar URL en diferentes campos posibles
+      // Buscar URL en diferentes campos posibles para MEDIA SERVICE
       final possibleFields = [
+        'publicUrl',      // 🔧 CAMPO PRINCIPAL DE MEDIA SERVICE
         'url',
         'fileUrl', 
         'file_url',
         'downloadUrl',
         'download_url',
-        'publicUrl',
-        'public_url',
         'mediaUrl',
         'media_url',
         'src',
@@ -195,7 +225,7 @@ class MediaUploadService {
       }
     }
 
-    throw Exception('No se pudo extraer la URL de la foto de la respuesta del servidor');
+    throw Exception('No se pudo extraer la URL de la foto de la respuesta del servidor. Respuesta: $responseData');
   }
 
   /// Validar si una cadena es una URL válida

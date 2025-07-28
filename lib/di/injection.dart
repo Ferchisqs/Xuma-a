@@ -100,7 +100,7 @@ Future<void> configureDependencies() async {
 void _registerMediaUploadService() {
   if (!getIt.isRegistered<MediaUploadService>()) {
     getIt.registerLazySingleton<MediaUploadService>(
-      () => MediaUploadService(getIt<ApiClient>()),
+      () => MediaUploadService(getIt<ApiClient>(), getIt<TokenManager>()),
     );
   }
 }

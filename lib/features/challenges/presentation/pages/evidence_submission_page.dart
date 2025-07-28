@@ -1054,8 +1054,22 @@ class _EvidenceSubmissionContentState
       metadata: metadata,
     );
   }
+
+  
+void _removeImage(int index) {
+  if (index >= 0 && index < _selectedImages.length) {
+    setState(() {
+      _selectedImages.removeAt(index);
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Foto eliminada'),
+        backgroundColor: AppColors.info,
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
 }
 
-class _removeImage {
-  _removeImage(int index);
 }
