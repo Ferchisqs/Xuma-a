@@ -23,6 +23,7 @@ abstract class CompanionRepository {
   Future<Either<Failure, CompanionEntity>> evolveCompanionViaApi({
     required String userId,
     required String petId,
+    CompanionStage? currentStage, // 🔥 NUEVA: Etapa actual para evolución correcta
   });
 
    Future<Either<Failure, CompanionEntity>> decreasePetStats({

@@ -83,15 +83,7 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () {
-              // Debug manual
-              _showDebugDialog(context);
-            },
-            icon: const Icon(Icons.info_outline, color: Colors.white),
-          ),
-        ],
+       
       ),
       body: BlocBuilder<TriviaCubit, TriviaState>(
         builder: (context, state) {

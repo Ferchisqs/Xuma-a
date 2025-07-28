@@ -547,6 +547,7 @@ Future<Either<Failure, CompanionEntity>> simulateTimePassage({
   Future<Either<Failure, CompanionEntity>> evolveCompanionViaApi({
     required String userId,
     required String petId,
+    CompanionStage? currentStage, // 🔥 NUEVA: Etapa actual para evolución correcta
   }) async {
     try {
       debugPrint('🦋 [REPO] === EVOLUCIONANDO VIA API REAL ===');
@@ -571,6 +572,7 @@ Future<Either<Failure, CompanionEntity>> simulateTimePassage({
           final evolvedCompanion = await remoteDataSource.evolvePetViaApi(
             userId: realUserId,
             petId: petId,
+            currentStage: currentStage, // 🔥 PASAR ETAPA ACTUAL
           );
 
           debugPrint('✅ [REPO] Evolución exitosa desde API: ${evolvedCompanion.displayName}');

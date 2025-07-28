@@ -24,8 +24,11 @@ abstract class CompanionRemoteDataSource {
     required String userId
   });
   // 🔥 NUEVOS MÉTODOS PARA API REAL - ACTUALIZADOS
-      Future<CompanionModel> evolvePetViaApi(
-      {required String userId, required String petId});
+      Future<CompanionModel> evolvePetViaApi({
+      required String userId, 
+      required String petId,
+      CompanionStage? currentStage, // 🔥 NUEVA: Etapa actual para evolución correcta
+  });
   Future<CompanionModel> featurePetViaApi(
       {required String userId, required String petId});
   Future<CompanionModel> evolveOwnedPetViaApi(
@@ -832,84 +835,6 @@ Future<List<CompanionModel>> getStoreCompanions({required String userId}) async 
     }
   }
 
-  // ==================== 🔥 EVOLUCIÓN VIA API REAL - MEJORADA ====================
-  @override
-  Future<CompanionModel> evolvePetViaApi({
-    required String userId, 
-    required String petId
-  }) async {
-    try {
-      debugPrint('🦋 [API] === INICIANDO EVOLUCIÓN VIA API REAL ===');
-      debugPrint('👤 [API] User ID: $userId');
-      debugPrint('🆔 [API] Pet ID: $petId');
-
-      final endpoint = '/api/gamification/pets/$userId/evolve';
-      final requestBody = {'petId': petId};
-
-      debugPrint('📦 [API] Request body: $requestBody');
-      debugPrint('🌐 [API] Endpoint: $endpoint');
-
-      final response = await apiClient.postGamification(
-        endpoint,
-        data: requestBody,
-      );
-
-      debugPrint('✅ [API] Evolución response: ${response.statusCode}');
-      debugPrint('📄 [API] Response data: ${response.data}');
-
-      if (response.statusCode == 200 || 
-          response.statusCode == 201 || 
-          response.statusCode == 204) {
-        debugPrint('🎉 [API] Evolución exitosa');
-        
-        // 🔥 CREAR COMPANION EVOLUCIONADO CON DATOS REALES DE LA RESPUESTA
-        final evolvedCompanion = _createEvolvedCompanionFromResponse(petId, response.data);
-        debugPrint('✅ [API] Companion evolucionado: ${evolvedCompanion.displayName}');
-        return evolvedCompanion;
-      } else {
-        throw ServerException(
-            'Error en evolución: código ${response.statusCode}, data: ${response.data}');
-      }
-    } catch (e) {
-      debugPrint('❌ [API] Error en evolución: $e');
-      
-      // 🔥 MANEJO ESPECÍFICO DE ERRORES DE EVOLUCIÓN CON MENSAJES CLAROS
-      final errorMessage = e.toString().toLowerCase();
-
-      if (errorMessage.contains('insufficient') ||
-          errorMessage.contains('puntos') ||
-          errorMessage.contains('not enough') ||
-          errorMessage.contains('400')) {
-        throw ServerException('💰 No tienes suficientes puntos para evolucionar');
-      } else if (errorMessage.contains('max level') ||
-          errorMessage.contains('maximum') ||
-          errorMessage.contains('máximo') ||
-          errorMessage.contains('adulto') ||
-          errorMessage.contains('already')) {
-        throw ServerException('🏆 Esta mascota ya está en su máxima evolución');
-      } else if (errorMessage.contains('not found') ||
-          errorMessage.contains('no encontrada') ||
-          errorMessage.contains('404')) {
-        throw ServerException('🔍 Mascota no encontrada en tu colección');
-      } else if (errorMessage.contains('experience') ||
-          errorMessage.contains('experiencia') ||
-          errorMessage.contains('nivel') ||
-          errorMessage.contains('requirements')) {
-        throw ServerException('📊 Tu mascota necesita más experiencia para evolucionar');
-      } else if (errorMessage.contains('stage') ||
-          errorMessage.contains('etapa') ||
-          errorMessage.contains('previous') ||
-          errorMessage.contains('order')) {
-        throw ServerException('📈 No se puede evolucionar desde esta etapa. Debes tener la etapa anterior');
-      } else if (errorMessage.contains('401') ||
-          errorMessage.contains('unauthorized')) {
-        throw ServerException('🔐 Error de autenticación. Reinicia sesión');
-      } else {
-        throw ServerException('❌ Error evolucionando mascota. Intenta de nuevo');
-      }
-    }
-  }
-
   // ==================== 🔥 DESTACAR MASCOTA VIA API REAL - MEJORADA ====================
   @override
   Future<CompanionModel> featurePetViaApi({
@@ -1128,6 +1053,86 @@ Future<List<CompanionModel>> getStoreCompanions({required String userId}) async 
     }
   }
 
+  // ==================== 🔥 EVOLUTION API IMPLEMENTATION - CORREGIDO ====================
+  @override
+  Future<CompanionModel> evolvePetViaApi({
+    required String userId, 
+    required String petId,
+    CompanionStage? currentStage, // 🔥 NUEVA: Etapa actual para evolución correcta
+  }) async {
+    try {
+      debugPrint('🦋 [API] === INICIANDO EVOLUCIÓN VIA API REAL ===');
+      debugPrint('👤 [API] User ID: $userId');
+      debugPrint('🆔 [API] Pet ID (TEMPLATE): $petId');
+
+      // 🔥 USAR ENDPOINT CORRECTO: /api/gamification/pets/owned/userId/petId/evolve
+      final endpoint = '/api/gamification/pets/owned/$userId/$petId/evolve';
+      final requestBody = <String, dynamic>{}; // Empty body for evolution
+
+      debugPrint('📦 [API] Request body: $requestBody');
+      debugPrint('🌐 [API] Endpoint: $endpoint');
+
+      final response = await apiClient.postGamification(
+        endpoint,
+        data: requestBody,
+      );
+
+      debugPrint('✅ [API] Evolution response: ${response.statusCode}');
+      debugPrint('📄 [API] Response data: ${response.data}');
+
+      if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
+        debugPrint('🎉 [API] === EVOLUCIÓN EXITOSA (${response.statusCode}) ===');
+        
+        // 🔥 MANEJAR RESPUESTA 204 (No Content) - ÉXITO SIN DATOS
+        if (response.statusCode == 204) {
+          debugPrint('✅ [API] Evolución exitosa con respuesta vacía (204)');
+          
+          // 🔥 USAR ETAPA ACTUAL SI ESTÁ DISPONIBLE
+          if (currentStage != null) {
+            debugPrint('✅ [API] Usando etapa actual proporcionada: ${currentStage.name}');
+            return _createEvolvedCompanionFromPetIdAndStage(petId, currentStage);
+          } else {
+            // Fallback: asumir baby -> young
+            debugPrint('⚠️ [API] FALLBACK: Asumiendo evolución baby -> young');
+            return _createEvolvedCompanionFromPetIdAndStage(petId, CompanionStage.baby);
+          }
+        } else {
+          // Para 200/201, usar datos de la respuesta
+          return _createEvolvedCompanionFromResponse(petId, response.data);
+        }
+      } else {
+        debugPrint('❌ [API] Error en evolución: ${response.statusCode}');
+        throw ServerException('Error evolucionando mascota: ${response.data}');
+      }
+    } catch (e) {
+      debugPrint('❌ [API] Error en evolución: $e');
+      
+      final errorMessage = e.toString().toLowerCase();
+      if (errorMessage.contains('insufficient') ||
+          errorMessage.contains('points') ||
+          errorMessage.contains('cost')) {
+        throw ServerException('💰 No tienes suficientes puntos para evolucionar');
+      } else if (errorMessage.contains('max level') ||
+          errorMessage.contains('maximum') ||
+          errorMessage.contains('adulto')) {
+        throw ServerException('🏆 Esta mascota ya está en su máxima evolución');
+      } else if (errorMessage.contains('not found') ||
+          errorMessage.contains('404')) {
+        throw ServerException('🔍 Mascota no encontrada en tu colección');
+      } else if (errorMessage.contains('stage') ||
+          errorMessage.contains('etapa') ||
+          errorMessage.contains('previous') ||
+          errorMessage.contains('order')) {
+        throw ServerException('📈 No se puede evolucionar desde esta etapa. Debes tener la etapa anterior');
+      } else if (errorMessage.contains('401') ||
+          errorMessage.contains('unauthorized')) {
+        throw ServerException('🔐 Error de autenticación. Reinicia sesión');
+      } else {
+        throw ServerException('❌ Error evolucionando mascota. Intenta de nuevo');
+      }
+    }
+  }
+
   // ==================== MÉTODOS LEGACY (mantener compatibilidad) ====================
   @override
   Future<CompanionModel> evolvePet({required String userId, required String petId}) async {
@@ -1249,6 +1254,111 @@ Future<List<CompanionModel>> getStoreCompanions({required String userId}) async 
       return CompanionMood.hungry;
     } else {
       return CompanionMood.normal;
+    }
+  }
+
+  /// 🔥 CREAR COMPANION EVOLUCIONADO DESDE PET ID Y ETAPA ACTUAL (para respuestas 204)
+  CompanionModel _createEvolvedCompanionFromPetIdAndStage(String petId, CompanionStage currentStage) {
+    debugPrint('🦋 [EVOLUTION] Creando companion evolucionado desde petId: $petId');
+    debugPrint('📊 [EVOLUTION] Etapa actual recibida: ${currentStage.name}');
+    
+    // 🔥 MAPEAR PET ID A TIPO
+    final companionType = _mapPetIdToCompanionType(petId);
+    
+    // 🔥 DETERMINAR LA SIGUIENTE ETAPA DE EVOLUCIÓN
+    CompanionStage nextStage;
+    switch (currentStage) {
+      case CompanionStage.baby:
+        nextStage = CompanionStage.young;
+        break;
+      case CompanionStage.young:
+        nextStage = CompanionStage.adult;
+        break;
+      case CompanionStage.adult:
+        nextStage = CompanionStage.adult; // Ya está en máxima evolución
+        break;
+    }
+    
+    debugPrint('✨ [EVOLUTION] Evolución: ${currentStage.name} → ${nextStage.name}');
+    
+    // 🔥 GENERAR NUEVO ID LOCAL PARA LA ETAPA EVOLUCIONADA
+    final evolvedLocalId = '${companionType.name}_${nextStage.name}';
+    
+    // 🔥 CREAR COMPANION EVOLUCIONADO CON DATOS MEJORADOS
+    final evolvedCompanion = CompanionModelWithPetId(
+      id: evolvedLocalId,
+      type: companionType,
+      stage: nextStage,
+      name: _getCompanionNameForStage(companionType, nextStage),
+      description: _generateDescription(companionType, nextStage),
+      level: _getInitialLevelForStage(nextStage),
+      experience: 0,
+      happiness: 85, // Feliz por la evolución
+      hunger: 15,    // Poco hambre después de evolucionar
+      energy: 90,    // Energía alta después de evolucionar
+      currentMood: CompanionMood.excited, // Emocionado por evolucionar
+      lastFeedTime: DateTime.now().subtract(const Duration(hours: 2)),
+      lastLoveTime: DateTime.now().subtract(const Duration(hours: 1)),
+      isOwned: true,
+      isSelected: false,
+      purchasePrice: 0, // Ya adoptado
+      evolutionPrice: _getEvolutionPriceForStage(_getStageNumber(nextStage)),
+      unlockedAnimations: _getAnimationsForStage(nextStage),
+      createdAt: DateTime.now(),
+      petId: petId, // 🔥 PRESERVAR EL PET ID ORIGINAL
+    );
+    
+    debugPrint('🎉 [EVOLUTION] Companion evolucionado creado: ${evolvedCompanion.displayName}');
+    debugPrint('🆔 [EVOLUTION] Pet ID preservado: ${evolvedCompanion.petId}');
+    
+    return evolvedCompanion;
+  }
+  
+  /// Helper para obtener nombre del companion según la etapa
+  String _getCompanionNameForStage(CompanionType type, CompanionStage stage) {
+    switch (type) {
+      case CompanionType.dexter:
+        switch (stage) {
+          case CompanionStage.baby: return 'Dexter Bebé';
+          case CompanionStage.young: return 'Dexter Joven';
+          case CompanionStage.adult: return 'Dexter Adulto';
+        }
+      case CompanionType.elly:
+        switch (stage) {
+          case CompanionStage.baby: return 'Elly Bebé';
+          case CompanionStage.young: return 'Elly Joven';
+          case CompanionStage.adult: return 'Elly Adulta';
+        }
+      case CompanionType.paxolotl:
+        switch (stage) {
+          case CompanionStage.baby: return 'Paxolotl Bebé';
+          case CompanionStage.young: return 'Paxolotl Joven';
+          case CompanionStage.adult: return 'Paxolotl Adulto';
+        }
+      case CompanionType.yami:
+        switch (stage) {
+          case CompanionStage.baby: return 'Yami Bebé';
+          case CompanionStage.young: return 'Yami Joven';
+          case CompanionStage.adult: return 'Yami Adulto';
+        }
+    }
+  }
+  
+  /// Helper para obtener nivel inicial según la etapa
+  int _getInitialLevelForStage(CompanionStage stage) {
+    switch (stage) {
+      case CompanionStage.baby: return 1;
+      case CompanionStage.young: return 5;
+      case CompanionStage.adult: return 10;
+    }
+  }
+  
+  /// Helper para obtener número de etapa
+  int _getStageNumber(CompanionStage stage) {
+    switch (stage) {
+      case CompanionStage.baby: return 1;
+      case CompanionStage.young: return 2;
+      case CompanionStage.adult: return 3;
     }
   }
 

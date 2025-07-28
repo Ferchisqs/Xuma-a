@@ -362,6 +362,115 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
     return idUserPet.length > 0;
   }
 
+  // 🔥 NUEVO MÉTODO PARA EXTRAER PET ID (TEMPLATE ID) PARA EVOLUCIÓN
+  String _extractPetIdForEvolution(CompanionEntity companion) {
+    debugPrint('🔍 [EVOLUTION_EXTRACT] === EXTRAYENDO PET ID PARA EVOLUCIÓN ===');
+    debugPrint('🐾 [EVOLUTION_EXTRACT] Companion: ${companion.displayName}');
+    debugPrint('🆔 [EVOLUTION_EXTRACT] Local ID: ${companion.id}');
+    debugPrint('🔧 [EVOLUTION_EXTRACT] Tipo: ${companion.runtimeType}');
+    
+    // 🔥 IMPORTANTE: Para evolución necesitamos el PET ID (template), NO el idUserPet (instancia)
+    // El endpoint de evolución espera: /api/gamification/pets/owned/userId/petId/evolve
+    // Donde petId es el ID del template de la mascota, no la instancia del usuario
+    
+    // 1. 🔥 BUSCAR EN LA RESPUESTA DE LA API EL PET ID REAL
+    if (companion is CompanionModelWithPetId) {
+      debugPrint('✅ [EVOLUTION_EXTRACT] Es CompanionModelWithPetId');
+      
+      // 🔥 PROBLEMA: El campo petId en CompanionModelWithPetId actualmente contiene idUserPet
+      // Necesitamos buscar el pet_id real del template en los datos de la API
+      
+      try {
+        final json = companion.toJson();
+        debugPrint('📄 [EVOLUTION_EXTRACT] Buscando pet_id en JSON...');
+        debugPrint('🗝️ [EVOLUTION_EXTRACT] Keys disponibles: ${json.keys.toList()}');
+        
+        // 🔥 BUSCAR EL PET ID REAL DEL TEMPLATE (no el idUserPet)
+        final possiblePetIdKeys = [
+          'originalPetId',    // Si se preservó el ID original
+          'templatePetId',    // ID del template
+          'basePetId',        // ID base
+          'pet_template_id',  // Snake case
+          'template_id',      // Simplificado
+        ];
+        
+        for (final key in possiblePetIdKeys) {
+          if (json.containsKey(key) && json[key] != null) {
+            final value = json[key] as String;
+            debugPrint('🎯 [EVOLUTION_EXTRACT] Encontrado $key: "$value"');
+            
+            if (_isValidPetId(value)) {
+              debugPrint('✅ [EVOLUTION_EXTRACT] PET ID TEMPLATE VÁLIDO: $value');
+              return value;
+            }
+          }
+        }
+        
+        debugPrint('⚠️ [EVOLUTION_EXTRACT] No se encontró pet ID template en JSON');
+      } catch (e) {
+        debugPrint('❌ [EVOLUTION_EXTRACT] Error accediendo JSON: $e');
+      }
+    }
+    
+    // 2. 🔥 FALLBACK: MAPEAR DESDE EL NOMBRE DE LA MASCOTA AL PET ID CONOCIDO
+    debugPrint('🔄 [EVOLUTION_EXTRACT] Usando mapeo por nombre como fallback...');
+    final petId = _mapCompanionNameToPetId(companion.displayName, companion.type);
+    
+    if (_isValidPetId(petId)) {
+      debugPrint('✅ [EVOLUTION_EXTRACT] Pet ID mapeado: $petId');
+      return petId;
+    }
+    
+    // 3. 🆘 ANÁLISIS DEL PROBLEMA
+    debugPrint('🆘 [EVOLUTION_EXTRACT] === ANÁLISIS DEL PROBLEMA ===');
+    debugPrint('❌ [EVOLUTION_EXTRACT] NO SE ENCONTRÓ PET ID VÁLIDO PARA EVOLUCIÓN');
+    debugPrint('🔍 [EVOLUTION_EXTRACT] Posibles causas:');
+    debugPrint('   1. La respuesta de getUserCompanions no incluye el pet_id original');
+    debugPrint('   2. El mapping de la API no preserva el template ID');
+    debugPrint('   3. La mascota se creó localmente sin datos de API');
+    debugPrint('   4. El endpoint de evolución necesita un ID diferente');
+    
+    // 4. 🔥 RETURN ERROR ID para debugging
+    final errorId = 'ERROR_NO_TEMPLATE_PET_ID_${companion.id}_${DateTime.now().millisecondsSinceEpoch}';
+    debugPrint('🚨 [EVOLUTION_EXTRACT] Devolviendo ID de error: $errorId');
+    debugPrint('💡 [EVOLUTION_EXTRACT] ACCIÓN REQUERIDA: Verificar que getUserCompanions preserve el pet_id original');
+    
+    return errorId;
+  }
+  
+  // 🔥 HELPER PARA VALIDAR PET ID
+  bool _isValidPetId(String? petId) {
+    if (petId == null || petId.isEmpty) return false;
+    if (petId == 'unknown') return false;
+    if (petId.startsWith('ERROR_')) return false;
+    if (petId.startsWith('FALLBACK_')) return false;
+    if (petId == 'undefined') return false;
+    if (petId == 'null') return false;
+    
+    // El petId debe ser un UUID válido o string con contenido
+    return petId.length > 10; // Los UUIDs tienen al menos 36 caracteres
+  }
+  
+  // 🔥 MAPEAR NOMBRE DE COMPANION A PET ID CONOCIDO
+  String _mapCompanionNameToPetId(String name, CompanionType type) {
+    debugPrint('🗺️ [MAPPING] Mapeando $name (${type.name}) a Pet ID...');
+    
+    // 🔥 ESTOS SON LOS PET IDs REALES DEL API QUE DEBES USAR
+    // Basado en tu log: "pet_id":"e0512239-dc32-444f-a354-ef94446e5f1c"
+    
+    switch (type) {
+      case CompanionType.dexter:
+        // 🔥 USAR EL PET ID REAL DE DEXTER DESDE TU API
+        return 'e0512239-dc32-444f-a354-ef94446e5f1c'; 
+      case CompanionType.elly:
+        return 'ab23c9ee-a63a-4114-aff7-8ef9899b33f6'; 
+      case CompanionType.paxolotl:
+        return 'afdfcdfa-aed6-4320-a8e5-51debbd1bccf';
+      case CompanionType.yami:
+        return '19119059-bb47-40e2-8eb5-8cf7a66f21b8'; 
+    }
+  }
+
   // ==================== 🔥 EVOLUCIÓN CORREGIDA (resto del código igual) ====================
   Future<void> evolveCompanion(CompanionEntity companion) async {
     try {
@@ -394,12 +503,13 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
         return;
       }
 
-      final petId = _extractCorrectUserPetId(companion);
-      debugPrint('🆔 [ACTIONS_CUBIT] Pet ID extraído: $petId');
+      // 🔥 EXTRAER PET ID CORRECTO PARA EVOLUCIÓN (TEMPLATE ID, NO USER PET ID)
+      final petId = _extractPetIdForEvolution(companion);
+      debugPrint('🆔 [ACTIONS_CUBIT] Pet ID (template) extraído para evolución: $petId');
       
       if (petId.startsWith('ERROR_')) {
         emit(CompanionActionsError(
-          message: '🔧 Error: Esta mascota no tiene un ID válido para evolucionar',
+          message: '🔧 Error: Esta mascota no tiene un Pet ID válido para evolucionar',
           action: 'evolving',
         ));
         return;
@@ -408,6 +518,7 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
       final result = await repository.evolveCompanionViaApi(
         userId: userId,
         petId: petId,
+        currentStage: companion.stage, // 🔥 PASAR ETAPA ACTUAL DEL COMPANION
       );
       
       result.fold(
