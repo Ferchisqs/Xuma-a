@@ -59,13 +59,13 @@ class ApiPetResponseModel {
   /// 🔧 MAPEO PRINCIPAL: Convierte cada etapa de evolución a CompanionModel CON PET ID
   List<CompanionModel> toCompanionModels() {
     final companions = <CompanionModel>[];
-    
-    for (int i = 0; i < evolutionChain.length; i++) {
-      final stage = evolutionChain[i];
-      final companionStage = _mapStageNumberToCompanionStage(stage.stage);
+    final babyStages = evolutionChain.where((stage) => stage.stage == 1).toList();
+
+    for (int i = 0; i < babyStages.length; i++) {
+      final companionStage = _mapStageNumberToCompanionStage(babyStages[i].stage);
       final companionType = _mapNameToCompanionType(name);
       
-      debugPrint('🔄 [API_MAPPING] Mapeando: $name etapa ${stage.stage} -> ${companionType.name}_${companionStage.name}');
+      debugPrint('🔄 [API_MAPPING] Mapeando: $name etapa ${babyStages[i].stage} -> ${companionType.name}_${companionStage.name}');
       debugPrint('🆔 [API_MAPPING] Pet ID: $petId');
       
       final companion = CompanionModelWithPetId(
@@ -83,7 +83,7 @@ class ApiPetResponseModel {
         isSelected: false,
         purchasedAt: null,
         currentMood: CompanionMood.happy,
-        purchasePrice: _calculatePriceForStage(stage.stage),
+        purchasePrice: _calculatePriceForStage(babyStages[i].stage),
         evolutionPrice: _calculateEvolutionPrice(companionStage),
         unlockedAnimations: _getAnimationsForStage(companionStage),
         createdAt: DateTime.now(),
@@ -129,23 +129,10 @@ class ApiPetResponseModel {
     }
   }
 
-  /// 🔧 CALCULAR PRECIO POR ETAPA
-  int _calculatePriceForStage(int stageNumber) {
-    final basePrice = quizPointsCost;
-    
-    switch (stageNumber) {
-      case 1: // Baby
-        return basePrice;
-      case 2: // Young
-        return (basePrice * 1.5).round();
-      case 3: // Adult
-        return (basePrice * 2.0).round();
-      case 4: // Adult premium (para Yami)
-        return (basePrice * 2.5).round();
-      default:
-        return basePrice;
-    }
-  }
+  // NUEVO (precio directo de la API)
+int _calculatePriceForStage(int stageNumber) {
+  return quizPointsCost; // Usar precio directo de la API
+}
 
   /// 🔧 PRECIO DE EVOLUCIÓN
   int _calculateEvolutionPrice(CompanionStage stage) {
