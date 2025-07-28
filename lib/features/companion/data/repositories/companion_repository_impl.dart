@@ -172,19 +172,21 @@ class CompanionRepositoryImpl implements CompanionRepository {
     }
   }
 
-  @override
+ @override
 Future<Either<Failure, CompanionEntity>> feedCompanionViaApi({
   required String userId,
   required String petId,
 }) async {
-  debugPrint('🍎 [REPO] === ALIMENTANDO VIA API CON STATS REALES ===');
+  debugPrint('🍎 [REPO] === ALIMENTANDO VIA API CON VALORES CORREGIDOS ===');
+  debugPrint('🆔 [REPO] Pet ID: $petId');
+  debugPrint('👤 [REPO] User ID: $userId');
   
-  // 🔥 ENVIAR TANTO HAPPINESS COMO HEALTH SEGÚN TU API
+  // 🔥 VALORES CORREGIDOS: Más conservadores y balanceados
   return increasePetStats(
     userId: userId,
     petId: petId,
-    happiness: 5,  // 🔥 AGREGAR 5 DE FELICIDAD
-    health: 15,    // 🔥 AGREGAR 15 DE SALUD
+    happiness: 5,   // 🔥 REDUCIDO: +5 felicidad (era 5, mantener)
+    health: 10,     // 🔥 REDUCIDO: +10 salud (era 15, ahora 10)
   );
 }
 
@@ -193,14 +195,16 @@ Future<Either<Failure, CompanionEntity>> loveCompanionViaApi({
   required String userId,
   required String petId,
 }) async {
-  debugPrint('💖 [REPO] === DANDO AMOR VIA API CON STATS REALES ===');
+  debugPrint('💖 [REPO] === DANDO AMOR VIA API CON VALORES CORREGIDOS ===');
+  debugPrint('🆔 [REPO] Pet ID: $petId');
+  debugPrint('👤 [REPO] User ID: $userId');
   
-  // 🔥 ENVIAR TANTO HAPPINESS COMO HEALTH SEGÚN TU API  
+  // 🔥 VALORES CORREGIDOS: Enfoque en felicidad con poca salud
   return increasePetStats(
     userId: userId,
     petId: petId,
-    happiness: 10, // 🔥 AGREGAR 10 DE FELICIDAD
-    health: 5,     // 🔥 AGREGAR 5 DE SALUD
+    happiness: 8,   // 🔥 REDUCIDO: +8 felicidad (era 10, ahora 8)
+    health: 3,      // 🔥 REDUCIDO: +3 salud (era 5, ahora 3)
   );
 }
 
@@ -210,14 +214,15 @@ Future<Either<Failure, CompanionEntity>> simulateTimePassage({
   required String userId,
   required String petId,
 }) async {
-  debugPrint('⏰ [REPO] === SIMULANDO PASO DEL TIEMPO ===');
+  debugPrint('⏰ [REPO] === SIMULANDO PASO DEL TIEMPO CON VALORES CONSERVADORES ===');
+  debugPrint('🆔 [REPO] Pet ID: $petId');
   
-  // 🔥 REDUCIR AMBAS ESTADÍSTICAS
+  // 🔥 VALORES MÁS CONSERVADORES PARA REDUCIR
   return decreasePetStats(
     userId: userId,
     petId: petId,
-    happiness: 5,  // 🔥 REDUCIR 5 DE FELICIDAD
-    health: 8,     // 🔥 REDUCIR 8 DE SALUD
+    happiness: 3,   
+    health: 5,      
   );
 }
 

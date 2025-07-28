@@ -504,12 +504,12 @@ class _LoadedView extends StatelessWidget {
             right: 10,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-  children: [
-    // 🍎 Alimentar CORREGIDO
+   children: [
+    // 🍎 Alimentar CORREGIDO - Validación relajada
     _buildQuickActionButton(
       icon: Icons.restaurant,
       color: Colors.orange,
-      onPressed: (companion.hunger < 95)  // ✅ CAMBIAR DE 90 A 95
+      onPressed: (companion.hunger < 90)  // ✅ CAMBIAR DE 95 A 90
           ? () {
               debugPrint('🍎 [MAIN] Alimentando desde tarjeta principal - Salud: ${companion.hunger}');
               _feedCompanion(context, companion);
@@ -519,11 +519,11 @@ class _LoadedView extends StatelessWidget {
       label: 'Alimentar',
     ),
     
-    // 💖 Amor CORREGIDO
+    // 💖 Amor CORREGIDO - Validación relajada
     _buildQuickActionButton(
       icon: Icons.favorite,
       color: Colors.pink,
-      onPressed: (companion.happiness < 95)  // ✅ CAMBIAR DE 90 A 95
+      onPressed: (companion.happiness < 90)  // ✅ CAMBIAR DE 95 A 90
           ? () {
               debugPrint('💖 [MAIN] Dando amor desde tarjeta principal - Felicidad: ${companion.happiness}');
               _loveCompanion(context, companion);

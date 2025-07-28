@@ -65,72 +65,120 @@ class CompanionRemoteDataSourceImpl implements CompanionRemoteDataSource {
  
   // ==================== 🔥 AUMENTAR ESTADÍSTICAS VIA API ====================
   @override
-  Future<CompanionModel> increasePetStats({
-    required String idUserPet,
-    int? happiness,
-    int? health,
-  }) async {
-    try {
-      debugPrint('📈 [API] === AUMENTANDO STATS VIA API REAL ===');
-      debugPrint('🆔 [API] Pet ID: $idUserPet');
-      debugPrint('😊 [API] Aumentar felicidad: ${happiness ?? 0}');
-      debugPrint('❤️ [API] Aumentar salud: ${health ?? 0}');
+Future<CompanionModel> increasePetStats({
+  required String idUserPet,
+  int? happiness,
+  int? health,
+}) async {
+  try {
+    debugPrint('📈 [API] === AUMENTANDO STATS VIA API REAL CON DEBUG ===');
+    debugPrint('🆔 [API] idUserPet recibido: "$idUserPet"');
+    debugPrint('😊 [API] Happiness a aumentar: ${happiness ?? 0}');
+    debugPrint('❤️ [API] Health a aumentar: ${health ?? 0}');
 
-      final endpoint = '/api/gamification/pet-stats/$idUserPet/increase';
-      final requestBody = <String, dynamic>{};
+    // 🔥 VALIDACIÓN DEL idUserPet
+    if (idUserPet.isEmpty || idUserPet.startsWith('ERROR_') || idUserPet.startsWith('FALLBACK_')) {
+      debugPrint('❌ [API] idUserPet INVÁLIDO: "$idUserPet"');
+      throw ServerException('🔧 ID de mascota inválido: $idUserPet');
+    }
+
+    final endpoint = '/api/gamification/pet-stats/$idUserPet/increase';
+    final requestBody = <String, dynamic>{};
+    
+    // 🔥 CONSTRUCCIÓN CUIDADOSA DEL BODY
+    if (happiness != null && happiness > 0) {
+      requestBody['happiness'] = happiness;
+      debugPrint('✅ [API] Agregando happiness: $happiness');
+    }
+    
+    if (health != null && health > 0) {
+      requestBody['health'] = health;
+      debugPrint('✅ [API] Agregando health: $health');
+    }
+    
+    // 🔥 VALIDACIÓN DEL BODY
+    if (requestBody.isEmpty) {
+      debugPrint('⚠️ [API] Request body vacío, no hay nada que aumentar');
+      throw ServerException('No hay estadísticas para aumentar');
+    }
+
+    debugPrint('📦 [API] === REQUEST DETAILS ===');
+    debugPrint('🌐 [API] Endpoint completo: $endpoint');
+    debugPrint('📄 [API] Request body: $requestBody');
+    debugPrint('🔧 [API] Content-Type: application/json');
+
+    final response = await apiClient.postGamification(
+      endpoint,
+      data: requestBody,
+    );
+
+    debugPrint('📨 [API] === RESPONSE DETAILS ===');
+    debugPrint('✅ [API] Status code: ${response.statusCode}');
+    debugPrint('📄 [API] Response headers: ${response.headers}');
+    debugPrint('📄 [API] Response data type: ${response.data?.runtimeType}');
+    debugPrint('📄 [API] Response data: ${response.data}');
+
+    if (response.statusCode == 200 || 
+        response.statusCode == 201 || 
+        response.statusCode == 204) {
+      debugPrint('🎉 [API] === AUMENTO DE STATS EXITOSO ===');
       
-      if (happiness != null) requestBody['happiness'] = happiness;
-      if (health != null) requestBody['health'] = health;
-
-      debugPrint('📦 [API] Request body: $requestBody');
-      debugPrint('🌐 [API] Endpoint: $endpoint');
-
-      final response = await apiClient.postGamification(
-        endpoint,
-        data: requestBody,
-      );
-
-      debugPrint('✅ [API] Increase stats response: ${response.statusCode}');
-      debugPrint('📄 [API] Response data: ${response.data}');
-
-      if (response.statusCode == 200 || 
-          response.statusCode == 201 || 
-          response.statusCode == 204) {
-        debugPrint('🎉 [API] Aumento de stats exitoso');
-        
-        // 🔥 OBTENER ESTADÍSTICAS ACTUALIZADAS DESDE EL ENDPOINT DE DETALLES
-        final userId = await tokenManager.getUserId();
-        if (userId != null) {
-          debugPrint('🔄 [API] Obteniendo stats actualizadas desde pet details...');
+      // 🔥 OBTENER ESTADÍSTICAS ACTUALIZADAS
+      final userId = await tokenManager.getUserId();
+      if (userId != null) {
+        debugPrint('🔄 [API] Obteniendo stats actualizadas desde pet details...');
+        try {
           return await getPetDetails(petId: idUserPet, userId: userId);
-        } else {
+        } catch (detailsError) {
+          debugPrint('⚠️ [API] Error obteniendo detalles: $detailsError');
           // Fallback: crear companion desde respuesta
           return _createCompanionFromStatsResponse(idUserPet, response.data);
         }
       } else {
-        throw ServerException(
-            'Error aumentando stats: código ${response.statusCode}, data: ${response.data}');
+        // Fallback: crear companion desde respuesta
+        return _createCompanionFromStatsResponse(idUserPet, response.data);
       }
-    } catch (e) {
-      debugPrint('❌ [API] Error aumentando stats: $e');
-      
-      final errorMessage = e.toString().toLowerCase();
-      if (errorMessage.contains('not found') || errorMessage.contains('404')) {
-        throw ServerException('🔍 Mascota no encontrada');
-      } else if (errorMessage.contains('maximum') || errorMessage.contains('máximo')) {
-        throw ServerException('📊 Las estadísticas ya están al máximo');
-      } else {
-        throw ServerException('❌ Error aumentando estadísticas de la mascota');
-      }
+    } else {
+      debugPrint('❌ [API] Error en response: ${response.statusCode}');
+      throw ServerException(
+          'Error aumentando stats: código ${response.statusCode}, data: ${response.data}');
+    }
+  } catch (e) {
+    debugPrint('❌ [API] === ERROR DETALLADO ===');
+    debugPrint('💥 [API] Tipo de error: ${e.runtimeType}');
+    debugPrint('📄 [API] Error completo: $e');
+    
+    final errorMessage = e.toString().toLowerCase();
+    
+    // 🔥 ANÁLISIS ESPECÍFICO DE ERRORES
+    if (errorMessage.contains('not found') || errorMessage.contains('404')) {
+      debugPrint('🔍 [API] Error 404: Mascota no encontrada');
+      debugPrint('🔧 [API] Verificar idUserPet: "$idUserPet"');
+      throw ServerException('🔍 Mascota no encontrada (ID: $idUserPet)');
+    } else if (errorMessage.contains('400') || errorMessage.contains('bad request')) {
+      debugPrint('📝 [API] Error 400: Request inválido');
+      debugPrint('🔧 [API] Verificar formato del JSON');
+      throw ServerException('📝 Formato de request inválido');
+    } else if (errorMessage.contains('maximum') || errorMessage.contains('máximo')) {
+      debugPrint('📊 [API] Error: Stats al máximo');
+      throw ServerException('📊 Las estadísticas ya están al máximo');
+    } else if (errorMessage.contains('401') || errorMessage.contains('unauthorized')) {
+      debugPrint('🔐 [API] Error de autenticación');
+      throw ServerException('🔐 Error de autenticación');
+    } else {
+      debugPrint('❓ [API] Error desconocido');
+      throw ServerException('❌ Error aumentando estadísticas: ${e.toString()}');
     }
   }
+}
+
  @override
 Future<CompanionModel> getPetDetails({
   required String petId, 
   required String userId
 }) async {
   try {
-    debugPrint('🔍 [API] === OBTENIENDO DETALLES DE MASCOTA ===');
+    debugPrint('🔍 [API] === OBTENIENDO DETALLES DE MASCOTA MEJORADO ===');
     debugPrint('🆔 [API] Pet ID: $petId');
     debugPrint('👤 [API] User ID: $userId');
 
@@ -155,7 +203,7 @@ Future<CompanionModel> getPetDetails({
 
     final petData = response.data as Map<String, dynamic>;
     
-    // 🔥 EXTRAER INFORMACIÓN BÁSICA
+    // 🔥 EXTRACCIÓN BÁSICA
     final responsePetId = petData['pet_id'] as String;
     final name = petData['name'] as String? ?? 'Mascota';
     final description = petData['description'] as String? ?? 'Una mascota especial';
@@ -163,14 +211,14 @@ Future<CompanionModel> getPetDetails({
     
     debugPrint('🐾 [API] Pet básico - ID: $responsePetId, Nombre: $name, Tipo: $speciesType');
 
-    // 🔥 EXTRAER BASE STATS
+    // 🔥 EXTRACCIÓN BASE STATS
     final baseStats = petData['base_stats'] as Map<String, dynamic>? ?? {};
     final baseHealth = (baseStats['health'] as num?)?.toInt() ?? 100;
     final baseHappiness = (baseStats['happiness'] as num?)?.toInt() ?? 100;
     
     debugPrint('📊 [API] Base stats - Salud: $baseHealth, Felicidad: $baseHappiness');
 
-    // 🔥 EXTRAER USER INFO
+    // 🔥 EXTRACCIÓN USER INFO
     final userInfo = petData['user_info'] as Map<String, dynamic>? ?? {};
     final userOwns = userInfo['user_owns'] as bool? ?? false;
     final userCanAfford = userInfo['user_can_afford'] as bool? ?? false;
@@ -178,12 +226,50 @@ Future<CompanionModel> getPetDetails({
     
     debugPrint('👤 [API] User info - Posee: $userOwns, Puede comprar: $userCanAfford, Puntos: $userAvailablePoints');
 
-    // 🔥 EXTRAER USER PET INFO - AQUÍ ESTÁ EL idUserPet CRÍTICO
+    // 🔥 EXTRACCIÓN MEJORADA DEL USER PET INFO
     final userPetInfo = userInfo['user_pet_info'] as Map<String, dynamic>? ?? {};
     
-    // 🔥 ¡ESTE ES EL ID QUE NECESITAMOS!
-    final idUserPet = userPetInfo['idUserPet'] as String? ?? '';
+    // 🔥 BÚSQUEDA EXHAUSTIVA DEL idUserPet
+    String idUserPet = '';
+    final possibleIdKeys = [
+      'idUserPet',     // Principal
+      'id_user_pet',   // Snake case
+      'userPetId',     // Camel case
+      'user_pet_id',   // Otra variación
+      'id',            // ID genérico
+      'petId',         // Pet ID dentro de user_pet_info
+    ];
     
+    debugPrint('🔍 [API] === BÚSQUEDA EXHAUSTIVA DE idUserPet ===');
+    debugPrint('📄 [API] user_pet_info keys: ${userPetInfo.keys.toList()}');
+    
+    for (final key in possibleIdKeys) {
+      if (userPetInfo.containsKey(key) && userPetInfo[key] != null) {
+        final value = userPetInfo[key].toString();
+        debugPrint('🎯 [API] Encontrado $key: "$value"');
+        
+        if (value.isNotEmpty && value != 'null' && value != 'undefined') {
+          idUserPet = value;
+          debugPrint('✅ [API] idUserPet CONFIRMADO: $idUserPet');
+          break;
+        }
+      }
+    }
+    
+    // 🔥 VERIFICACIÓN CRÍTICA
+    if (idUserPet.isEmpty) {
+      debugPrint('🆘 [API] === CRÍTICO: NO SE ENCONTRÓ idUserPet ===');
+      debugPrint('📄 [API] Contenido completo de user_pet_info:');
+      userPetInfo.forEach((key, value) {
+        debugPrint('   $key: $value (${value.runtimeType})');
+      });
+      
+      // 🔥 FALLBACK: usar el pet_id original con prefijo para identificar el problema
+      idUserPet = 'FALLBACK_${responsePetId}_${DateTime.now().millisecondsSinceEpoch}';
+      debugPrint('🚨 [API] Usando FALLBACK ID: $idUserPet');
+    }
+    
+    // 🔥 EXTRACCIÓN DEL RESTO DE DATOS
     final currentHappiness = (userPetInfo['happiness_level'] as num?)?.toInt() ?? baseHappiness;
     final currentHealth = (userPetInfo['health_level'] as num?)?.toInt() ?? baseHealth;
     final level = (userPetInfo['level'] as num?)?.toInt() ?? 1;
@@ -199,11 +285,11 @@ Future<CompanionModel> getPetDetails({
     debugPrint('🎯 [API] Nivel: $level, Etapa: $evolutionStage, EXP: $experiencePoints');
     debugPrint('⭐ [API] Destacada: $isFeatured, Nickname: $nickname');
 
-    // 🔥 CORRECCIÓN: USAR EL MÉTODO DE MAPEO CORRECTO BASADO EN EL NOMBRE
-    final companionType = _mapNameToCompanionType(name); // ✅ USAR ESTE MÉTODO
+    // 🔥 MAPEO CORRECTO
+    final companionType = _mapNameToCompanionType(name);
     final companionStage = _mapEvolutionStageToCompanionStage(evolutionStage);
     
-    // 🔥 CREAR COMPANION MODEL CON EL idUserPet COMO PET ID
+    // 🔥 CREAR COMPANION MODEL CON EL idUserPet CORRECTO
     final companion = CompanionModelWithPetId(
       id: '${companionType.name}_${companionStage.name}',
       type: companionType,
@@ -223,12 +309,18 @@ Future<CompanionModel> getPetDetails({
       evolutionPrice: _getEvolutionPriceForStage(evolutionStage),
       unlockedAnimations: _getAnimationsForStage(companionStage),
       createdAt: DateTime.now(),
-      petId: idUserPet, // 🔥 USAR idUserPet EN LUGAR DE pet_id
+      petId: idUserPet, // 🔥 USAR EL idUserPet EXTRAÍDO O FALLBACK
     );
 
     debugPrint('✅ [API] === COMPANION CREADO CON idUserPet ===');
     debugPrint('🐾 [API] ${companion.displayName} - Pet ID: ${companion.petId}');
     debugPrint('📊 [API] Stats: Felicidad: ${companion.happiness}, Salud: ${companion.hunger}');
+    
+    // 🔥 VERIFICACIÓN FINAL
+    if (companion.petId.startsWith('FALLBACK_')) {
+      debugPrint('⚠️ [API] ADVERTENCIA: Se está usando un FALLBACK ID');
+      debugPrint('💡 [API] ACCIÓN REQUERIDA: Verificar estructura de respuesta de API');
+    }
     
     return companion;
 

@@ -16,14 +16,7 @@ enum CompanionStage {
   adult // Adulto
 }
 
-enum CompanionMood {
-  happy,
-  normal,
-  hungry,
-  sleepy,
-  excited,
-  sad
-}
+enum CompanionMood { happy, normal, hungry, sleepy, excited, sad }
 
 class CompanionEntity extends Equatable {
   final String id;
@@ -71,10 +64,12 @@ class CompanionEntity extends Equatable {
   });
 
   // 🔧 GETTERS ACTUALIZADOS
-  String get imagePath => 'assets/images/companions/pets/${type.name}_${stage.name}.png';
-  
-  String get backgroundPath => 'assets/images/companions/backgrounds/${_getBackgroundName()}.png';
-  
+  String get imagePath =>
+      'assets/images/companions/pets/${type.name}_${stage.name}.png';
+
+  String get backgroundPath =>
+      'assets/images/companions/backgrounds/${_getBackgroundName()}.png';
+
   String _getBackgroundName() {
     switch (type) {
       case CompanionType.dexter:
@@ -87,7 +82,7 @@ class CompanionEntity extends Equatable {
         return 'jaguar_bg';
     }
   }
-  
+
   String get displayName {
     switch (type) {
       case CompanionType.dexter:
@@ -129,9 +124,9 @@ class CompanionEntity extends Equatable {
   bool get canEvolve {
     // No puede evolucionar si ya es adulto
     if (stage == CompanionStage.adult) return false;
-    
+
     // 🔥 NUEVA LÓGICA: Solo necesita experiencia básica
-    return experience >= experienceNeededForNextStage;
+    return happiness >= 80 && hunger >= 80; // 90 >= 80 && 93 >= 80 = true
   }
 
   // 🔥 EXPERIENCIA MUY FÁCIL DE OBTENER PARA TESTING
@@ -163,9 +158,25 @@ class CompanionEntity extends Equatable {
 
   @override
   List<Object?> get props => [
-    id, type, stage, name, description, level, experience,
-    happiness, hunger, energy, isOwned, isSelected,
-    purchasedAt, lastFeedTime, lastLoveTime, currentMood,
-    purchasePrice, evolutionPrice, unlockedAnimations, createdAt,
-  ];
+        id,
+        type,
+        stage,
+        name,
+        description,
+        level,
+        experience,
+        happiness,
+        hunger,
+        energy,
+        isOwned,
+        isSelected,
+        purchasedAt,
+        lastFeedTime,
+        lastLoveTime,
+        currentMood,
+        purchasePrice,
+        evolutionPrice,
+        unlockedAnimations,
+        createdAt,
+      ];
 }

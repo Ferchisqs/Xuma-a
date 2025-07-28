@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../di/injection.dart';
 import '../../domain/entities/companion_entity.dart';
 import '../cubit/companion_detail_cubit.dart';
-import '../cubit/companion_actions_cubit.dart'; 
+import '../cubit/companion_actions_cubit.dart';
 import '../widgets/companion_animation_widget.dart';
 import '../widgets/companion_evolution_dialog.dart';
 import '../widgets/companion_info_dialog.dart';
@@ -74,7 +74,7 @@ class _CompanionDetailView extends StatelessWidget {
           listener: (context, state) {
             if (state is CompanionActionsSuccess) {
               debugPrint('✅ [DETAIL] Acción API exitosa: ${state.action}');
-              
+
               // Mostrar mensaje de éxito con icono específico
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -89,18 +89,19 @@ class _CompanionDetailView extends StatelessWidget {
                   duration: const Duration(seconds: 3),
                 ),
               );
-              
+
               // Actualizar el companion en DetailCubit
-              context.read<CompanionDetailCubit>().loadCompanion(state.companion);
-              
+              context
+                  .read<CompanionDetailCubit>()
+                  .loadCompanion(state.companion);
+
               // Mostrar diálogo de evolución si aplica
               if (state.action == 'evolving') {
                 _showEvolutionDialog(context, state.companion);
               }
-              
             } else if (state is CompanionActionsError) {
               debugPrint('❌ [DETAIL] Error API: ${state.message}');
-              
+
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Row(
@@ -124,14 +125,16 @@ class _CompanionDetailView extends StatelessWidget {
           builder: (context, state) {
             final currentCompanion = _getCurrentCompanion(state);
             final isLoading = state is CompanionDetailUpdating;
-            final currentAction = state is CompanionDetailUpdating ? state.action : null;
+            final currentAction =
+                state is CompanionDetailUpdating ? state.action : null;
 
             return BlocBuilder<CompanionActionsCubit, CompanionActionsState>(
               builder: (context, actionsState) {
-                final isApiActionLoading = actionsState is CompanionActionsLoading;
-                final apiCurrentAction = actionsState is CompanionActionsLoading 
-                  ? actionsState.action 
-                  : null;
+                final isApiActionLoading =
+                    actionsState is CompanionActionsLoading;
+                final apiCurrentAction = actionsState is CompanionActionsLoading
+                    ? actionsState.action
+                    : null;
 
                 final finalIsLoading = isLoading || isApiActionLoading;
                 final finalCurrentAction = currentAction ?? apiCurrentAction;
@@ -145,11 +148,8 @@ class _CompanionDetailView extends StatelessWidget {
 
                         // ÁREA PRINCIPAL DE LA MASCOTA
                         Expanded(
-                          child: _buildPetMainArea(
-                            currentCompanion, 
-                            finalIsLoading, 
-                            finalCurrentAction
-                          ),
+                          child: _buildPetMainArea(currentCompanion,
+                              finalIsLoading, finalCurrentAction),
                         ),
                       ],
                     ),
@@ -159,12 +159,8 @@ class _CompanionDetailView extends StatelessWidget {
                       bottom: 0,
                       left: 0,
                       right: 0,
-                      child: _buildFloatingActions(
-                        context, 
-                        currentCompanion, 
-                        finalIsLoading, 
-                        finalCurrentAction
-                      ),
+                      child: _buildFloatingActions(context, currentCompanion,
+                          finalIsLoading, finalCurrentAction),
                     ),
                   ],
                 );
@@ -217,22 +213,7 @@ class _CompanionDetailView extends StatelessWidget {
 
               const Spacer(),
 
-              // 🆕 BOTÓN DE SIMULAR TIEMPO
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.schedule,
-                      color: Colors.orange, size: 20),
-                  onPressed: () => _showTimeSimulationDialog(context, currentCompanion),
-                  tooltip: 'Simular Tiempo',
-                ),
-              ),
-              
+
               const SizedBox(width: 8),
 
               // BOTÓN DE INFORMACIÓN
@@ -277,7 +258,8 @@ class _CompanionDetailView extends StatelessWidget {
               children: [
                 // Badge con nombre
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.green,
                     borderRadius: BorderRadius.circular(20),
@@ -291,14 +273,15 @@ class _CompanionDetailView extends StatelessWidget {
                     ),
                   ),
                 ),
-                
+
                 // 🆕 ESTADÍSTICAS DETALLADAS
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     // Felicidad
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
                         color: _getStatColor(currentCompanion.happiness),
                         borderRadius: BorderRadius.circular(12),
@@ -319,12 +302,13 @@ class _CompanionDetailView extends StatelessWidget {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 4),
-                    
+
                     // Salud/Hambre
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
                         color: _getStatColor(currentCompanion.hunger),
                         borderRadius: BorderRadius.circular(12),
@@ -355,11 +339,15 @@ class _CompanionDetailView extends StatelessWidget {
           Positioned.fill(
             child: Padding(
               padding: const EdgeInsets.only(top: 100, bottom: 20),
-              child: BlocBuilder<CompanionDetailCubit, CompanionDetailState>(
-                builder: (context, state) {
-                  final isInteracting = state is CompanionDetailUpdating;
-                  final currentAction =
-                      state is CompanionDetailUpdating ? state.action : null;
+              child: BlocBuilder<CompanionActionsCubit, CompanionActionsState>(
+                builder: (context, actionsState) {
+                  final isInteracting = actionsState is CompanionActionsLoading;
+                  final currentAction = actionsState is CompanionActionsLoading
+                      ? actionsState.action
+                      : null;
+
+                  debugPrint(
+                      '🎭 [DETAIL] Pasando a AnimationWidget: isInteracting=$isInteracting, action=$currentAction');
 
                   return CompanionAnimationWidget(
                     companion: currentCompanion,
@@ -372,7 +360,7 @@ class _CompanionDetailView extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // 🆕 INDICADOR DE ESTADO EN LA PARTE INFERIOR
           Positioned(
             bottom: 100,
@@ -390,7 +378,7 @@ class _CompanionDetailView extends StatelessWidget {
     String statusMessage;
     Color statusColor;
     IconData statusIcon;
-    
+
     if (companion.needsFood && companion.needsLove) {
       statusMessage = '${companion.displayName} necesita comida y amor';
       statusColor = Colors.red;
@@ -412,7 +400,7 @@ class _CompanionDetailView extends StatelessWidget {
       statusColor = Colors.green;
       statusIcon = Icons.sentiment_very_satisfied;
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -449,94 +437,100 @@ class _CompanionDetailView extends StatelessWidget {
 
   // ACCIONES FLOTANTES ACTUALIZADAS
   Widget _buildFloatingActions(BuildContext context,
-    CompanionEntity currentCompanion, bool isLoading, String? currentAction) {
-  return Container(
-    margin: const EdgeInsets.all(20),
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.1),
-          blurRadius: 10,
-          offset: const Offset(0, -5),
-        ),
-      ],
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        // 🔥 Botón Alimentar CORREGIDO
-        _buildActionButton(
-          icon: Icons.restaurant,
-          color: Colors.green,
-          onPressed: (currentCompanion.hunger < 95) && !isLoading  // ✅ CAMBIAR DE 90 A 95
-              ? () {
-                  debugPrint('🍎 [DETAIL] Alimentando via API - Salud actual: ${currentCompanion.hunger}');
-                  context
-                      .read<CompanionActionsCubit>()
-                      .feedCompanionViaApi(currentCompanion);
-                }
-              : null,
-          isActive: currentAction == 'feeding',
-          disabled: currentCompanion.hunger >= 95, // ✅ CAMBIAR VALIDACIÓN
-          label: 'Alimentar',
-        ),
+      CompanionEntity currentCompanion, bool isLoading, String? currentAction) {
+    return Container(
+      margin: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          // 🔥 Botón Alimentar CORREGIDO - Validación relajada (90 en lugar de 95)
+          _buildActionButton(
+            icon: Icons.restaurant,
+            color: Colors.green,
+            onPressed: (currentCompanion.hunger < 90) &&
+                    !isLoading // ✅ CAMBIAR DE 95 A 90
+                ? () {
+                    debugPrint(
+                        '🍎 [DETAIL] Alimentando via API - Salud actual: ${currentCompanion.hunger}');
+                    context
+                        .read<CompanionActionsCubit>()
+                        .feedCompanionViaApi(currentCompanion);
+                  }
+                : null,
+            isActive: currentAction == 'feeding',
+            disabled:
+                currentCompanion.hunger >= 90, // ✅ CAMBIAR VALIDACIÓN A 90
+            label: 'Alimentar',
+          ),
 
-        // 🔥 Botón Dar Amor CORREGIDO
-        _buildActionButton(
-          icon: Icons.favorite,
-          color: Colors.pink,
-          onPressed: (currentCompanion.happiness < 95) && !isLoading  // ✅ CAMBIAR DE 90 A 95
-              ? () {
-                  debugPrint('💖 [DETAIL] Dando amor via API - Felicidad actual: ${currentCompanion.happiness}');
-                  context
-                      .read<CompanionActionsCubit>()
-                      .loveCompanionViaApi(currentCompanion);
-                }
-              : null,
-          isActive: currentAction == 'loving',
-          disabled: currentCompanion.happiness >= 95, // ✅ CAMBIAR VALIDACIÓN
-          label: 'Amor',
-        ),
+          // 🔥 Botón Dar Amor CORREGIDO - Validación relajada (90 en lugar de 95)
+          _buildActionButton(
+            icon: Icons.favorite,
+            color: Colors.pink,
+            onPressed: (currentCompanion.happiness < 90) &&
+                    !isLoading // ✅ CAMBIAR DE 95 A 90
+                ? () {
+                    debugPrint(
+                        '💖 [DETAIL] Dando amor via API - Felicidad actual: ${currentCompanion.happiness}');
+                    context
+                        .read<CompanionActionsCubit>()
+                        .loveCompanionViaApi(currentCompanion);
+                  }
+                : null,
+            isActive: currentAction == 'loving',
+            disabled:
+                currentCompanion.happiness >= 90, // ✅ CAMBIAR VALIDACIÓN A 90
+            label: 'Amor',
+          ),
 
-        // Botón Evolucionar (mantener igual)
-        _buildActionButton(
-          icon: Icons.auto_awesome,
-          color: Colors.purple,
-          onPressed: currentCompanion.canEvolve && !isLoading
-              ? () {
-                  debugPrint('🦋 [DETAIL] Evolucionando via API');
-                  context
-                      .read<CompanionActionsCubit>()
-                      .evolveCompanion(currentCompanion);
-                }
-              : null,
-          isActive: currentAction == 'evolving',
-          disabled: !currentCompanion.canEvolve,
-          label: 'Evolucionar',
-        ),
+          // Botón Evolucionar (mantener igual)
+          _buildActionButton(
+            icon: Icons.auto_awesome,
+            color: Colors.purple,
+            onPressed: currentCompanion.canEvolve && !isLoading
+                ? () {
+                    debugPrint('🦋 [DETAIL] Evolucionando via API');
+                    context
+                        .read<CompanionActionsCubit>()
+                        .evolveCompanion(currentCompanion);
+                  }
+                : null,
+            isActive: currentAction == 'evolving',
+            disabled: !currentCompanion.canEvolve,
+            label: 'Evolucionar',
+          ),
 
-        // Botón Activar/Destacar (mantener igual)
-        _buildActionButton(
-          icon: currentCompanion.isSelected ? Icons.star : Icons.star_outline,
-          color: Colors.orange,
-          onPressed: !isLoading
-              ? () {
-                  debugPrint('⭐ [DETAIL] Destacando via API');
-                  context
-                      .read<CompanionActionsCubit>()
-                      .featureCompanion(currentCompanion);
-                }
-              : null,
-          isActive: currentAction == 'featuring',
-          label: 'Activar',
-        ),
-      ],
-    ),
-  );
-}
+          // Botón Activar/Destacar (mantener igual)
+          _buildActionButton(
+            icon: currentCompanion.isSelected ? Icons.star : Icons.star_outline,
+            color: Colors.orange,
+            onPressed: !isLoading
+                ? () {
+                    debugPrint('⭐ [DETAIL] Destacando via API');
+                    context
+                        .read<CompanionActionsCubit>()
+                        .featureCompanion(currentCompanion);
+                  }
+                : null,
+            isActive: currentAction == 'featuring',
+            label: 'Activar',
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildActionButton({
     required IconData icon,
@@ -599,57 +593,6 @@ class _CompanionDetailView extends StatelessWidget {
   }
 
   // 🆕 DIÁLOGO DE SIMULACIÓN DE TIEMPO
-  void _showTimeSimulationDialog(BuildContext context, CompanionEntity companion) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.schedule, color: Colors.orange),
-            const SizedBox(width: 8),
-            const Text('Simular Tiempo'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Esto reducirá las estadísticas de ${companion.displayName} para simular el paso del tiempo.',
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Cambios:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text('• Felicidad: ${companion.happiness} → ${(companion.happiness - 5).clamp(10, 100)}'),
-                  Text('• Salud: ${companion.hunger} → ${(companion.hunger - 8).clamp(10, 100)}'),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancelar'),
-          ),
-         
-        ],
-      ),
-    );
-  }
 
   // Helper methods
   Color _getStatColor(int value) {

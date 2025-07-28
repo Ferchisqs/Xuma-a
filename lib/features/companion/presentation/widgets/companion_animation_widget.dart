@@ -8,7 +8,7 @@ class CompanionAnimationWidget extends StatefulWidget {
   final double size;
   final bool isInteracting;
   final String? currentAction;
-  final bool showBackground; // 🆕 NUEVO PARÁMETRO PARA CONTROLAR EL FONDO
+  final bool showBackground;
   
   const CompanionAnimationWidget({
     Key? key,
@@ -16,7 +16,7 @@ class CompanionAnimationWidget extends StatefulWidget {
     this.size = 350,
     this.isInteracting = false,
     this.currentAction,
-    this.showBackground = false, // 🔧 FALSE POR DEFECTO (PARA TIENDA)
+    this.showBackground = false,
   }) : super(key: key);
   
   @override
@@ -66,7 +66,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     
     // 🦘 Animación de rebote (cuando interactúa)
     _bounceController = AnimationController(
-      duration: const Duration(milliseconds: 3000),
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
     _bounceAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -75,7 +75,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     
     // 💕 Animación de corazones (amor)
     _heartController = AnimationController(
-      duration: const Duration(milliseconds: 3000),
+      duration: const Duration(milliseconds: 2500),
       vsync: this,
     );
     _heartAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -84,7 +84,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     
     // 🍎 Animación de alimentación
     _feedController = AnimationController(
-      duration: const Duration(milliseconds: 6500),
+      duration: const Duration(milliseconds: 3000),
       vsync: this,
     );
     _feedAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -93,7 +93,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     
     // 😊 Animación de felicidad
     _happyController = AnimationController(
-      duration: const Duration(milliseconds: 6000),
+      duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
     _happyAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -146,9 +146,12 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   }
   
   void _handleInteraction() {
-    // 🦘 Rebote universal
+    debugPrint('🎭 [ANIMATION] === INICIANDO INTERACCIÓN ===');
+    debugPrint('🎯 [ANIMATION] Acción: ${widget.currentAction}');
+    
+    // 🦘 Rebote universal más suave
     _bounceController.forward().then((_) {
-      Future.delayed(const Duration(milliseconds: 300), () {
+      Future.delayed(const Duration(milliseconds: 200), () {
         if (mounted) _bounceController.reverse();
       });
     });
@@ -161,6 +164,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
   }
   
   void _handleLoveAction() {
+    debugPrint('💖 [ANIMATION] === ANIMACIÓN DE AMOR ===');
     _actionTimer?.cancel();
     
     setState(() {
@@ -168,30 +172,35 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       _isHappy = true;
     });
     
+    // Corazones flotantes
     _heartController.reset();
     _heartController.forward().then((_) {
-      _heartController.reverse().then((_) {
+      Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          setState(() {
-            _showHearts = false;
+          _heartController.reverse().then((_) {
+            if (mounted) {
+              setState(() => _showHearts = false);
+            }
           });
         }
       });
     });
     
+    // Felicidad
     _happyController.reset();
     _happyController.forward().then((_) {
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) _happyController.reverse();
       });
     });
     
-    _actionTimer = Timer(const Duration(milliseconds: 4000), () {
+    _actionTimer = Timer(const Duration(milliseconds: 3000), () {
       if (mounted) setState(() => _isHappy = false);
     });
   }
   
   void _handleFeedAction() {
+    debugPrint('🍎 [ANIMATION] === ANIMACIÓN DE ALIMENTACIÓN ===');
     _actionTimer?.cancel();
     
     setState(() {
@@ -199,9 +208,10 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       _isHappy = true;
     });
     
+    // Animación de comida
     _feedController.reset();
     _feedController.forward().then((_) {
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 400), () {
         if (mounted) {
           _feedController.reverse().then((_) {
             if (mounted) {
@@ -212,19 +222,19 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       });
     });
     
+    // Felicidad por comer
     _happyController.reset();
     _happyController.forward().then((_) {
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) _happyController.reverse();
       });
     });
     
-    _actionTimer = Timer(const Duration(milliseconds: 4000), () {
+    _actionTimer = Timer(const Duration(milliseconds: 3500), () {
       if (mounted) setState(() => _isHappy = false);
     });
   }
   
-  // 🔧 MÉTODO PARA OBTENER IMAGEN DE LA MASCOTA (SIN FONDO)
   String get _petImagePath {
     final baseName = '${widget.companion.type.name}_${widget.companion.stage.name}';
     
@@ -243,11 +253,10 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
       return 'assets/images/companions/animations/${baseName}_happy.png';
     }
     
-    // 🔧 Imagen normal DE LA MASCOTA SOLAMENTE
+    // 🔧 Imagen normal
     return 'assets/images/companions/${baseName}.png';
   }
 
-  // 🆕 MÉTODO PARA OBTENER FONDO
   String get _backgroundImagePath {
     switch (widget.companion.type) {
       case CompanionType.dexter:
@@ -260,92 +269,16 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
         return 'assets/images/companions/backgrounds/yami_bg.png';
     }
   }
-
-  // 🔧 TAMAÑO ESPECÍFICO PARA CADA COMPAÑERO
-  double get _getCompanionSpecificSize {
-    double baseMultiplier = 1.0;
-    
-    // Multiplicador por etapa
-    switch (widget.companion.stage) {
-      case CompanionStage.baby:
-        baseMultiplier = 1.0;
-        break;
-      case CompanionStage.young:
-        baseMultiplier = 1.15;
-        break;
-      case CompanionStage.adult:
-        baseMultiplier = 1.3;
-        break;
-    }
-    
-    // Ajustes específicos por tipo
-    switch (widget.companion.type) {
-      case CompanionType.yami:
-        if (widget.companion.stage == CompanionStage.adult) {
-          baseMultiplier = 1.5;
-        } else if (widget.companion.stage == CompanionStage.young) {
-          baseMultiplier = 1.3;
-        }
-        break;
-        
-      case CompanionType.elly:
-        if (widget.companion.stage == CompanionStage.adult) {
-          baseMultiplier = 1.4;
-        } else if (widget.companion.stage == CompanionStage.young) {
-          baseMultiplier = 1.25;
-        }
-        break;
-        
-      case CompanionType.dexter:
-        if (widget.companion.stage == CompanionStage.baby) {
-          baseMultiplier = 0.95;
-        }
-        break;
-        
-      case CompanionType.paxolotl:
-        break;
-    }
-    
-    return widget.size * baseMultiplier;
-  }
-
-  // 🔧 POSICIÓN ESPECÍFICA
-  Offset get _getCompanionOffset {
-    switch (widget.companion.type) {
-      case CompanionType.yami:
-        if (widget.companion.stage == CompanionStage.adult) {
-          return const Offset(-60, -10);
-        } else if (widget.companion.stage == CompanionStage.young) {
-          return const Offset(-30, -5);
-        }
-        break;
-        
-      case CompanionType.elly:
-        if (widget.companion.stage == CompanionStage.adult) {
-          return const Offset(-20, -5);
-        }
-        break;
-        
-      case CompanionType.dexter:
-      case CompanionType.paxolotl:
-        break;
-    }
-    
-    return Offset.zero;
-  }
   
   @override
   Widget build(BuildContext context) {
-    final companionSize = _getCompanionSpecificSize;
-    final companionOffset = _getCompanionOffset;
-    
     return SizedBox(
       width: widget.size,
       height: widget.size,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 🆕 FONDO CONDICIONAL - SOLO SI showBackground ES TRUE
+          // 🆕 FONDO CONDICIONAL
           if (widget.showBackground)
             Positioned.fill(
               child: Container(
@@ -358,8 +291,6 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
                     _backgroundImagePath,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      debugPrint('🔧 Error loading background: $_backgroundImagePath');
-                      // Fondo de gradiente como fallback
                       return Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -379,12 +310,10 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
               ),
             ),
           
-          // 🔧 SI NO HAY FONDO, USAR TRANSPARENTE/SUAVE
           if (!widget.showBackground)
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  // 🔧 FONDO TRANSPARENTE O GRADIENTE MUY SUAVE
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -398,7 +327,7 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
               ),
             ),
           
-          // 🐾 MASCOTA CON ANIMACIONES
+          // 🐾 MASCOTA CON ANIMACIONES SUAVES
           AnimatedBuilder(
             animation: Listenable.merge([
               _bounceAnimation, 
@@ -408,29 +337,26 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
             builder: (context, child) {
               return Transform.translate(
                 offset: Offset(
-                  companionOffset.dx,
-                  companionOffset.dy + 
-                  // 🌸 Flotación sutil
-                  (sin(_floatingAnimation.value * pi * 2) * 4) + 
-                  // 🦘 Rebote
-                  (_bounceAnimation.value * -15) +
-                  // 😊 Movimiento de felicidad
-                  (sin(_happyAnimation.value * pi * 4) * 2)
+                  0,
+                  // 🌸 Flotación muy sutil
+                  (sin(_floatingAnimation.value * pi * 2) * 3) + 
+                  // 🦘 Rebote suave
+                  (_bounceAnimation.value * -8) +
+                  // 😊 Movimiento de felicidad sutil
+                  (sin(_happyAnimation.value * pi * 3) * 1.5)
                 ),
                 child: Transform.scale(
                   scale: 1.0 + 
-                         (_bounceAnimation.value * 0.12) +
-                         (_happyAnimation.value * 0.08) +
-                         (sin(_floatingAnimation.value * pi * 2) * 0.02),
+                         (_bounceAnimation.value * 0.05) +  // Rebote muy sutil
+                         (_happyAnimation.value * 0.03) +   // Felicidad sutil
+                         (sin(_floatingAnimation.value * pi * 2) * 0.01), // Flotación mínima
                   child: Container(
-                    width: companionSize,
-                    height: companionSize,
-                    // 🔧 SOLO LA MASCOTA, SIN FONDO ADICIONAL
+                    width: widget.size * 0.8,  // Mantener tamaño original
+                    height: widget.size * 0.8, // Mantener tamaño original
                     child: Image.asset(
                       _petImagePath,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
-                        debugPrint('🔧 Error loading pet image: $_petImagePath');
                         if (_isBlinking || _isHappy || _isFeeding) {
                           final normalPath = 'assets/images/companions/${widget.companion.type.name}_${widget.companion.stage.name}.png';
                           return Image.asset(
@@ -450,29 +376,39 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
             },
           ),
           
-          // 💕 CORAZONES FLOTANTES
+          // 💕 CORAZONES FLOTANTES MEJORADOS
           if (_showHearts)
             AnimatedBuilder(
               animation: _heartAnimation,
               builder: (context, child) {
                 return Stack(
-                  children: List.generate(6, (index) {
-                    final angle = (index * pi * 2) / 6;
-                    final radius = 50 + (_heartAnimation.value * 80);
-                    final opacity = (1.0 - _heartAnimation.value).clamp(0.0, 1.0);
+                  children: List.generate(8, (index) {
+                    final angle = (index * pi * 2) / 8;
+                    final radius = 40 + (_heartAnimation.value * 60);
+                    final opacity = (1.0 - _heartAnimation.value * 0.8).clamp(0.2, 1.0);
                     
                     return Positioned(
                       left: (widget.size / 2) + cos(angle + _heartAnimation.value * pi) * radius,
                       top: (widget.size / 2) + sin(angle + _heartAnimation.value * pi) * radius - 
-                          (_heartAnimation.value * 100),
+                          (_heartAnimation.value * 80),
                       child: Transform.scale(
-                        scale: 0.8 + (_heartAnimation.value * 1.2),
-                        child: Opacity(
-                          opacity: opacity,
-                          child: Icon(
-                            Icons.favorite,
-                            color: Colors.red.withOpacity(0.9),
-                            size: 20 + (_heartAnimation.value * 16),
+                        scale: 0.6 + (_heartAnimation.value * 0.8),
+                        child: Transform.rotate(
+                          angle: _heartAnimation.value * pi / 4,
+                          child: Opacity(
+                            opacity: opacity,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.favorite,
+                                color: Colors.red[400],
+                                size: 16 + (_heartAnimation.value * 8),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -482,90 +418,160 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
               },
             ),
           
-          // 🍎 EFECTOS DE ALIMENTACIÓN
+          // 🍎 EFECTOS DE ALIMENTACIÓN MEJORADOS
           if (_isFeeding)
             AnimatedBuilder(
               animation: _feedAnimation,
               builder: (context, child) {
-                return Positioned(
-                  top: 30 - (_feedAnimation.value * 60),
-                  child: Opacity(
-                    opacity: (1.0 - _feedAnimation.value).clamp(0.0, 1.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Transform.scale(
-                          scale: 1.0 + (_feedAnimation.value * 0.6),
-                          child: const Text(
-                            '🍎',
-                            style: TextStyle(fontSize: 28),
+                return Stack(
+                  children: [
+                    // Comida cayendo desde arriba
+                    Positioned(
+                      top: 20 - (_feedAnimation.value * 50),
+                      left: widget.size / 2 - 40,
+                      child: Opacity(
+                        opacity: (1.0 - _feedAnimation.value * 0.7).clamp(0.3, 1.0),
+                        child: Transform.scale(
+                          scale: 0.8 + (_feedAnimation.value * 0.4),
+                          child: Transform.rotate(
+                            angle: _feedAnimation.value * pi / 2,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                '🍎',
+                                style: TextStyle(fontSize: 20),
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Transform.scale(
-                          scale: 1.0 + (_feedAnimation.value * 0.6),
-                          child: const Text(
-                            '🥕',
-                            style: TextStyle(fontSize: 24),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Transform.scale(
-                          scale: 1.0 + (_feedAnimation.value * 0.6),
-                          child: const Text(
-                            '🥬',
-                            style: TextStyle(fontSize: 22),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    
+                    // Más comida
+                    Positioned(
+                      top: 25 - (_feedAnimation.value * 45),
+                      left: widget.size / 2 + 10,
+                      child: Opacity(
+                        opacity: (1.0 - _feedAnimation.value * 0.8).clamp(0.2, 1.0),
+                        child: Transform.scale(
+                          scale: 0.7 + (_feedAnimation.value * 0.3),
+                          child: Transform.rotate(
+                            angle: -_feedAnimation.value * pi / 3,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                '🥕',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    // Tercera comida
+                    Positioned(
+                      top: 30 - (_feedAnimation.value * 40),
+                      left: widget.size / 2 - 20,
+                      child: Opacity(
+                        opacity: (1.0 - _feedAnimation.value * 0.9).clamp(0.1, 1.0),
+                        child: Transform.scale(
+                          scale: 0.6 + (_feedAnimation.value * 0.2),
+                          child: Transform.rotate(
+                            angle: _feedAnimation.value * pi / 4,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                '🥬',
+                                style: TextStyle(fontSize: 14),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
           
-          // ✨ EFECTOS DE FELICIDAD
+          // ✨ EFECTOS DE FELICIDAD SUAVES
           if (_isHappy && widget.isInteracting)
             AnimatedBuilder(
               animation: _happyAnimation,
               builder: (context, child) {
                 return Stack(
                   children: [
+                    // Estrella principal
                     Positioned(
-                      top: 20 - (_happyAnimation.value * 40),
-                      left: widget.size / 2 - 15,
+                      top: 15 - (_happyAnimation.value * 30),
+                      left: widget.size / 2 - 10,
+                      child: Opacity(
+                        opacity: (1.0 - _happyAnimation.value * 0.5).clamp(0.5, 1.0),
+                        child: Transform.scale(
+                          scale: 0.8 + (_happyAnimation.value * 0.6),
+                          child: Transform.rotate(
+                            angle: _happyAnimation.value * pi,
+                            child: Text(
+                              '✨',
+                              style: TextStyle(
+                                fontSize: 18 + (_happyAnimation.value * 8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    // Estrella secundaria
+                    Positioned(
+                      top: 20 - (_happyAnimation.value * 25),
+                      left: widget.size / 2 + 15,
                       child: Opacity(
                         opacity: (1.0 - _happyAnimation.value * 0.6).clamp(0.4, 1.0),
-                        child: Text(
-                          '✨',
-                          style: TextStyle(
-                            fontSize: 24 + (_happyAnimation.value * 12),
+                        child: Transform.scale(
+                          scale: 0.6 + (_happyAnimation.value * 0.4),
+                          child: Transform.rotate(
+                            angle: -_happyAnimation.value * pi / 2,
+                            child: Text(
+                              '⭐',
+                              style: TextStyle(
+                                fontSize: 14 + (_happyAnimation.value * 6),
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
+                    
+                    // Tercera estrella
                     Positioned(
-                      top: 25 - (_happyAnimation.value * 35),
-                      left: widget.size / 2 + 20,
+                      top: 25 - (_happyAnimation.value * 20),
+                      left: widget.size / 2 - 25,
                       child: Opacity(
                         opacity: (1.0 - _happyAnimation.value * 0.7).clamp(0.3, 1.0),
-                        child: Text(
-                          '⭐',
-                          style: TextStyle(
-                            fontSize: 18 + (_happyAnimation.value * 8),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 25 - (_happyAnimation.value * 35),
-                      left: widget.size / 2 - 40,
-                      child: Opacity(
-                        opacity: (1.0 - _happyAnimation.value * 0.7).clamp(0.3, 1.0),
-                        child: Text(
-                          '💫',
-                          style: TextStyle(
-                            fontSize: 16 + (_happyAnimation.value * 6),
+                        child: Transform.scale(
+                          scale: 0.5 + (_happyAnimation.value * 0.3),
+                          child: Transform.rotate(
+                            angle: _happyAnimation.value * pi / 3,
+                            child: Text(
+                              '💫',
+                              style: TextStyle(
+                                fontSize: 12 + (_happyAnimation.value * 4),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -579,7 +585,6 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
     );
   }
   
-  // 🔧 PLACEHOLDER MEJORADO SOLO PARA LA MASCOTA
   Widget _buildEnhancedPlaceholder() {
     return Container(
       decoration: BoxDecoration(
@@ -596,13 +601,6 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
           color: _getCompanionColor().withOpacity(0.5),
           width: 2,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -633,23 +631,6 @@ class _CompanionAnimationWidgetState extends State<CompanionAnimationWidget>
             style: TextStyle(
               fontSize: 12,
               color: _getCompanionColor().withOpacity(0.7),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              widget.showBackground ? '🖼️ Con fondo' : '🎨 Solo PNG',
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.orange[700],
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
             ),
           ),
         ],
