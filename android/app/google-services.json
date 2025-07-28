@@ -9,7 +9,26 @@
       "client_info": {
         "mobilesdk_app_id": "1:83757561055:android:8a112662d08983e3b0a56a",
         "android_client_info": {
-          "package_name": "com.example.xuma_a"
+          "package_name": "com.novacode.xumaa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB4tChOScDwj50btoLHhlrAF-rKA1vIlSg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:83757561055:android:3567dcae11ed5306b0a56a",
+        "android_client_info": {
+          "package_name": "com.novacode.xumaa"
         }
       },
       "oauth_client": [],

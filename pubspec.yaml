@@ -2,7 +2,7 @@ name: xuma_a
 description: "Una aplicación móvil de conciencia ambiental"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: '>=3.1.0 <4.0.0'

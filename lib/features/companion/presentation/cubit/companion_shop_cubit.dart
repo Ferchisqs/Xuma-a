@@ -81,6 +81,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
 
   Map<String, String> _localIdToApiPetId = {};
   List<CompanionEntity> _userOwnedCompanions = [];
+  Set<CompanionType> _ownedTypes = {};
 
   CompanionShopCubit({
     required this.getCompanionShopUseCase,
@@ -88,9 +89,9 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     required this.tokenManager,
   }) : super(CompanionShopInitial());
 
-  Future<void> loadShop() async {
+ Future<void> loadShop() async {
     try {
-      debugPrint('🏪 [SHOP_CUBIT] === CARGANDO TIENDA SOLO CON DATOS DE API ===');
+      debugPrint('🏪 [SHOP_CUBIT] === CARGANDO TIENDA CON LÓGICA DE TIPOS ===');
       emit(CompanionShopLoading());
 
       final userId = await tokenManager.getUserId();
@@ -111,26 +112,27 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
         (shopData) {
           debugPrint('✅ [SHOP_CUBIT] === TIENDA API CARGADA ===');
           
-          // 🔥 USAR SOLO LOS DATOS QUE VIENEN DE LA API - SIN AGREGAR NADA LOCAL
           final availableCompanions = shopData.availableCompanions;
-          
           debugPrint('🛍️ [SHOP_CUBIT] Mascotas disponibles desde API: ${availableCompanions.length}');
           
-          // 🔥 EXTRAER MASCOTAS YA ADOPTADAS (MARCAR COMO isOwned = true)
+          // 🔥 EXTRAER MASCOTAS YA ADOPTADAS Y TIPOS ADOPTADOS
           _userOwnedCompanions = availableCompanions.where((c) => c.isOwned).toList();
+          _ownedTypes = _userOwnedCompanions.map((c) => c.type).toSet();
+          
           debugPrint('🏠 [SHOP_CUBIT] Mascotas ya adoptadas: ${_userOwnedCompanions.length}');
+          debugPrint('🐾 [SHOP_CUBIT] Tipos adoptados: ${_ownedTypes.map((t) => t.name).toList()}');
           
           // 🔥 MASCOTAS DISPONIBLES PARA COMPRAR (isOwned = false)
           final purchasableCompanions = availableCompanions.where((c) => !c.isOwned).toList();
           debugPrint('🛒 [SHOP_CUBIT] Mascotas disponibles para comprar: ${purchasableCompanions.length}');
 
-          // 🔥 CONSTRUIR MAPEO DE PET IDS (SOLO SI ES NECESARIO)
+          // 🔥 CONSTRUIR MAPEO DE PET IDS
           _buildPetIdMapping(availableCompanions);
 
           // 🔥 ORDENAR POR PRECIO (MÁS BARATOS PRIMERO)
           purchasableCompanions.sort((a, b) => a.purchasePrice.compareTo(b.purchasePrice));
 
-          debugPrint('🛒 [SHOP_CUBIT] === TIENDA FINAL (SOLO API) ===');
+          debugPrint('🛒 [SHOP_CUBIT] === TIENDA FINAL (TIPOS CORRECTOS) ===');
           for (final companion in purchasableCompanions) {
             debugPrint('🏪 [SHOP_CUBIT] ${companion.displayName} ${companion.stage.name}: ${companion.purchasePrice}★ (${companion.isOwned ? "YA TIENE" : "DISPONIBLE"})');
           }
@@ -150,10 +152,10 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     }
   }
 
-  // 🔥 ADOPCIÓN SIMPLIFICADA - USAR SOLO PET ID DE LA API
-  Future<void> purchaseCompanion(CompanionEntity companion) async {
-    debugPrint('🛒 [SHOP_CUBIT] === ADOPTANDO MASCOTA DESDE API ===');
+   Future<void> purchaseCompanion(CompanionEntity companion) async {
+    debugPrint('🛒 [SHOP_CUBIT] === ADOPTANDO CON VERIFICACIÓN DE TIPOS ===');
     debugPrint('🐾 [SHOP_CUBIT] Companion: ${companion.displayName} ${companion.stage.name}');
+    debugPrint('🔍 [SHOP_CUBIT] Tipo: ${companion.type.name}');
     debugPrint('💰 [SHOP_CUBIT] Precio: ${companion.purchasePrice}★');
 
     if (state is! CompanionShopLoaded) {
@@ -163,7 +165,15 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
 
     final currentState = state as CompanionShopLoaded;
 
-    // 🔥 VALIDACIÓN: Ya lo tiene
+    // 🔥 VALIDACIÓN MEJORADA: Verificar si ya tiene este tipo
+    if (_ownedTypes.contains(companion.type)) {
+      emit(CompanionShopError(
+        message: '✅ Ya tienes una mascota ${companion.typeDescription}. No puedes adoptar más del mismo tipo.',
+      ));
+      return;
+    }
+
+    // 🔥 VALIDACIÓN: También verificar isOwned (por si acaso)
     if (companion.isOwned) {
       emit(CompanionShopError(
         message: '✅ Ya tienes a ${companion.displayName} ${companion.stage.name}.',
@@ -212,7 +222,12 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
           debugPrint('🎉 [SHOP_CUBIT] === ADOPCIÓN EXITOSA ===');
           debugPrint('✅ [SHOP_CUBIT] Mascota adoptada: ${adoptedCompanion.displayName}');
           
-          final message = '🎉 ¡Has adoptado a ${adoptedCompanion.displayName} ${companion.stage.name}!';
+          // 🔥 ACTUALIZAR EL SET DE TIPOS ADOPTADOS
+          _ownedTypes.add(companion.type);
+          debugPrint('🐾 [SHOP_CUBIT] Tipo ${companion.type.name} marcado como adoptado');
+          
+          final message = '🎉 ¡Has adoptado a ${adoptedCompanion.displayName} ${companion.stage.name}!\n\n'
+                         '📝 Nota: Todas las etapas de ${companion.typeDescription} ahora están marcadas como adoptadas.';
           
           emit(CompanionShopPurchaseSuccess(
             purchasedCompanion: adoptedCompanion,
@@ -230,7 +245,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
   }
 
   // 🔥 EXTRAER PET ID REAL DE LA API (SIN FALLBACKS LOCALES)
-  String _extractRealPetId(CompanionEntity companion) {
+   String _extractRealPetId(CompanionEntity companion) {
     debugPrint('🔍 [SHOP_CUBIT] === EXTRAYENDO PET ID REAL ===');
     debugPrint('🐾 [SHOP_CUBIT] Companion: ${companion.displayName}');
     debugPrint('🆔 [SHOP_CUBIT] Local ID: ${companion.id}');
@@ -274,7 +289,6 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
     return companion.id;
   }
 
-  // 🔥 CONSTRUIR MAPEO DE PET IDS DESDE LA API
   void _buildPetIdMapping(List<CompanionEntity> companions) {
     _localIdToApiPetId.clear();
     debugPrint('🗺️ [SHOP_CUBIT] === CONSTRUYENDO MAPEO DE PET IDS ===');
@@ -314,4 +328,7 @@ class CompanionShopCubit extends Cubit<CompanionShopState> {
   void refreshShop() {
     loadShop();
   }
+
+
+  
 }

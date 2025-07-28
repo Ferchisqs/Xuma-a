@@ -1,3 +1,6 @@
+// lib/features/companion/presentation/widgets/companion_purchase_dialog.dart
+// 🔥 SECCIÓN CORREGIDA: Mensajes más claros para tipos adoptados
+
 import 'package:flutter/material.dart';
 import '../../domain/entities/companion_entity.dart';
 
@@ -5,12 +8,14 @@ class CompanionPurchaseDialog extends StatelessWidget {
   final CompanionEntity companion;
   final int userPoints;
   final VoidCallback onConfirm;
+  final bool typeAlreadyOwned; // 🔥 NUEVO: Indicador si el tipo ya fue adoptado
   
   const CompanionPurchaseDialog({
     Key? key,
     required this.companion,
     required this.userPoints,
     required this.onConfirm,
+    this.typeAlreadyOwned = false, // 🔥 NUEVO PARÁMETRO
   }) : super(key: key);
 
   @override
@@ -18,9 +23,15 @@ class CompanionPurchaseDialog extends StatelessWidget {
     final canAfford = userPoints >= companion.purchasePrice;
     final remainingPoints = userPoints - companion.purchasePrice;
     
-    // 🛒 DEBUG: Log cuando se muestra el diálogo
-    debugPrint('🛒 Mostrando diálogo de compra para: ${companion.displayName}');
-    debugPrint('💰 Puntos usuario: $userPoints, Precio: ${companion.purchasePrice}, Puede comprar: $canAfford');
+    // 🔥 VALIDACIÓN MEJORADA: Verificar si el tipo ya fue adoptado
+    final canPurchase = canAfford && !companion.isOwned && !typeAlreadyOwned;
+    
+    debugPrint('🛒 [PURCHASE_DIALOG] === MOSTRANDO DIÁLOGO MEJORADO ===');
+    debugPrint('🛒 [PURCHASE_DIALOG] Companion: ${companion.displayName}');
+    debugPrint('💰 [PURCHASE_DIALOG] Puntos usuario: $userPoints, Precio: ${companion.purchasePrice}');
+    debugPrint('✅ [PURCHASE_DIALOG] Puede comprar: $canAfford, Ya poseído: ${companion.isOwned}');
+    debugPrint('🐾 [PURCHASE_DIALOG] Tipo ya adoptado: $typeAlreadyOwned');
+    debugPrint('🎯 [PURCHASE_DIALOG] Puede proceder: $canPurchase');
     
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -52,13 +63,13 @@ class CompanionPurchaseDialog extends StatelessWidget {
             
             const SizedBox(height: 20),
             
-            // Información de la compra
-            _buildPurchaseInfo(canAfford, remainingPoints),
+            // 🔥 INFORMACIÓN DE LA COMPRA MEJORADA
+            _buildPurchaseInfo(canAfford, remainingPoints, typeAlreadyOwned),
             
             const SizedBox(height: 24),
             
-            // Botones de acción
-            _buildActionButtons(context, canAfford),
+            // 🔥 BOTONES DE ACCIÓN MEJORADOS
+            _buildActionButtons(context, canPurchase, typeAlreadyOwned),
           ],
         ),
       ),
@@ -109,7 +120,6 @@ class CompanionPurchaseDialog extends StatelessWidget {
                   height: double.infinity,
                   errorBuilder: (context, error, stackTrace) {
                     debugPrint('🔧 Error cargando imagen en diálogo: ${_getPetImagePath()}');
-                    debugPrint('🔧 Error details: $error');
                     return Container(
                       color: _getCompanionColor().withOpacity(0.2),
                       child: Column(
@@ -141,14 +151,21 @@ class CompanionPurchaseDialog extends StatelessWidget {
         
         const SizedBox(height: 12),
         
-        // Título
+        // 🔥 TÍTULO MEJORADO
         Text(
-          '¿Adoptar a ${companion.displayName}?',
+          typeAlreadyOwned 
+            ? '⚠️ Tipo ya adoptado'
+            : companion.isOwned
+              ? '✅ Ya adoptado'
+              : '¿Adoptar a ${companion.displayName}?',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: _getCompanionColor(),
+            color: typeAlreadyOwned || companion.isOwned 
+              ? Colors.orange[700]
+              : _getCompanionColor(),
           ),
+          textAlign: TextAlign.center,
         ),
       ],
     );
@@ -242,134 +259,141 @@ class CompanionPurchaseDialog extends StatelessWidget {
     );
   }
   
-  Widget _buildPurchaseInfo(bool canAfford, int remainingPoints) {
+  // 🔥 INFORMACIÓN DE COMPRA MEJORADA
+  Widget _buildPurchaseInfo(bool canAfford, int remainingPoints, bool typeAlreadyOwned) {
+    Color containerColor;
+    Color borderColor;
+    
+    if (typeAlreadyOwned || companion.isOwned) {
+      containerColor = Colors.orange[50]!;
+      borderColor = Colors.orange;
+    } else if (canAfford) {
+      containerColor = Colors.green[50]!;
+      borderColor = Colors.green;
+    } else {
+      containerColor = Colors.red[50]!;
+      borderColor = Colors.red;
+    }
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: canAfford ? Colors.green[50] : Colors.red[50],
+        color: containerColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: canAfford ? Colors.green : Colors.red,
-          width: 1,
-        ),
+        border: Border.all(color: borderColor, width: 1),
       ),
       child: Column(
         children: [
-          // Costo
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Costo:',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Row(
-                children: [
-                  Icon(
-                    Icons.star,
-                    color: Colors.yellow[600],
-                    size: 20,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${companion.purchasePrice}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Text(
-                    ' puntos',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 8),
-          
-          // Puntos actuales
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Tus puntos:',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
-              ),
-              Text(
-                '$userPoints puntos',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          
-          if (canAfford) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Puntos restantes:',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-                Text(
-                  '$remainingPoints puntos',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green[700],
-                  ),
-                ),
-              ],
-            ),
+          // 🔥 MENSAJE PRINCIPAL MEJORADO
+          if (typeAlreadyOwned) ...[
+            _buildTypeAlreadyOwnedInfo(),
+          ] else if (companion.isOwned) ...[
+            _buildAlreadyOwnedInfo(),
+          ] else ...[
+            _buildRegularPurchaseInfo(canAfford, remainingPoints),
           ],
-          
-          const SizedBox(height: 12),
-          
-          // Mensaje de estado
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: canAfford ? Colors.green[100] : Colors.red[100],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  canAfford ? Icons.check_circle : Icons.error,
-                  color: canAfford ? Colors.green : Colors.red,
-                  size: 16,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    canAfford
-                        ? '¡Puedes adoptar a ${companion.displayName}!'
-                        : 'Necesitas ${companion.purchasePrice - userPoints} puntos más',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: canAfford ? Colors.green[700] : Colors.red[700],
-                      fontWeight: FontWeight.w500,
+        ],
+      ),
+    );
+  }
+  
+  // 🔥 NUEVO: Info para tipo ya adoptado
+  Widget _buildTypeAlreadyOwnedInfo() {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange[100],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.info,
+                color: Colors.orange[700],
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ya tienes una mascota ${companion.typeDescription}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange[700],
+                      ),
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Solo puedes adoptar una mascota de cada tipo. Tu ${companion.typeDescription} actual puede evolucionar a diferentes etapas.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.lightbulb_outline, color: Colors.blue[600], size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '💡 Consejo: Usa alimentar y dar amor para que tu ${companion.typeDescription} evolucione.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.blue[600],
                   ),
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  // Info para mascota específica ya adoptada
+  Widget _buildAlreadyOwnedInfo() {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.blue[100],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.check_circle,
+            color: Colors.blue[700],
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Ya tienes a ${companion.displayName} ${companion.stage.name} en tu colección.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.blue[700],
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -377,7 +401,133 @@ class CompanionPurchaseDialog extends StatelessWidget {
     );
   }
   
-  Widget _buildActionButtons(BuildContext context, bool canAfford) {
+  // Info para compra regular
+  Widget _buildRegularPurchaseInfo(bool canAfford, int remainingPoints) {
+    return Column(
+      children: [
+        // Costo
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Costo:',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Row(
+              children: [
+                Icon(
+                  Icons.star,
+                  color: Colors.yellow[600],
+                  size: 20,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${companion.purchasePrice}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Text(
+                  ' puntos',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 8),
+        
+        // Puntos actuales
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Tus puntos:',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            Text(
+              '$userPoints puntos',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        
+        if (canAfford) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Puntos restantes:',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+              Text(
+                '$remainingPoints puntos',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green[700],
+                ),
+              ),
+            ],
+          ),
+        ],
+        
+        const SizedBox(height: 12),
+        
+        // Mensaje de estado
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: canAfford ? Colors.green[100] : Colors.red[100],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                canAfford ? Icons.check_circle : Icons.error,
+                color: canAfford ? Colors.green : Colors.red,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  canAfford
+                      ? '¡Puedes adoptar a ${companion.displayName}!'
+                      : 'Necesitas ${companion.purchasePrice - userPoints} puntos más',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: canAfford ? Colors.green[700] : Colors.red[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  // 🔥 BOTONES DE ACCIÓN MEJORADOS
+  Widget _buildActionButtons(BuildContext context, bool canPurchase, bool typeAlreadyOwned) {
     return Row(
       children: [
         // Botón cancelar
@@ -406,18 +556,23 @@ class CompanionPurchaseDialog extends StatelessWidget {
         
         const SizedBox(width: 12),
         
-        // Botón confirmar con DEBUG
+        // 🔥 BOTÓN PRINCIPAL MEJORADO
         Expanded(
           child: ElevatedButton(
-            onPressed: canAfford ? () {
-              debugPrint('✅ Usuario CONFIRMÓ compra de: ${companion.displayName}');
-              debugPrint('💰 Ejecutando onConfirm callback...');
-              onConfirm();
-            } : () {
-              debugPrint('❌ Botón adoptar presionado pero no puede comprar: ${companion.displayName}');
+            onPressed: () {
+              if (typeAlreadyOwned || companion.isOwned) {
+                debugPrint('❌ Botón presionado pero tipo/mascota ya adoptado');
+                Navigator.of(context).pop();
+              } else if (canPurchase) {
+                debugPrint('✅ Usuario CONFIRMÓ compra de: ${companion.displayName}');
+                onConfirm();
+              } else {
+                debugPrint('❌ Botón adoptar presionado pero no puede comprar');
+                Navigator.of(context).pop();
+              }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: canAfford ? _getCompanionColor() : Colors.grey,
+              backgroundColor: _getButtonColor(canPurchase, typeAlreadyOwned),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -425,7 +580,7 @@ class CompanionPurchaseDialog extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
             child: Text(
-              canAfford ? 'Adoptar' : 'Insuficiente',
+              _getButtonText(canPurchase, typeAlreadyOwned),
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -435,6 +590,29 @@ class CompanionPurchaseDialog extends StatelessWidget {
         ),
       ],
     );
+  }
+  
+  // 🔥 HELPERS PARA BOTÓN MEJORADOS
+  Color _getButtonColor(bool canPurchase, bool typeAlreadyOwned) {
+    if (typeAlreadyOwned || companion.isOwned) {
+      return Colors.orange;
+    } else if (canPurchase) {
+      return _getCompanionColor();
+    } else {
+      return Colors.grey;
+    }
+  }
+  
+  String _getButtonText(bool canPurchase, bool typeAlreadyOwned) {
+    if (typeAlreadyOwned) {
+      return 'Entendido';
+    } else if (companion.isOwned) {
+      return 'Ya lo tengo';
+    } else if (canPurchase) {
+      return 'Adoptar';
+    } else {
+      return 'Sin puntos';
+    }
   }
   
   Color _getCompanionColor() {

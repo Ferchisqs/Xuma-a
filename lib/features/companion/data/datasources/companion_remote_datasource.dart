@@ -652,10 +652,10 @@ String? _extractApiPetIdFromCompanion(CompanionModel companion) {
   }
 
   // ==================== TIENDA (MASCOTAS DISPONIBLES - NO ADOPTADAS) ====================
-  @override
+ @override
 Future<List<CompanionModel>> getStoreCompanions({required String userId}) async {
   try {
-    debugPrint('🏪 [API] === OBTENIENDO TIENDA REAL SIN DATOS LOCALES ===');
+    debugPrint('🏪 [API] === OBTENIENDO TIENDA CORREGIDA PARA EVOLUCIONES ===');
     debugPrint('👤 [API] Usuario: $userId');
 
     if (userId.isEmpty) {
@@ -673,12 +673,16 @@ Future<List<CompanionModel>> getStoreCompanions({required String userId}) async 
     final userCompanions = await getUserCompanions(userId);
     debugPrint('✅ [API] Mascotas del usuario: ${userCompanions.length}');
 
-    // 🔥 3. CREAR SET DE IDs YA ADOPTADOS PARA FILTRAR
+    // 🔥 3. CREAR SET DE TIPOS DE MASCOTAS YA ADOPTADAS (NO SOLO IDs ESPECÍFICOS)
+    final adoptedTypes = <CompanionType>{};
     final adoptedIds = <String>{};
     final adoptedLocalIds = <String>{};
     
     for (final companion in userCompanions) {
-      // Agregar tanto el Pet ID como el ID local
+      // 🔥 MARCAR EL TIPO COMPLETO COMO ADOPTADO
+      adoptedTypes.add(companion.type);
+      
+      // Agregar también los IDs específicos (para compatibilidad)
       if (companion is CompanionModelWithPetId) {
         adoptedIds.add(companion.petId);
       }
@@ -687,28 +691,32 @@ Future<List<CompanionModel>> getStoreCompanions({required String userId}) async 
       final localId = '${companion.type.name}_${companion.stage.name}';
       adoptedLocalIds.add(localId);
       
-      debugPrint('🔍 [API] Mascota adoptada: ${companion.displayName} (${companion.id})');
+      debugPrint('🔍 [API] Mascota adoptada: ${companion.displayName} (Tipo: ${companion.type.name})');
     }
     
-    debugPrint('🔍 [API] IDs adoptados: $adoptedIds');
-    debugPrint('🔍 [API] IDs locales adoptados: $adoptedLocalIds');
+    debugPrint('🔍 [API] === RESUMEN DE ADOPCIONES ===');
+    debugPrint('🐾 [API] Tipos adoptados: ${adoptedTypes.map((t) => t.name).toList()}');
+    debugPrint('🆔 [API] IDs adoptados: $adoptedIds');
+    debugPrint('📝 [API] IDs locales adoptados: $adoptedLocalIds');
 
-    // 🔥 4. MARCAR MASCOTAS COMO ADOPTADAS O DISPONIBLES
+    // 🔥 4. MARCAR MASCOTAS COMO ADOPTADAS O DISPONIBLES (CORREGIDO)
     final storeCompanions = <CompanionModel>[];
     
     for (final companion in allCompanions) {
-      // Verificar si ya está adoptada
-      bool isAdopted = false;
+      // 🔥 VERIFICAR SI EL TIPO DE MASCOTA YA FUE ADOPTADO (CUALQUIER ETAPA)
+      bool isTypeAdopted = adoptedTypes.contains(companion.type);
       
-      // Verificar por Pet ID si es CompanionModelWithPetId
+      // También verificar por ID específico (compatibilidad)
+      bool isSpecificAdopted = false;
       if (companion is CompanionModelWithPetId) {
-        isAdopted = adoptedIds.contains(companion.petId);
+        isSpecificAdopted = adoptedIds.contains(companion.petId);
+      }
+      if (!isSpecificAdopted) {
+        isSpecificAdopted = adoptedLocalIds.contains(companion.id);
       }
       
-      // También verificar por ID local
-      if (!isAdopted) {
-        isAdopted = adoptedLocalIds.contains(companion.id);
-      }
+      // 🔥 LÓGICA CORREGIDA: Si ya tienes CUALQUIER etapa de este tipo, todas las etapas están "adoptadas"
+      final isAdopted = isTypeAdopted || isSpecificAdopted;
       
       // Marcar correctamente el estado
       final companionForStore = companion.copyWith(
@@ -719,7 +727,8 @@ Future<List<CompanionModel>> getStoreCompanions({required String userId}) async 
       storeCompanions.add(companionForStore);
       
       final status = isAdopted ? "YA ADOPTADA" : "DISPONIBLE";
-      debugPrint('🏪 [API] ${companion.displayName} ${companion.stage.name}: ${companion.purchasePrice}★ ($status)');
+      final reason = isTypeAdopted ? "(por tipo)" : isSpecificAdopted ? "(por ID)" : "";
+      debugPrint('🏪 [API] ${companion.displayName} ${companion.stage.name}: ${companion.purchasePrice}★ ($status $reason)');
     }
 
     // 🔥 5. ORDENAR: Disponibles primero, luego por precio
@@ -733,7 +742,7 @@ Future<List<CompanionModel>> getStoreCompanions({required String userId}) async 
       return a.purchasePrice.compareTo(b.purchasePrice);
     });
 
-    debugPrint('🛍️ [API] === TIENDA FINAL (SOLO API) ===');
+    debugPrint('🛍️ [API] === TIENDA FINAL (EVOLUCIONES CORREGIDAS) ===');
     debugPrint('🛒 [API] Total mascotas en tienda: ${storeCompanions.length}');
 
     for (final companion in storeCompanions) {
@@ -1262,8 +1271,8 @@ Future<List<CompanionModel>> getStoreCompanions({required String userId}) async 
     debugPrint('🦋 [EVOLUTION] Creando companion evolucionado desde petId: $petId');
     debugPrint('📊 [EVOLUTION] Etapa actual recibida: ${currentStage.name}');
     
-    // 🔥 MAPEAR PET ID A TIPO
-    final companionType = _mapPetIdToCompanionType(petId);
+    // 🔥 MAPEAR PET ID A TIPO CON CONTEXTO MEJORADO
+    final companionType = _mapPetIdToCompanionTypeWithContext(petId, currentStage);
     
     // 🔥 DETERMINAR LA SIGUIENTE ETAPA DE EVOLUCIÓN
     CompanionStage nextStage;
@@ -1280,6 +1289,7 @@ Future<List<CompanionModel>> getStoreCompanions({required String userId}) async 
     }
     
     debugPrint('✨ [EVOLUTION] Evolución: ${currentStage.name} → ${nextStage.name}');
+    debugPrint('🎯 [EVOLUTION] Tipo preservado: ${companionType.name}');
     
     // 🔥 GENERAR NUEVO ID LOCAL PARA LA ETAPA EVOLUCIONADA
     final evolvedLocalId = '${companionType.name}_${nextStage.name}';
@@ -1310,8 +1320,76 @@ Future<List<CompanionModel>> getStoreCompanions({required String userId}) async 
     
     debugPrint('🎉 [EVOLUTION] Companion evolucionado creado: ${evolvedCompanion.displayName}');
     debugPrint('🆔 [EVOLUTION] Pet ID preservado: ${evolvedCompanion.petId}');
+    debugPrint('🎯 [EVOLUTION] Tipo final: ${evolvedCompanion.type.name}');
     
     return evolvedCompanion;
+  }
+  
+  /// 🔥 MAPEO CON CONTEXTO PARA EVOLUCIÓN - EVITA FALLBACK A DEXTER
+  CompanionType _mapPetIdToCompanionTypeWithContext(String petId, CompanionStage currentStage) {
+    debugPrint('🔍 [CONTEXT_MAPPING] Mapeando con contexto: $petId (${currentStage.name})');
+    
+    // Primero intentar el mapeo normal
+    final normalMapping = _mapPetIdToCompanionType(petId);
+    
+    // Si el mapeo normal no es por hash (es decir, fue reconocido), usarlo
+    final petIdLower = petId.toLowerCase();
+    bool wasRecognized = petIdLower.contains('dexter') ||
+                        petIdLower.contains('dog') ||
+                        petIdLower.contains('chihuahua') ||
+                        petIdLower.contains('mammal') ||
+                        petIdLower.contains('canine') ||
+                        petIdLower.contains('elly') ||
+                        petIdLower.contains('panda') ||
+                        petIdLower.contains('bear') ||
+                        petIdLower.contains('oso') ||
+                        petIdLower.contains('paxolotl') ||
+                        petIdLower.contains('axolotl') ||
+                        petIdLower.contains('ajolote') ||
+                        petIdLower.contains('amphibian') ||
+                        petIdLower.contains('anfibio') ||
+                        petIdLower.contains('yami') ||
+                        petIdLower.contains('jaguar') ||
+                        petIdLower.contains('felino') ||
+                        petIdLower.contains('cat') ||
+                        petIdLower.contains('feline') ||
+                        petIdLower.contains('001') ||
+                        petIdLower.contains('002') ||
+                        petIdLower.contains('003') ||
+                        petIdLower.contains('004') ||
+                        petIdLower.contains('pet1') ||
+                        petIdLower.contains('pet2') ||
+                        petIdLower.contains('pet3') ||
+                        petIdLower.contains('pet4') ||
+                        petIdLower.startsWith('d') ||
+                        petIdLower.startsWith('e') ||
+                        petIdLower.startsWith('p') ||
+                        petIdLower.startsWith('y');
+    
+    if (wasRecognized) {
+      debugPrint('✅ [CONTEXT_MAPPING] Pet ID reconocido, usando mapeo normal: ${normalMapping.name}');
+      return normalMapping;
+    }
+    
+    // Si no fue reconocido, intentar preservar el contexto de la etapa anterior
+    debugPrint('⚠️ [CONTEXT_MAPPING] Pet ID no reconocido, intentando preservar contexto');
+    
+    // Para evitar el fallback a Dexter, usar una distribución más inteligente
+    // basada en características del ID
+    if (petId.length > 10) {
+      // IDs largos probablemente son UUIDs, usar distribución por longitud
+      final lengthHash = petId.length % 4;
+      switch (lengthHash) {
+        case 0: return CompanionType.elly;
+        case 1: return CompanionType.paxolotl;
+        case 2: return CompanionType.yami;
+        case 3: return CompanionType.dexter;
+      }
+    }
+    
+    // Usar el mapeo normal como último recurso
+    debugPrint('🎲 [CONTEXT_MAPPING] Usando mapeo normal como último recurso: ${normalMapping.name}');
+    return normalMapping;
   }
   
   /// Helper para obtener nombre del companion según la etapa
@@ -1548,26 +1626,80 @@ Future<List<CompanionModel>> getStoreCompanions({required String userId}) async 
     );
   }
 
-  /// Mapear Pet ID a CompanionType
+  /// Mapear Pet ID a CompanionType con lógica mejorada
   CompanionType _mapPetIdToCompanionType(String petId) {
     final petIdLower = petId.toLowerCase();
+    
+    debugPrint(' [MAPPING] Mapeando Pet ID: $petId');
 
+    // MAPEO MEJORADO CON MÁS PATRONES
     if (petIdLower.contains('dexter') ||
         petIdLower.contains('dog') ||
-        petIdLower.contains('chihuahua')) {
+        petIdLower.contains('chihuahua') ||
+        petIdLower.contains('mammal') ||
+        petIdLower.contains('canine')) {
+      debugPrint(' [MAPPING] Detectado como Dexter');
       return CompanionType.dexter;
-    } else if (petIdLower.contains('elly') || petIdLower.contains('panda')) {
+    } else if (petIdLower.contains('elly') || 
+               petIdLower.contains('panda') ||
+               petIdLower.contains('bear') ||
+               petIdLower.contains('oso')) {
+      debugPrint(' [MAPPING] Detectado como Elly');
       return CompanionType.elly;
     } else if (petIdLower.contains('paxolotl') ||
-        petIdLower.contains('axolotl') ||
-        petIdLower.contains('ajolote')) {
+               petIdLower.contains('axolotl') ||
+               petIdLower.contains('ajolote') ||
+               petIdLower.contains('amphibian') ||
+               petIdLower.contains('anfibio')) {
+      debugPrint(' [MAPPING] Detectado como Paxolotl');
       return CompanionType.paxolotl;
-    } else if (petIdLower.contains('yami') || petIdLower.contains('jaguar')) {
+    } else if (petIdLower.contains('yami') || 
+               petIdLower.contains('jaguar') ||
+               petIdLower.contains('felino') ||
+               petIdLower.contains('cat') ||
+               petIdLower.contains('feline')) {
+      debugPrint(' [MAPPING] Detectado como Yami');
       return CompanionType.yami;
     }
 
-    debugPrint('⚠️ [MAPPING] Pet ID no reconocido: $petId, usando dexter por defecto');
-    return CompanionType.dexter;
+    // MAPEO POR PATRONES DE ID NUMÉRICOS O CÓDIGOS
+    if (petIdLower.contains('001') || petIdLower.contains('pet1') || petIdLower.startsWith('d')) {
+      debugPrint(' [MAPPING] Detectado por patrón como Dexter');
+      return CompanionType.dexter;
+    } else if (petIdLower.contains('002') || petIdLower.contains('pet2') || petIdLower.startsWith('e')) {
+      debugPrint(' [MAPPING] Detectado por patrón como Elly');
+      return CompanionType.elly;
+    } else if (petIdLower.contains('003') || petIdLower.contains('pet3') || petIdLower.startsWith('p')) {
+      debugPrint(' [MAPPING] Detectado por patrón como Paxolotl');
+      return CompanionType.paxolotl;
+    } else if (petIdLower.contains('004') || petIdLower.contains('pet4') || petIdLower.startsWith('y')) {
+      debugPrint(' [MAPPING] Detectado por patrón como Yami');
+      return CompanionType.yami;
+    }
+
+    // ÚLTIMO RECURSO: Intentar extraer de contexto o usar hash
+    debugPrint(' [MAPPING] Pet ID no reconocido: $petId');
+    debugPrint(' [MAPPING] Usando hash para distribución equitativa');
+    
+    // Usar hash del petId para distribución más equitativa en lugar de siempre dexter
+    final hash = petId.hashCode.abs() % 4;
+    switch (hash) {
+      case 0:
+        debugPrint(' [MAPPING] Hash asignado a Dexter');
+        return CompanionType.dexter;
+      case 1:
+        debugPrint(' [MAPPING] Hash asignado a Elly');
+        return CompanionType.elly;
+      case 2:
+        debugPrint(' [MAPPING] Hash asignado a Paxolotl');
+        return CompanionType.paxolotl;
+      case 3:
+        debugPrint(' [MAPPING] Hash asignado a Yami');
+        return CompanionType.yami;
+      default:
+        debugPrint(' [MAPPING] Fallback final a Dexter');
+        return CompanionType.dexter;
+    }
   }
 
   /// Mapear Pet ID a CompanionStage

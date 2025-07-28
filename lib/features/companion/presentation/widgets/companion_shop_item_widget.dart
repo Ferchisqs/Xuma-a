@@ -1,5 +1,5 @@
 // lib/features/companion/presentation/widgets/companion_shop_item_widget.dart
-// 🔥 CORREGIDO: Sin lógica de Dexter gratis, todos se compran según la API
+// 🔥 ARCHIVO COMPLETO CORREGIDO: Mensajes más claros para tipos adoptados
 
 import 'package:flutter/material.dart';
 import '../../domain/entities/companion_entity.dart';
@@ -201,19 +201,20 @@ class CompanionShopItemWidget extends StatelessWidget {
     );
   }
   
-  /// Botón de acción principal
+  /// Botón de acción principal - CORREGIDO para tipos adoptados
   Widget _buildActionButton(BuildContext context, bool canAfford, bool isAlreadyOwned) {
     String buttonText;
     IconData buttonIcon;
     Color? buttonColor;
     
     if (isAlreadyOwned) {
-      buttonText = 'YA TUYO';
-      buttonIcon = Icons.check_circle;
+      // 🔥 MENSAJE MÁS ESPECÍFICO PARA TIPOS ADOPTADOS
+      buttonText = 'TIPO ADOPTADO';
+      buttonIcon = Icons.pets;
       buttonColor = Colors.blue;
     } else if (canAfford) {
       buttonText = 'ADOPTAR ${companion.purchasePrice}★';
-      buttonIcon = Icons.pets;
+      buttonIcon = Icons.favorite;
       buttonColor = _getCompanionColor();
     } else {
       buttonText = 'SIN PUNTOS';
@@ -267,22 +268,43 @@ class CompanionShopItemWidget extends StatelessWidget {
   List<Widget> _buildOverlays(bool canAfford, bool isAlreadyOwned) {
     final overlays = <Widget>[];
     
-    // Overlay para ya poseído
+    // Overlay para ya poseído - MEJORADO
     if (isAlreadyOwned) {
       overlays.add(
         Positioned(
           top: 8,
           right: 8,
           child: Container(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.blue,
               borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            child: Icon(
-              Icons.check_circle,
-              color: Colors.white,
-              size: 16,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  color: Colors.white,
+                  size: 12,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'ADOPTADO',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -349,13 +371,34 @@ class CompanionShopItemWidget extends StatelessWidget {
     }
   }
   
-  /// Mostrar mensaje para companion ya poseído
+  /// 🔥 MENSAJE MEJORADO para companion ya poseído
   void _showAlreadyOwnedMessage(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Ya tienes a ${companion.displayName} en tu colección.'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '🐾 Ya tienes una mascota ${companion.typeDescription}',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Solo puedes adoptar una mascota de cada tipo. Tu ${companion.typeDescription} puede evolucionar a diferentes etapas.',
+              style: const TextStyle(fontSize: 14),
+            ),
+          ],
+        ),
         backgroundColor: Colors.blue,
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
     );
   }
