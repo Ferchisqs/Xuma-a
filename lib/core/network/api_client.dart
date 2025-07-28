@@ -747,6 +747,35 @@ Future<void> _addAuthToken(RequestOptions options, String serviceName) async {
     );
   }
 
+  // Media service methods
+  Future<Response> getMedia(
+    String endpoint, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    print('📁 [API CLIENT] Media get: $endpoint');
+    
+    return await get(
+      endpoint,
+      queryParameters: queryParameters,
+      options: Options(extra: {'baseUrl': 'https://media-service-production-6446.up.railway.app'}),
+    );
+  }
+
+  Future<Response> postMedia(
+    String endpoint, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    print('📁 [API CLIENT] Media post: $endpoint');
+    
+    return await post(
+      endpoint,
+      data: data,
+      queryParameters: queryParameters,
+      options: Options(extra: {'baseUrl': 'https://media-service-production-6446.up.railway.app'}),
+    );
+  }
+
   ServerException _handleDioError(DioException error) {
     switch (error.type) {
       case DioExceptionType.connectionTimeout:

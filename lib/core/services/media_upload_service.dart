@@ -53,8 +53,8 @@ class MediaUploadService {
 
     print('📤 [MEDIA UPLOAD] FormData created, uploading...');
 
-    // 🔧 USAR EL SERVICIO QUIZ PARA SUBIR MEDIA
-    final response = await _apiClient.postQuiz(
+    // 🔧 USAR EL SERVICIO MEDIA PARA SUBIR MEDIA
+    final response = await _apiClient.postMedia(
       '/api/media/upload',
       data: formData,
     );
