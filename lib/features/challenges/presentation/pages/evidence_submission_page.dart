@@ -875,7 +875,7 @@ class _EvidenceSubmissionContentState
         // Subir fotos con callback de progreso
         uploadedPhotoUrls = await mediaUploadService.uploadMultiplePhotos(
           photoFiles: _selectedImages,
-          category: 'challenge_evidence',
+          category: 'image',
           isPublic: true,
           uploadPurpose: 'challenge_evidence',
           onProgress: (current, total) {
