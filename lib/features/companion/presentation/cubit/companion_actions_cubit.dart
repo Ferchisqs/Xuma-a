@@ -87,267 +87,384 @@ class CompanionActionsCubit extends Cubit<CompanionActionsState> {
   }) : super(CompanionActionsInitial());
 
   // ==================== 🔥 ALIMENTAR VIA API - CORREGIDO ====================
-  Future<void> feedCompanionViaApi(CompanionEntity companion) async {
-    try {
-      debugPrint('🍎 [ACTIONS_CUBIT] === ALIMENTANDO CON idUserPet CORREGIDO ===');
-      debugPrint('🐾 [ACTIONS_CUBIT] Companion: ${companion.displayName}');
-      debugPrint('🏥 [ACTIONS_CUBIT] Salud actual: ${companion.hunger}/100');
-      
-      // 🔥 VALIDACIÓN RELAJADA: Permitir alimentar hasta 90 (en lugar de 95)
-      if (companion.hunger >= 90) {
-        emit(CompanionActionsError(
-          message: '🍽️ ${companion.displayName} está muy bien alimentado (${companion.hunger}/100)',
-          action: 'feeding',
-        ));
-        return;
-      }
-      
-      if (!companion.isOwned) {
-        emit(CompanionActionsError(
-          message: '🔒 No puedes alimentar a ${companion.displayName} porque no es tuyo',
-          action: 'feeding',
-        ));
-        return;
-      }
-      
-      emit(CompanionActionsLoading(
-        action: 'feeding',
-        companion: companion,
-      ));
-      
-      final userId = await tokenManager.getUserId();
-      if (userId == null) {
-        emit(CompanionActionsError(
-          message: '🔐 Usuario no autenticado',
-          action: 'feeding',
-        ));
-        return;
-      }
-      
-      // 🔥 EXTRACCIÓN CORREGIDA DEL idUserPet
-      final idUserPet = _extractCorrectUserPetId(companion);
-      debugPrint('🎯 [ACTIONS_CUBIT] === EXTRACCIÓN DE idUserPet ===');
-      debugPrint('🆔 [ACTIONS_CUBIT] idUserPet extraído: "$idUserPet"');
-      debugPrint('🔧 [ACTIONS_CUBIT] Tipo de companion: ${companion.runtimeType}');
-      
-      if (idUserPet.isEmpty || idUserPet.startsWith('ERROR_')) {
-        debugPrint('❌ [ACTIONS_CUBIT] idUserPet inválido: $idUserPet');
-        emit(CompanionActionsError(
-          message: '🔧 Error: Esta mascota no tiene un ID de usuario válido. Intenta recargar.',
-          action: 'feeding',
-        ));
-        return;
-      }
-      
-      debugPrint('🚀 [ACTIONS_CUBIT] Enviando request a API con idUserPet: $idUserPet');
-      
-      final result = await feedCompanionViaApiUseCase(
-        FeedCompanionViaApiParams(
-          userId: userId,
-          petId: idUserPet, // 🔥 USAR EL idUserPet CORRECTO
-        ),
-      );
-      
-      result.fold(
-        (failure) {
-          debugPrint('❌ [ACTIONS_CUBIT] Error API alimentando: ${failure.message}');
-          emit(CompanionActionsError(
-            message: failure.message,
-            action: 'feeding',
-          ));
-        },
-        (fedCompanion) {
-          debugPrint('✅ [ACTIONS_CUBIT] === ALIMENTACIÓN EXITOSA ===');
-          debugPrint('🏥 [ACTIONS_CUBIT] Salud anterior: ${companion.hunger} → Nueva: ${fedCompanion.hunger}');
-          
-          final healthGain = fedCompanion.hunger - companion.hunger;
-          final message = healthGain > 0 
-              ? '🍎 ¡${fedCompanion.displayName} ha sido alimentado! +$healthGain salud (${fedCompanion.hunger}/100)'
-              : '🍎 ¡${fedCompanion.displayName} ha sido alimentado! (${fedCompanion.hunger}/100)';
-          
-          emit(CompanionActionsSuccess(
-            action: 'feeding',
-            companion: fedCompanion,
-            message: message,
-          ));
-        },
-      );
-      
-    } catch (e) {
-      debugPrint('💥 [ACTIONS_CUBIT] Error inesperado alimentando: $e');
+ Future<void> feedCompanionViaApi(CompanionEntity companion) async {
+  try {
+    debugPrint('🍎 [ACTIONS_CUBIT] === ALIMENTANDO CON VALIDACIÓN DE TIPO ===');
+    debugPrint('🐾 [ACTIONS_CUBIT] Companion: ${companion.displayName}');
+    debugPrint('🎯 [ACTIONS_CUBIT] Tipo esperado: ${companion.type.name}');
+    debugPrint('🏥 [ACTIONS_CUBIT] Salud actual: ${companion.hunger}/100');
+    
+    // 🔥 VALIDACIÓN RELAJADA: Permitir alimentar hasta 90
+    if (companion.hunger >= 90) {
       emit(CompanionActionsError(
-        message: '❌ Error inesperado alimentando a ${companion.displayName}',
+        message: '🍽️ ${companion.displayName} está muy bien alimentado (${companion.hunger}/100)',
         action: 'feeding',
       ));
+      return;
     }
-  }
-  
-  // ==================== 🔥 DAR AMOR VIA API - CORREGIDO ====================
-  Future<void> loveCompanionViaApi(CompanionEntity companion) async {
-    try {
-      debugPrint('💖 [ACTIONS_CUBIT] === DANDO AMOR VIA API CORREGIDO ===');
-      debugPrint('🐾 [ACTIONS_CUBIT] Companion: ${companion.displayName}');
-      debugPrint('❤️ [ACTIONS_CUBIT] Felicidad actual: ${companion.happiness}/100');
-      
-      if (!companion.isOwned) {
-        emit(CompanionActionsError(
-          message: '🔒 No puedes dar amor a ${companion.displayName} porque no es tuyo',
-          action: 'loving',
-        ));
-        return;
-      }
-      
-      // 🔥 VALIDACIÓN RELAJADA: Permitir amar hasta 90 (en lugar de 95)
-      if (companion.happiness >= 90) {
-        emit(CompanionActionsError(
-          message: '❤️ ${companion.displayName} ya está muy feliz (${companion.happiness}/100)',
-          action: 'loving',
-        ));
-        return;
-      }
-      
-      emit(CompanionActionsLoading(
-        action: 'loving',
-        companion: companion,
-      ));
-      
-      final userId = await tokenManager.getUserId();
-      if (userId == null) {
-        emit(CompanionActionsError(
-          message: '🔐 Usuario no autenticado',
-          action: 'loving',
-        ));
-        return;
-      }
-      
-      // 🔥 EXTRACCIÓN CORREGIDA DEL idUserPet
-      final idUserPet = _extractCorrectUserPetId(companion);
-      debugPrint('🎯 [ACTIONS_CUBIT] === EXTRACCIÓN DE idUserPet PARA AMOR ===');
-      debugPrint('🆔 [ACTIONS_CUBIT] idUserPet extraído: "$idUserPet"');
-      
-      if (idUserPet.isEmpty || idUserPet.startsWith('ERROR_')) {
-        debugPrint('❌ [ACTIONS_CUBIT] idUserPet inválido: $idUserPet');
-        emit(CompanionActionsError(
-          message: '🔧 Error: Esta mascota no tiene un ID de usuario válido. Intenta recargar.',
-          action: 'loving',
-        ));
-        return;
-      }
-      
-      debugPrint('🚀 [ACTIONS_CUBIT] Enviando request de amor a API con idUserPet: $idUserPet');
-      
-      final result = await loveCompanionViaApiUseCase(
-        LoveCompanionViaApiParams(
-          userId: userId,
-          petId: idUserPet, // 🔥 USAR EL idUserPet CORRECTO
-        ),
-      );
-      
-      result.fold(
-        (failure) {
-          debugPrint('❌ [ACTIONS_CUBIT] Error API dando amor: ${failure.message}');
-          emit(CompanionActionsError(
-            message: failure.message,
-            action: 'loving',
-          ));
-        },
-        (lovedCompanion) {
-          debugPrint('✅ [ACTIONS_CUBIT] === AMOR EXITOSO ===');
-          debugPrint('❤️ [ACTIONS_CUBIT] Felicidad anterior: ${companion.happiness} → Nueva: ${lovedCompanion.happiness}');
-          
-          final happinessGain = lovedCompanion.happiness - companion.happiness;
-          final message = happinessGain > 0 
-              ? '💖 ¡${lovedCompanion.displayName} se siente amado! +$happinessGain felicidad (${lovedCompanion.happiness}/100)'
-              : '💖 ¡${lovedCompanion.displayName} se siente amado! (${lovedCompanion.happiness}/100)';
-          
-          emit(CompanionActionsSuccess(
-            action: 'loving',
-            companion: lovedCompanion,
-            message: message,
-          ));
-        },
-      );
-      
-    } catch (e) {
-      debugPrint('💥 [ACTIONS_CUBIT] Error inesperado dando amor: $e');
+    
+    if (!companion.isOwned) {
       emit(CompanionActionsError(
-        message: '❌ Error inesperado dando amor a ${companion.displayName}',
+        message: '🔒 No puedes alimentar a ${companion.displayName} porque no es tuyo',
+        action: 'feeding',
+      ));
+      return;
+    }
+    
+    emit(CompanionActionsLoading(
+      action: 'feeding',
+      companion: companion,
+    ));
+    
+    final userId = await tokenManager.getUserId();
+    if (userId == null) {
+      emit(CompanionActionsError(
+        message: '🔐 Usuario no autenticado',
+        action: 'feeding',
+      ));
+      return;
+    }
+    
+    // 🔥 EXTRACCIÓN CORREGIDA DEL idUserPet
+    final idUserPet = _extractCorrectUserPetId(companion);
+    debugPrint('🎯 [ACTIONS_CUBIT] === EXTRACCIÓN DE idUserPet PARA ALIMENTAR ===');
+    debugPrint('🆔 [ACTIONS_CUBIT] idUserPet extraído: "$idUserPet"');
+    debugPrint('🔧 [ACTIONS_CUBIT] Tipo de companion: ${companion.runtimeType}');
+    debugPrint('🎯 [ACTIONS_CUBIT] Tipo esperado: ${companion.type.name}');
+    
+    if (idUserPet.isEmpty || idUserPet.startsWith('ERROR_')) {
+      debugPrint('❌ [ACTIONS_CUBIT] idUserPet inválido: $idUserPet');
+      emit(CompanionActionsError(
+        message: '🔧 Error: Esta mascota no tiene un ID de usuario válido. Intenta recargar las mascotas.',
+        action: 'feeding',
+      ));
+      return;
+    }
+    
+    // 🔥 VALIDACIÓN FINAL: Verificar coherencia de tipo
+    final detectedType = _detectTypeFromUserPetId(idUserPet);
+    if (detectedType != companion.type) {
+      debugPrint('⚠️ [ACTIONS_CUBIT] ADVERTENCIA: Tipo no coincide');
+      debugPrint('🎯 [ACTIONS_CUBIT] Esperado: ${companion.type.name}');
+      debugPrint('🔍 [ACTIONS_CUBIT] Detectado en ID: ${detectedType.name}');
+    }
+    
+    debugPrint('🚀 [ACTIONS_CUBIT] Enviando request a API con idUserPet: $idUserPet');
+    
+    final result = await feedCompanionViaApiUseCase(
+      FeedCompanionViaApiParams(
+        userId: userId,
+        petId: idUserPet, // 🔥 USAR EL idUserPet CORRECTO
+      ),
+    );
+    
+    result.fold(
+      (failure) {
+        debugPrint('❌ [ACTIONS_CUBIT] Error API alimentando: ${failure.message}');
+        emit(CompanionActionsError(
+          message: failure.message,
+          action: 'feeding',
+        ));
+      },
+      (fedCompanion) {
+        debugPrint('✅ [ACTIONS_CUBIT] === ALIMENTACIÓN EXITOSA ===');
+        debugPrint('🎯 [ACTIONS_CUBIT] Tipo original: ${companion.type.name}');
+        debugPrint('🎯 [ACTIONS_CUBIT] Tipo alimentado: ${fedCompanion.type.name}');
+        debugPrint('🏥 [ACTIONS_CUBIT] Salud anterior: ${companion.hunger} → Nueva: ${fedCompanion.hunger}');
+        
+        // 🔥 VALIDAR QUE SE ALIMENTÓ LA MASCOTA CORRECTA
+        if (fedCompanion.type != companion.type) {
+          debugPrint('🚨 [ACTIONS_CUBIT] ERROR: Se alimentó una mascota diferente!');
+          debugPrint('🎯 [ACTIONS_CUBIT] Se quería alimentar: ${companion.displayName} (${companion.type.name})');
+          debugPrint('🔍 [ACTIONS_CUBIT] Se alimentó: ${fedCompanion.displayName} (${fedCompanion.type.name})');
+          
+          emit(CompanionActionsError(
+            message: '⚠️ Error: Se alimentó ${fedCompanion.displayName} en lugar de ${companion.displayName}. Problema de mapeo de IDs.',
+            action: 'feeding',
+          ));
+          return;
+        }
+        
+        final healthGain = fedCompanion.hunger - companion.hunger;
+        final message = healthGain > 0 
+            ? '🍎 ¡${fedCompanion.displayName} ha sido alimentado! +$healthGain salud (${fedCompanion.hunger}/100)'
+            : '🍎 ¡${fedCompanion.displayName} ha sido alimentado! (${fedCompanion.hunger}/100)';
+        
+        emit(CompanionActionsSuccess(
+          action: 'feeding',
+          companion: fedCompanion,
+          message: message,
+        ));
+      },
+    );
+    
+  } catch (e) {
+    debugPrint('💥 [ACTIONS_CUBIT] Error inesperado alimentando: $e');
+    emit(CompanionActionsError(
+      message: '❌ Error inesperado alimentando a ${companion.displayName}',
+      action: 'feeding',
+    ));
+  }
+}
+
+// 🔥 ACTUALIZACIÓN EN DAR AMOR - Agregar más debug
+Future<void> loveCompanionViaApi(CompanionEntity companion) async {
+  try {
+    debugPrint('💖 [ACTIONS_CUBIT] === DANDO AMOR CON VALIDACIÓN DE TIPO ===');
+    debugPrint('🐾 [ACTIONS_CUBIT] Companion: ${companion.displayName}');
+    debugPrint('🎯 [ACTIONS_CUBIT] Tipo esperado: ${companion.type.name}');
+    debugPrint('❤️ [ACTIONS_CUBIT] Felicidad actual: ${companion.happiness}/100');
+    
+    if (!companion.isOwned) {
+      emit(CompanionActionsError(
+        message: '🔒 No puedes dar amor a ${companion.displayName} porque no es tuyo',
         action: 'loving',
       ));
+      return;
     }
+    
+    // 🔥 VALIDACIÓN RELAJADA: Permitir amar hasta 90
+    if (companion.happiness >= 90) {
+      emit(CompanionActionsError(
+        message: '❤️ ${companion.displayName} ya está muy feliz (${companion.happiness}/100)',
+        action: 'loving',
+      ));
+      return;
+    }
+    
+    emit(CompanionActionsLoading(
+      action: 'loving',
+      companion: companion,
+    ));
+    
+    final userId = await tokenManager.getUserId();
+    if (userId == null) {
+      emit(CompanionActionsError(
+        message: '🔐 Usuario no autenticado',
+        action: 'loving',
+      ));
+      return;
+    }
+    
+    // 🔥 EXTRACCIÓN CORREGIDA DEL idUserPet
+    final idUserPet = _extractCorrectUserPetId(companion);
+    debugPrint('🎯 [ACTIONS_CUBIT] === EXTRACCIÓN DE idUserPet PARA AMOR ===');
+    debugPrint('🆔 [ACTIONS_CUBIT] idUserPet extraído: "$idUserPet"');
+    debugPrint('🎯 [ACTIONS_CUBIT] Tipo esperado: ${companion.type.name}');
+    
+    if (idUserPet.isEmpty || idUserPet.startsWith('ERROR_')) {
+      debugPrint('❌ [ACTIONS_CUBIT] idUserPet inválido: $idUserPet');
+      emit(CompanionActionsError(
+        message: '🔧 Error: Esta mascota no tiene un ID de usuario válido. Intenta recargar las mascotas.',
+        action: 'loving',
+      ));
+      return;
+    }
+    
+    // 🔥 VALIDACIÓN FINAL: Verificar coherencia de tipo
+    final detectedType = _detectTypeFromUserPetId(idUserPet);
+    if (detectedType != companion.type) {
+      debugPrint('⚠️ [ACTIONS_CUBIT] ADVERTENCIA: Tipo no coincide en amor');
+      debugPrint('🎯 [ACTIONS_CUBIT] Esperado: ${companion.type.name}');
+      debugPrint('🔍 [ACTIONS_CUBIT] Detectado en ID: ${detectedType.name}');
+    }
+    
+    debugPrint('🚀 [ACTIONS_CUBIT] Enviando request de amor a API con idUserPet: $idUserPet');
+    
+    final result = await loveCompanionViaApiUseCase(
+      LoveCompanionViaApiParams(
+        userId: userId,
+        petId: idUserPet, // 🔥 USAR EL idUserPet CORRECTO
+      ),
+    );
+    
+    result.fold(
+      (failure) {
+        debugPrint('❌ [ACTIONS_CUBIT] Error API dando amor: ${failure.message}');
+        emit(CompanionActionsError(
+          message: failure.message,
+          action: 'loving',
+        ));
+      },
+      (lovedCompanion) {
+        debugPrint('✅ [ACTIONS_CUBIT] === AMOR EXITOSO ===');
+        debugPrint('🎯 [ACTIONS_CUBIT] Tipo original: ${companion.type.name}');
+        debugPrint('🎯 [ACTIONS_CUBIT] Tipo que recibió amor: ${lovedCompanion.type.name}');
+        debugPrint('❤️ [ACTIONS_CUBIT] Felicidad anterior: ${companion.happiness} → Nueva: ${lovedCompanion.happiness}');
+        
+        // 🔥 VALIDAR QUE SE DIO AMOR A LA MASCOTA CORRECTA
+        if (lovedCompanion.type != companion.type) {
+          debugPrint('🚨 [ACTIONS_CUBIT] ERROR: Se dio amor a una mascota diferente!');
+          debugPrint('🎯 [ACTIONS_CUBIT] Se quería dar amor a: ${companion.displayName} (${companion.type.name})');
+          debugPrint('🔍 [ACTIONS_CUBIT] Se dio amor a: ${lovedCompanion.displayName} (${lovedCompanion.type.name})');
+          
+          emit(CompanionActionsError(
+            message: '⚠️ Error: Se dio amor a ${lovedCompanion.displayName} en lugar de ${companion.displayName}. Problema de mapeo de IDs.',
+            action: 'loving',
+          ));
+          return;
+        }
+        
+        final happinessGain = lovedCompanion.happiness - companion.happiness;
+        final message = happinessGain > 0 
+            ? '💖 ¡${lovedCompanion.displayName} se siente amado! +$happinessGain felicidad (${lovedCompanion.happiness}/100)'
+            : '💖 ¡${lovedCompanion.displayName} se siente amado! (${lovedCompanion.happiness}/100)';
+        
+        emit(CompanionActionsSuccess(
+          action: 'loving',
+          companion: lovedCompanion,
+          message: message,
+        ));
+      },
+    );
+    
+  } catch (e) {
+    debugPrint('💥 [ACTIONS_CUBIT] Error inesperado dando amor: $e');
+    emit(CompanionActionsError(
+      message: '❌ Error inesperado dando amor a ${companion.displayName}',
+      action: 'loving',
+    ));
   }
+}
 
   // ==================== 🔥 MÉTODO CORREGIDO PARA EXTRAER idUserPet ====================
   String _extractCorrectUserPetId(CompanionEntity companion) {
-    debugPrint('🔍 [EXTRACT] === EXTRAYENDO idUserPet CORRECTAMENTE ===');
-    debugPrint('🐾 [EXTRACT] Companion: ${companion.displayName}');
-    debugPrint('🆔 [EXTRACT] Local ID: ${companion.id}');
-    debugPrint('🔧 [EXTRACT] Tipo: ${companion.runtimeType}');
+  debugPrint('🔍 [EXTRACT] === EXTRAYENDO idUserPet CORRECTAMENTE ===');
+  debugPrint('🐾 [EXTRACT] Companion: ${companion.displayName}');
+  debugPrint('🎯 [EXTRACT] Tipo esperado: ${companion.type.name}');
+  debugPrint('🆔 [EXTRACT] Local ID: ${companion.id}');
+  debugPrint('🔧 [EXTRACT] Tipo de clase: ${companion.runtimeType}');
+  
+  // 1. 🔥 MÉTODO PRINCIPAL: CompanionModelWithPetId
+  if (companion is CompanionModelWithPetId) {
+    final idUserPet = companion.petId;
+    debugPrint('✅ [EXTRACT] Es CompanionModelWithPetId');
+    debugPrint('🎯 [EXTRACT] petId extraído: "$idUserPet"');
     
-    // 1. 🔥 MÉTODO PRINCIPAL: CompanionModelWithPetId
-    if (companion is CompanionModelWithPetId) {
-      final idUserPet = companion.petId;
-      debugPrint('✅ [EXTRACT] Es CompanionModelWithPetId');
-      debugPrint('🎯 [EXTRACT] petId extraído: "$idUserPet"');
+    if (_isValidUserPetId(idUserPet)) {
+      debugPrint('✅ [EXTRACT] idUserPet VÁLIDO: $idUserPet');
       
-      if (_isValidUserPetId(idUserPet)) {
-        debugPrint('✅ [EXTRACT] idUserPet VÁLIDO: $idUserPet');
+      // 🔥 VALIDACIÓN ADICIONAL: Verificar que el tipo coincida
+      final expectedType = companion.type;
+      final detectedType = _detectTypeFromUserPetId(idUserPet);
+      
+      if (detectedType == expectedType) {
+        debugPrint('✅ [EXTRACT] Tipo coincide - ${expectedType.name}');
         return idUserPet;
       } else {
-        debugPrint('⚠️ [EXTRACT] idUserPet INVÁLIDO: "$idUserPet"');
+        debugPrint('⚠️ [EXTRACT] ADVERTENCIA: Tipo no coincide');
+        debugPrint('🎯 [EXTRACT] Esperado: ${expectedType.name}, Detectado: ${detectedType.name}');
+        // 🔥 AÚN ASÍ LO USAMOS SI ES VÁLIDO
+        return idUserPet;
       }
+    } else {
+      debugPrint('⚠️ [EXTRACT] idUserPet INVÁLIDO: "$idUserPet"');
     }
-    
-    // 2. 🔥 MÉTODO ALTERNATIVO: JSON del CompanionModel
-    if (companion is CompanionModel) {
-      try {
-        final json = companion.toJson();
-        debugPrint('📄 [EXTRACT] Buscando en JSON...');
-        debugPrint('🗝️ [EXTRACT] Keys disponibles: ${json.keys.toList()}');
-        
-        // Lista de posibles nombres de campo para idUserPet
-        final possibleKeys = [
-          'petId',           // Campo principal
-          'idUserPet',       // Campo alternativo
-          'userPetId',       // Otra variación
-          'user_pet_id',     // Snake case
-          'id_user_pet',     // Otra variación snake case
-        ];
-        
-        for (final key in possibleKeys) {
-          if (json.containsKey(key) && json[key] != null) {
-            final value = json[key] as String;
-            debugPrint('🎯 [EXTRACT] Encontrado $key: "$value"');
+  }
+  
+  // 2. 🔥 MÉTODO ALTERNATIVO: JSON del CompanionModel
+  if (companion is CompanionModel) {
+    try {
+      final json = companion.toJson();
+      debugPrint('📄 [EXTRACT] Buscando en JSON...');
+      debugPrint('🗝️ [EXTRACT] Keys disponibles: ${json.keys.toList()}');
+      
+      // Lista de posibles nombres de campo para idUserPet
+      final possibleKeys = [
+        'petId',           // Campo principal
+        'idUserPet',       // Campo alternativo
+        'userPetId',       // Otra variación
+        'user_pet_id',     // Snake case
+        'id_user_pet',     // Otra variación snake case
+        'apiPetId',        // Si se guardó así
+        'realPetId',       // Otra posibilidad
+      ];
+      
+      for (final key in possibleKeys) {
+        if (json.containsKey(key) && json[key] != null) {
+          final value = json[key] as String;
+          debugPrint('🎯 [EXTRACT] Encontrado $key: "$value"');
+          
+          if (_isValidUserPetId(value)) {
+            // 🔥 VALIDACIÓN ADICIONAL: Verificar coherencia de tipo
+            final expectedType = companion.type;
+            final detectedType = _detectTypeFromUserPetId(value);
             
-            if (_isValidUserPetId(value)) {
+            if (detectedType == expectedType) {
               debugPrint('✅ [EXTRACT] idUserPet del JSON VÁLIDO: $value');
+              return value;
+            } else {
+              debugPrint('⚠️ [EXTRACT] Tipo no coincide en JSON');
+              debugPrint('🎯 [EXTRACT] Esperado: ${expectedType.name}, Detectado: ${detectedType.name}');
+              // 🔥 AÚN ASÍ LO USAMOS SI ES EL ÚNICO VÁLIDO
               return value;
             }
           }
         }
-        
-        debugPrint('❌ [EXTRACT] No se encontró idUserPet válido en JSON');
-      } catch (e) {
-        debugPrint('❌ [EXTRACT] Error accediendo JSON: $e');
       }
+      
+      debugPrint('❌ [EXTRACT] No se encontró idUserPet válido en JSON');
+    } catch (e) {
+      debugPrint('❌ [EXTRACT] Error accediendo JSON: $e');
     }
-    
-    // 3. 🆘 ANÁLISIS DETALLADO DEL PROBLEMA
-    debugPrint('🆘 [EXTRACT] === ANÁLISIS DEL PROBLEMA ===');
-    debugPrint('❌ [EXTRACT] NO SE ENCONTRÓ idUserPet VÁLIDO');
-    debugPrint('🔍 [EXTRACT] Posibles causas:');
-    debugPrint('   1. El companion no se creó correctamente desde getPetDetails');
-    debugPrint('   2. El endpoint getPetDetails no devuelve idUserPet');
-    debugPrint('   3. El mapping de la respuesta está incompleto');
-    debugPrint('   4. La mascota no está realmente adoptada por el usuario');
-    
-    // 4. 🔥 RETURN ERROR ID para debugging
-    final errorId = 'ERROR_NO_USER_PET_ID_${companion.id}_${DateTime.now().millisecondsSinceEpoch}';
-    debugPrint('🚨 [EXTRACT] Devolviendo ID de error: $errorId');
-    debugPrint('💡 [EXTRACT] ACCIÓN REQUERIDA: Verificar el flujo de adopción y getPetDetails');
-    
-    return errorId;
   }
+  
+  // 3. 🆘 ANÁLISIS DETALLADO DEL PROBLEMA
+  debugPrint('🆘 [EXTRACT] === ANÁLISIS DEL PROBLEMA ===');
+  debugPrint('❌ [EXTRACT] NO SE ENCONTRÓ idUserPet VÁLIDO');
+  debugPrint('🔍 [EXTRACT] Posibles causas:');
+  debugPrint('   1. El companion no se creó correctamente desde getUserCompanions');
+  debugPrint('   2. El endpoint getUserCompanions no devuelve idUserPet');
+  debugPrint('   3. El mapping de la respuesta está incompleto');
+  debugPrint('   4. La mascota no está realmente adoptada por el usuario');
+  
+  // 4. 🔥 CREAR UN ID DE ERROR DESCRIPTIVO
+  final expectedType = companion.type.name;
+  final errorId = 'ERROR_NO_USER_PET_ID_${expectedType}_${companion.stage.name}_${DateTime.now().millisecondsSinceEpoch}';
+  
+  debugPrint('🚨 [EXTRACT] Devolviendo ID de error: $errorId');
+  debugPrint('💡 [EXTRACT] ACCIÓN REQUERIDA: Verificar el flujo de getUserCompanions');
+  
+  return errorId;
+}
+
+CompanionType _detectTypeFromUserPetId(String idUserPet) {
+  debugPrint('🔍 [TYPE_DETECT] Detectando tipo desde idUserPet: $idUserPet');
+  
+  final idLower = idUserPet.toLowerCase();
+  
+  // 🔥 DETECCIÓN POR PATRONES DE NOMBRE
+  if (idLower.contains('dexter') ||
+      idLower.contains('dog') ||
+      idLower.contains('chihuahua')) {
+    debugPrint('✅ [TYPE_DETECT] Detectado como Dexter');
+    return CompanionType.dexter;
+  } else if (idLower.contains('elly') ||
+             idLower.contains('panda')) {
+    debugPrint('✅ [TYPE_DETECT] Detectado como Elly');
+    return CompanionType.elly;
+  } else if (idLower.contains('paxolotl') ||
+             idLower.contains('axolotl') ||
+             idLower.contains('ajolote')) {
+    debugPrint('✅ [TYPE_DETECT] Detectado como Paxolotl');
+    return CompanionType.paxolotl;
+  } else if (idLower.contains('yami') ||
+             idLower.contains('jaguar')) {
+    debugPrint('✅ [TYPE_DETECT] Detectado como Yami');
+    return CompanionType.yami;
+  }
+  
+  // 🔥 SI NO SE DETECTA ESPECÍFICAMENTE, USAR HASH CONSISTENTE
+  debugPrint('⚠️ [TYPE_DETECT] No se detectó tipo específico, usando hash');
+  final hash = idUserPet.hashCode.abs() % 4;
+  switch (hash) {
+    case 0: return CompanionType.dexter;
+    case 1: return CompanionType.elly;
+    case 2: return CompanionType.paxolotl;
+    case 3: return CompanionType.yami;
+    default: return CompanionType.dexter;
+  }
+}
 
   // 🔥 HELPER PARA VALIDAR idUserPet
   bool _isValidUserPetId(String? idUserPet) {

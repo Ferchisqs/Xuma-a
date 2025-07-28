@@ -175,7 +175,7 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Error al cargar el quiz',
+                    'No hay quizzes disponibles',
                     style: AppTextStyles.h4.copyWith(
                       color: AppColors.error,
                       fontWeight: FontWeight.bold,
@@ -183,53 +183,10 @@ class _TriviaQuizGameContentState extends State<_TriviaQuizGameContent> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    errorMessage,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
+                 
                   
                   // Debug info
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Debug Info:',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Quiz ID: ${widget.quizId}',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        Text(
-                          'User ID: ${widget.userId}',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        Text(
-                          'Expected URL: /api/quiz/questions/quiz/${widget.quizId}',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  
                 ],
               ),
             ),

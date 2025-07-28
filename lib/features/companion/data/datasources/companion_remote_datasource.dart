@@ -206,13 +206,17 @@ Future<CompanionModel> getPetDetails({
 
     final petData = response.data as Map<String, dynamic>;
     
-    // 🔥 EXTRACCIÓN BÁSICA
-    final responsePetId = petData['pet_id'] as String;
+    // 🔥 EXTRACCIÓN BÁSICA CON VALIDACIÓN
+    final responsePetId = petData['pet_id'] as String? ?? petId;
     final name = petData['name'] as String? ?? 'Mascota';
     final description = petData['description'] as String? ?? 'Una mascota especial';
     final speciesType = petData['species_type'] as String? ?? 'mammal';
     
     debugPrint('🐾 [API] Pet básico - ID: $responsePetId, Nombre: $name, Tipo: $speciesType');
+
+    // 🔥 MAPEO CORRECTO DEL TIPO BASADO EN LA RESPUESTA REAL
+    final companionType = _mapNameAndSpeciesToCompanionType(name, speciesType, responsePetId);
+    debugPrint('🎯 [API] Tipo mapeado: ${companionType.name}');
 
     // 🔥 EXTRACCIÓN BASE STATS
     final baseStats = petData['base_stats'] as Map<String, dynamic>? ?? {};
@@ -241,6 +245,8 @@ Future<CompanionModel> getPetDetails({
       'user_pet_id',   // Otra variación
       'id',            // ID genérico
       'petId',         // Pet ID dentro de user_pet_info
+      'user_pet_instance_id', // ID de instancia específica
+      'instance_id',   // ID de instancia
     ];
     
     debugPrint('🔍 [API] === BÚSQUEDA EXHAUSTIVA DE idUserPet ===');
@@ -267,9 +273,9 @@ Future<CompanionModel> getPetDetails({
         debugPrint('   $key: $value (${value.runtimeType})');
       });
       
-      // 🔥 FALLBACK: usar el pet_id original con prefijo para identificar el problema
-      idUserPet = 'FALLBACK_${responsePetId}_${DateTime.now().millisecondsSinceEpoch}';
-      debugPrint('🚨 [API] Usando FALLBACK ID: $idUserPet');
+      // 🔥 FALLBACK: usar el pet_id original con un marcador especial
+      idUserPet = 'INSTANCE_${responsePetId}_${companionType.name}_${DateTime.now().millisecondsSinceEpoch}';
+      debugPrint('🚨 [API] Usando FALLBACK ID con tipo específico: $idUserPet');
     }
     
     // 🔥 EXTRACCIÓN DEL RESTO DE DATOS
@@ -288,14 +294,13 @@ Future<CompanionModel> getPetDetails({
     debugPrint('🎯 [API] Nivel: $level, Etapa: $evolutionStage, EXP: $experiencePoints');
     debugPrint('⭐ [API] Destacada: $isFeatured, Nickname: $nickname');
 
-    // 🔥 MAPEO CORRECTO
-    final companionType = _mapNameToCompanionType(name);
+    // 🔥 MAPEO CORRECTO DE LA ETAPA
     final companionStage = _mapEvolutionStageToCompanionStage(evolutionStage);
     
-    // 🔥 CREAR COMPANION MODEL CON EL idUserPet CORRECTO
+    // 🔥 CREAR COMPANION MODEL CON EL TIPO CORRECTO
     final companion = CompanionModelWithPetId(
-      id: '${companionType.name}_${companionStage.name}',
-      type: companionType,
+      id: '${companionType.name}_${companionStage.name}', // 🔥 USAR TIPO CORRECTO
+      type: companionType, // 🔥 USAR TIPO MAPEADO CORRECTAMENTE
       stage: companionStage,
       name: nickname,
       description: description,
@@ -315,12 +320,13 @@ Future<CompanionModel> getPetDetails({
       petId: idUserPet, // 🔥 USAR EL idUserPet EXTRAÍDO O FALLBACK
     );
 
-    debugPrint('✅ [API] === COMPANION CREADO CON idUserPet ===');
-    debugPrint('🐾 [API] ${companion.displayName} - Pet ID: ${companion.petId}');
+    debugPrint('✅ [API] === COMPANION CREADO CON TIPO CORRECTO ===');
+    debugPrint('🐾 [API] ${companion.displayName} - Tipo: ${companion.type.name}');
+    debugPrint('🆔 [API] Pet ID: ${companion.petId}');
     debugPrint('📊 [API] Stats: Felicidad: ${companion.happiness}, Salud: ${companion.hunger}');
     
     // 🔥 VERIFICACIÓN FINAL
-    if (companion.petId.startsWith('FALLBACK_')) {
+    if (companion.petId.startsWith('INSTANCE_')) {
       debugPrint('⚠️ [API] ADVERTENCIA: Se está usando un FALLBACK ID');
       debugPrint('💡 [API] ACCIÓN REQUERIDA: Verificar estructura de respuesta de API');
     }
@@ -333,11 +339,130 @@ Future<CompanionModel> getPetDetails({
   }
 }
 
+CompanionType _mapNameAndSpeciesToCompanionType(String name, String speciesType, String petId) {
+  debugPrint('🔍 [MAPPING] === MAPEO COMPLETO DE TIPO ===');
+  debugPrint('📛 [MAPPING] Nombre: $name');
+  debugPrint('🧬 [MAPPING] Especie: $speciesType');
+  debugPrint('🆔 [MAPPING] Pet ID: $petId');
+  
+  final nameLower = name.toLowerCase();
+  final speciesLower = speciesType.toLowerCase();
+  final petIdLower = petId.toLowerCase();
+  
+  // 🔥 PRIORIDAD 1: MAPEO POR NOMBRE ESPECÍFICO
+  if (nameLower.contains('dexter')) {
+    debugPrint('✅ [MAPPING] Detectado DEXTER por nombre');
+    return CompanionType.dexter;
+  } else if (nameLower.contains('elly')) {
+    debugPrint('✅ [MAPPING] Detectado ELLY por nombre');
+    return CompanionType.elly;
+  } else if (nameLower.contains('paxoloth') || nameLower.contains('paxolotl')) {
+    debugPrint('✅ [MAPPING] Detectado PAXOLOTL por nombre');
+    return CompanionType.paxolotl;
+  } else if (nameLower.contains('yami')) {
+    debugPrint('✅ [MAPPING] Detectado YAMI por nombre');
+    return CompanionType.yami;
+  }
+  
+  // 🔥 PRIORIDAD 2: MAPEO POR ESPECIE
+  if (speciesLower.contains('dog') || 
+      speciesLower.contains('chihuahua') || 
+      speciesLower.contains('mammal') ||
+      speciesLower.contains('canine')) {
+    debugPrint('✅ [MAPPING] Detectado DEXTER por especie');
+    return CompanionType.dexter;
+  } else if (speciesLower.contains('panda') || 
+             speciesLower.contains('bear') ||
+             speciesLower.contains('oso')) {
+    debugPrint('✅ [MAPPING] Detectado ELLY por especie');
+    return CompanionType.elly;
+  } else if (speciesLower.contains('axolotl') || 
+             speciesLower.contains('ajolote') ||
+             speciesLower.contains('amphibian') ||
+             speciesLower.contains('anfibio')) {
+    debugPrint('✅ [MAPPING] Detectado PAXOLOTL por especie');
+    return CompanionType.paxolotl;
+  } else if (speciesLower.contains('jaguar') || 
+             speciesLower.contains('felino') ||
+             speciesLower.contains('cat') ||
+             speciesLower.contains('feline')) {
+    debugPrint('✅ [MAPPING] Detectado YAMI por especie');
+    return CompanionType.yami;
+  }
+  
+  // 🔥 PRIORIDAD 3: MAPEO POR PET ID (UUIDs específicos)
+  if (petId == 'e0512239-dc32-444f-a354-ef94446e5f1c') {
+    debugPrint('✅ [MAPPING] Detectado DEXTER por UUID específico');
+    return CompanionType.dexter;
+  } else if (petId == 'ab23c9ee-a63a-4114-aff7-8ef9899b33f6') {
+    debugPrint('✅ [MAPPING] Detectado ELLY por UUID específico');
+    return CompanionType.elly;
+  } else if (petId == 'afdfcdfa-aed6-4320-a8e5-51debbd1bccf') {
+    debugPrint('✅ [MAPPING] Detectado PAXOLOTL por UUID específico');
+    return CompanionType.paxolotl;
+  } else if (petId == '19119059-bb47-40e2-8eb5-8cf7a66f21b8') {
+    debugPrint('✅ [MAPPING] Detectado YAMI por UUID específico');
+    return CompanionType.yami;
+  }
+  
+  // 🔥 PRIORIDAD 4: MAPEO POR PATRONES EN PET ID
+  if (petIdLower.contains('dexter') || 
+      petIdLower.contains('dog') ||
+      petIdLower.startsWith('d') ||
+      petIdLower.contains('001')) {
+    debugPrint('✅ [MAPPING] Detectado DEXTER por patrón en Pet ID');
+    return CompanionType.dexter;
+  } else if (petIdLower.contains('elly') || 
+             petIdLower.contains('panda') ||
+             petIdLower.startsWith('e') ||
+             petIdLower.contains('002')) {
+    debugPrint('✅ [MAPPING] Detectado ELLY por patrón en Pet ID');
+    return CompanionType.elly;
+  } else if (petIdLower.contains('paxolotl') || 
+             petIdLower.contains('axolotl') ||
+             petIdLower.startsWith('p') ||
+             petIdLower.contains('003')) {
+    debugPrint('✅ [MAPPING] Detectado PAXOLOTL por patrón en Pet ID');
+    return CompanionType.paxolotl;
+  } else if (petIdLower.contains('yami') || 
+             petIdLower.contains('jaguar') ||
+             petIdLower.startsWith('y') ||
+             petIdLower.contains('004')) {
+    debugPrint('✅ [MAPPING] Detectado YAMI por patrón en Pet ID');
+    return CompanionType.yami;
+  }
+  
+  // 🔥 ÚLTIMO RECURSO: HASH BASADO EN MÚLTIPLES FACTORES
+  debugPrint('⚠️ [MAPPING] No se detectó tipo específico, usando hash combinado');
+  
+  // Combinar nombre, especie y petId para un hash más determinístico
+  final combinedString = '$name-$speciesType-$petId';
+  final hash = combinedString.hashCode.abs() % 4;
+  
+  switch (hash) {
+    case 0:
+      debugPrint('🎲 [MAPPING] Hash combinado asignó DEXTER');
+      return CompanionType.dexter;
+    case 1:
+      debugPrint('🎲 [MAPPING] Hash combinado asignó ELLY');
+      return CompanionType.elly;
+    case 2:
+      debugPrint('🎲 [MAPPING] Hash combinado asignó PAXOLOTL');
+      return CompanionType.paxolotl;
+    case 3:
+      debugPrint('🎲 [MAPPING] Hash combinado asignó YAMI');
+      return CompanionType.yami;
+    default:
+      debugPrint('🔄 [MAPPING] Fallback final a DEXTER');
+      return CompanionType.dexter;
+  }
+}
+
 
 @override
 Future<List<CompanionModel>> getUserCompanions(String userId) async {
   try {
-    debugPrint('👤 [API] === OBTENIENDO MASCOTAS DEL USUARIO CON idUserPet ===');
+    debugPrint('👤 [API] === OBTENIENDO MASCOTAS DEL USUARIO CON VALIDACIÓN DE TIPOS ===');
     debugPrint('👤 [API] Usuario ID: $userId');
 
     final response = await apiClient.getGamification(
@@ -375,35 +500,72 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
     for (int i = 0; i < petsData.length; i++) {
       try {
         final petData = petsData[i];
-        debugPrint('🐾 [API] Procesando mascota $i: ${petData['id'] ?? petData['pet_id']}');
+        debugPrint('🐾 [API] === PROCESANDO MASCOTA $i ===');
+        debugPrint('📄 [API] Pet data: $petData');
 
         if (petData is Map<String, dynamic>) {
           // 🔥 EXTRAER EL pet_id PARA LLAMAR A getPetDetails
-          final petId = petData['id'] as String? ?? petData['pet_id'] as String? ?? 'unknown';
+          final petId = petData['id'] as String? ?? 
+                       petData['pet_id'] as String? ?? 
+                       petData['petId'] as String? ?? 
+                       'unknown';
+          
+          final petName = petData['name'] as String? ?? 'Mascota';
+          final speciesType = petData['species_type'] as String? ?? 'unknown';
+          
+          debugPrint('🆔 [API] Pet ID extraído: $petId');
+          debugPrint('📛 [API] Nombre: $petName');
+          debugPrint('🧬 [API] Especie: $speciesType');
+          
+          // 🔥 DETERMINAR EL TIPO ESPERADO DESDE LOS DATOS BÁSICOS
+          final expectedType = _mapNameAndSpeciesToCompanionType(petName, speciesType, petId);
+          debugPrint('🎯 [API] Tipo esperado: ${expectedType.name}');
           
           // 🔥 OBTENER DETALLES COMPLETOS CON idUserPet
           try {
             debugPrint('🔄 [API] Obteniendo detalles con idUserPet para: $petId');
             final companionWithRealStats = await getPetDetails(petId: petId, userId: userId);
             
-            // 🔥 VERIFICAR QUE TENGA idUserPet
-            if (companionWithRealStats is CompanionModelWithPetId) {
-              final idUserPet = companionWithRealStats.petId;
-              debugPrint('✅ [API] Mascota con idUserPet: ${companionWithRealStats.displayName} -> $idUserPet');
+            // 🔥 VERIFICAR QUE EL TIPO SEA CORRECTO
+            if (companionWithRealStats.type != expectedType) {
+              debugPrint('⚠️ [API] === ADVERTENCIA: TIPO NO COINCIDE ===');
+              debugPrint('🎯 [API] Tipo esperado: ${expectedType.name}');
+              debugPrint('🔍 [API] Tipo devuelto: ${companionWithRealStats.type.name}');
+              debugPrint('💡 [API] Corriendo corrección de tipo...');
               
-              if (idUserPet.isNotEmpty && idUserPet != 'unknown') {
-                adoptedCompanions.add(companionWithRealStats);
-              } else {
-                debugPrint('⚠️ [API] idUserPet vacío para ${companionWithRealStats.displayName}');
-              }
+              // 🔥 CORREGIR EL TIPO SI ES NECESARIO
+              final correctedCompanion = _correctCompanionType(companionWithRealStats, expectedType, petName);
+              adoptedCompanions.add(correctedCompanion);
             } else {
-              debugPrint('⚠️ [API] Companion no es CompanionModelWithPetId');
+              debugPrint('✅ [API] Tipo correcto: ${companionWithRealStats.type.name}');
+              
+              // 🔥 VERIFICAR QUE TENGA idUserPet VÁLIDO
+              if (companionWithRealStats is CompanionModelWithPetId) {
+                final idUserPet = companionWithRealStats.petId;
+                debugPrint('✅ [API] Mascota con idUserPet: ${companionWithRealStats.displayName} -> $idUserPet');
+                
+                if (idUserPet.isNotEmpty && idUserPet != 'unknown') {
+                  adoptedCompanions.add(companionWithRealStats);
+                } else {
+                  debugPrint('⚠️ [API] idUserPet vacío para ${companionWithRealStats.displayName}');
+                  // Crear con datos básicos
+                  final basicCompanion = _createBasicCompanionFromUserPet(petData);
+                  if (basicCompanion != null) {
+                    adoptedCompanions.add(basicCompanion);
+                  }
+                }
+              } else {
+                debugPrint('⚠️ [API] Companion no es CompanionModelWithPetId');
+                adoptedCompanions.add(companionWithRealStats);
+              }
             }
             
           } catch (detailsError) {
             debugPrint('⚠️ [API] Error obteniendo detalles de $petId: $detailsError');
-            // 🔥 CREAR COMPANION BÁSICO SI FALLA getPetDetails
-            final basicCompanion = _createBasicCompanionFromUserPet(petData);
+            
+            // 🔥 CREAR COMPANION BÁSICO PERO CON TIPO CORRECTO
+            debugPrint('🔧 [API] Creando companion básico con tipo correcto: ${expectedType.name}');
+            final basicCompanion = _createBasicCompanionWithCorrectType(petData, expectedType);
             if (basicCompanion != null) {
               adoptedCompanions.add(basicCompanion);
             }
@@ -414,15 +576,14 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
       }
     }
 
-    debugPrint('✅ [API] === MASCOTAS USUARIO CON idUserPet PROCESADAS ===');
+    debugPrint('✅ [API] === MASCOTAS USUARIO CON TIPOS VALIDADOS ===');
     debugPrint('🏠 [API] Total mascotas del usuario: ${adoptedCompanions.length}');
 
-    // Debug de todos los idUserPet
+    // Debug de todos los tipos y idUserPet
     for (int i = 0; i < adoptedCompanions.length; i++) {
       final companion = adoptedCompanions[i];
-      if (companion is CompanionModelWithPetId) {
-        debugPrint('[$i] ${companion.displayName} -> idUserPet: ${companion.petId}');
-      }
+      final petIdInfo = companion is CompanionModelWithPetId ? companion.petId : 'No petId';
+      debugPrint('[$i] ${companion.displayName} (${companion.type.name}) -> idUserPet: $petIdInfo');
     }
 
     // Marcar todas como poseídas y asegurar una activa
@@ -437,6 +598,133 @@ Future<List<CompanionModel>> getUserCompanions(String userId) async {
   } catch (e) {
     debugPrint('❌ [API] Error obteniendo mascotas usuario: $e');
     return [];
+  }
+}
+
+CompanionModel _correctCompanionType(
+  CompanionModel originalCompanion, 
+  CompanionType correctType, 
+  String correctName
+) {
+  debugPrint('🔧 [CORRECTION] === CORRIGIENDO TIPO DE COMPANION ===');
+  debugPrint('🔍 [CORRECTION] Original: ${originalCompanion.type.name}');
+  debugPrint('🎯 [CORRECTION] Correcto: ${correctType.name}');
+  
+  // Determinar el ID local correcto
+  final correctLocalId = '${correctType.name}_${originalCompanion.stage.name}';
+  
+  if (originalCompanion is CompanionModelWithPetId) {
+    return CompanionModelWithPetId(
+      id: correctLocalId, // 🔥 ID local correcto
+      type: correctType, // 🔥 Tipo correcto
+      stage: originalCompanion.stage,
+      name: correctName.isNotEmpty ? correctName : originalCompanion.name,
+      description: _generateDescriptionForType(correctType, originalCompanion.stage),
+      level: originalCompanion.level,
+      experience: originalCompanion.experience,
+      happiness: originalCompanion.happiness,
+      hunger: originalCompanion.hunger,
+      energy: originalCompanion.energy,
+      isOwned: originalCompanion.isOwned,
+      isSelected: originalCompanion.isSelected,
+      purchasedAt: originalCompanion.purchasedAt,
+      lastFeedTime: originalCompanion.lastFeedTime,
+      lastLoveTime: originalCompanion.lastLoveTime,
+      currentMood: originalCompanion.currentMood,
+      purchasePrice: originalCompanion.purchasePrice,
+      evolutionPrice: originalCompanion.evolutionPrice,
+      unlockedAnimations: originalCompanion.unlockedAnimations,
+      createdAt: originalCompanion.createdAt,
+      petId: originalCompanion.petId, // 🔥 Preservar el petId original
+    );
+  } else {
+    return originalCompanion.copyWith(
+      id: correctLocalId,
+      type: correctType,
+      name: correctName.isNotEmpty ? correctName : originalCompanion.name,
+      description: _generateDescriptionForType(correctType, originalCompanion.stage),
+    );
+  }
+}
+
+// 🔥 NUEVO MÉTODO: Crear companion básico con tipo correcto
+CompanionModel? _createBasicCompanionWithCorrectType(
+  Map<String, dynamic> petData, 
+  CompanionType correctType
+) {
+  try {
+    debugPrint('🔧 [BASIC] === CREANDO COMPANION BÁSICO CON TIPO CORRECTO ===');
+    debugPrint('🎯 [BASIC] Tipo correcto: ${correctType.name}');
+    
+    // Buscar idUserPet en los datos básicos
+    final idUserPet = petData['idUserPet'] as String? ?? 
+                     petData['id_user_pet'] as String? ?? 
+                     petData['user_pet_id'] as String? ??
+                     petData['id'] as String?;
+    
+    if (idUserPet == null || idUserPet.isEmpty) {
+      debugPrint('⚠️ [BASIC] No se encontró idUserPet en datos básicos');
+      return null;
+    }
+    
+    final name = petData['name'] as String? ?? _getDisplayNameForType(correctType);
+    final stage = CompanionStage.young; // Por defecto
+    
+    debugPrint('🔧 [BASIC] Creando companion básico: $name (${correctType.name})');
+    debugPrint('🆔 [BASIC] Con idUserPet: $idUserPet');
+    
+    return CompanionModelWithPetId(
+      id: '${correctType.name}_${stage.name}', // 🔥 ID con tipo correcto
+      type: correctType, // 🔥 Tipo correcto
+      stage: stage,
+      name: name,
+      description: _generateDescriptionForType(correctType, stage),
+      level: 1,
+      experience: 0,
+      happiness: 75,
+      hunger: 80,
+      energy: 100,
+      isOwned: true,
+      isSelected: false,
+      purchasedAt: DateTime.now(),
+      currentMood: CompanionMood.happy,
+      purchasePrice: 0,
+      evolutionPrice: 50,
+      unlockedAnimations: ['idle', 'blink', 'happy'],
+      createdAt: DateTime.now(),
+      petId: idUserPet, // 🔥 EL idUserPet CRÍTICO
+    );
+  } catch (e) {
+    debugPrint('❌ [BASIC] Error creando companion básico: $e');
+    return null;
+  }
+}
+
+// 🔥 MÉTODO HELPER: Generar descripción para tipo específico
+String _generateDescriptionForType(CompanionType type, CompanionStage stage) {
+  final baseName = _getDisplayNameForType(type);
+  
+  switch (stage) {
+    case CompanionStage.baby:
+      return 'Un adorable $baseName bebé lleno de energía';
+    case CompanionStage.young:
+      return '$baseName ha crecido y es más juguetón';
+    case CompanionStage.adult:
+      return '$baseName adulto, el compañero perfecto';
+  }
+}
+
+// 🔥 MÉTODO HELPER: Obtener nombre para tipo específico
+String _getDisplayNameForType(CompanionType type) {
+  switch (type) {
+    case CompanionType.dexter:
+      return 'Dexter';
+    case CompanionType.elly:
+      return 'Elly';
+    case CompanionType.paxolotl:
+      return 'Paxolotl';
+    case CompanionType.yami:
+      return 'Yami';
   }
 }
 
@@ -1064,83 +1352,363 @@ Future<List<CompanionModel>> getStoreCompanions({required String userId}) async 
 
   // ==================== 🔥 EVOLUTION API IMPLEMENTATION - CORREGIDO ====================
   @override
-  Future<CompanionModel> evolvePetViaApi({
-    required String userId, 
-    required String petId,
-    CompanionStage? currentStage, // 🔥 NUEVA: Etapa actual para evolución correcta
-  }) async {
-    try {
-      debugPrint('🦋 [API] === INICIANDO EVOLUCIÓN VIA API REAL ===');
-      debugPrint('👤 [API] User ID: $userId');
-      debugPrint('🆔 [API] Pet ID (TEMPLATE): $petId');
+Future<CompanionModel> evolvePetViaApi({
+  required String userId, 
+  required String petId,
+  CompanionStage? currentStage,
+}) async {
+  try {
+    debugPrint('🦋 [API] === INICIANDO EVOLUCIÓN VIA API REAL CORREGIDA ===');
+    debugPrint('👤 [API] User ID: $userId');
+    debugPrint('🆔 [API] Pet ID (TEMPLATE): $petId');
+    debugPrint('🎯 [API] Etapa actual: ${currentStage?.name ?? "No especificada"}');
 
-      // 🔥 USAR ENDPOINT CORRECTO: /api/gamification/pets/owned/userId/petId/evolve
-      final endpoint = '/api/gamification/pets/owned/$userId/$petId/evolve';
-      final requestBody = <String, dynamic>{}; // Empty body for evolution
+    final endpoint = '/api/gamification/pets/owned/$userId/$petId/evolve';
+    final requestBody = <String, dynamic>{};
 
-      debugPrint('📦 [API] Request body: $requestBody');
-      debugPrint('🌐 [API] Endpoint: $endpoint');
+    debugPrint('📦 [API] Request body: $requestBody');
+    debugPrint('🌐 [API] Endpoint: $endpoint');
 
-      final response = await apiClient.postGamification(
-        endpoint,
-        data: requestBody,
-      );
+    final response = await apiClient.postGamification(
+      endpoint,
+      data: requestBody,
+    );
 
-      debugPrint('✅ [API] Evolution response: ${response.statusCode}');
-      debugPrint('📄 [API] Response data: ${response.data}');
+    debugPrint('✅ [API] Evolution response: ${response.statusCode}');
+    debugPrint('📄 [API] Response data: ${response.data}');
 
-      if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
-        debugPrint('🎉 [API] === EVOLUCIÓN EXITOSA (${response.statusCode}) ===');
+    if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
+      debugPrint('🎉 [API] === EVOLUCIÓN EXITOSA (${response.statusCode}) ===');
+      
+      // 🔥 CORRECCIÓN CRÍTICA: Para respuesta 204, crear companion correcto
+      if (response.statusCode == 204) {
+        debugPrint('✅ [API] Evolución exitosa con respuesta vacía (204)');
         
-        // 🔥 MANEJAR RESPUESTA 204 (No Content) - ÉXITO SIN DATOS
-        if (response.statusCode == 204) {
-          debugPrint('✅ [API] Evolución exitosa con respuesta vacía (204)');
+        // 🔥 CREAR COMPANION PRESERVANDO EL TIPO ORIGINAL
+        if (currentStage != null) {
+          debugPrint('✅ [API] Usando etapa actual proporcionada: ${currentStage.name}');
           
-          // 🔥 USAR ETAPA ACTUAL SI ESTÁ DISPONIBLE
-          if (currentStage != null) {
-            debugPrint('✅ [API] Usando etapa actual proporcionada: ${currentStage.name}');
-            return _createEvolvedCompanionFromPetIdAndStage(petId, currentStage);
-          } else {
-            // Fallback: asumir baby -> young
-            debugPrint('⚠️ [API] FALLBACK: Asumiendo evolución baby -> young');
-            return _createEvolvedCompanionFromPetIdAndStage(petId, CompanionStage.baby);
-          }
+          // 🔥 MAPEAR PET ID AL TIPO CORRECTO PRIMERO
+          final originalType = _mapPetIdToOriginalCompanionType(petId);
+          debugPrint('🎯 [API] Tipo original detectado: ${originalType.name}');
+          
+          return _createEvolvedCompanionWithCorrectType(petId, currentStage, originalType);
         } else {
-          // Para 200/201, usar datos de la respuesta
-          return _createEvolvedCompanionFromResponse(petId, response.data);
+          debugPrint('⚠️ [API] FALLBACK: Asumiendo evolución baby -> young');
+          final originalType = _mapPetIdToOriginalCompanionType(petId);
+          return _createEvolvedCompanionWithCorrectType(petId, CompanionStage.baby, originalType);
         }
       } else {
-        debugPrint('❌ [API] Error en evolución: ${response.statusCode}');
-        throw ServerException('Error evolucionando mascota: ${response.data}');
+        // Para 200/201, usar datos de la respuesta PERO VALIDAR EL TIPO
+        return _createEvolvedCompanionFromResponseCorrected(petId, response.data, currentStage);
       }
-    } catch (e) {
-      debugPrint('❌ [API] Error en evolución: $e');
-      
-      final errorMessage = e.toString().toLowerCase();
-      if (errorMessage.contains('insufficient') ||
-          errorMessage.contains('points') ||
-          errorMessage.contains('cost')) {
-        throw ServerException('💰 No tienes suficientes puntos para evolucionar');
-      } else if (errorMessage.contains('max level') ||
-          errorMessage.contains('maximum') ||
-          errorMessage.contains('adulto')) {
-        throw ServerException('🏆 Esta mascota ya está en su máxima evolución');
-      } else if (errorMessage.contains('not found') ||
-          errorMessage.contains('404')) {
-        throw ServerException('🔍 Mascota no encontrada en tu colección');
-      } else if (errorMessage.contains('stage') ||
-          errorMessage.contains('etapa') ||
-          errorMessage.contains('previous') ||
-          errorMessage.contains('order')) {
-        throw ServerException('📈 No se puede evolucionar desde esta etapa. Debes tener la etapa anterior');
-      } else if (errorMessage.contains('401') ||
-          errorMessage.contains('unauthorized')) {
-        throw ServerException('🔐 Error de autenticación. Reinicia sesión');
-      } else {
-        throw ServerException('❌ Error evolucionando mascota. Intenta de nuevo');
-      }
+    } else {
+      debugPrint('❌ [API] Error en evolución: ${response.statusCode}');
+      throw ServerException('Error evolucionando mascota: ${response.data}');
+    }
+  } catch (e) {
+    debugPrint('❌ [API] Error en evolución: $e');
+    
+    final errorMessage = e.toString().toLowerCase();
+    if (errorMessage.contains('insufficient') ||
+        errorMessage.contains('points') ||
+        errorMessage.contains('cost')) {
+      throw ServerException('💰 No tienes suficientes puntos para evolucionar');
+    } else if (errorMessage.contains('max level') ||
+        errorMessage.contains('maximum') ||
+        errorMessage.contains('adulto')) {
+      throw ServerException('🏆 Esta mascota ya está en su máxima evolución');
+    } else if (errorMessage.contains('not found') ||
+        errorMessage.contains('404')) {
+      throw ServerException('🔍 Mascota no encontrada en tu colección');
+    } else if (errorMessage.contains('stage') ||
+        errorMessage.contains('etapa') ||
+        errorMessage.contains('previous') ||
+        errorMessage.contains('order')) {
+      throw ServerException('📈 No se puede evolucionar desde esta etapa. Debes tener la etapa anterior');
+    } else if (errorMessage.contains('401') ||
+        errorMessage.contains('unauthorized')) {
+      throw ServerException('🔐 Error de autenticación. Reinicia sesión');
+    } else {
+      throw ServerException('❌ Error evolucionando mascota. Intenta de nuevo');
     }
   }
+}
+
+CompanionType _mapPetIdToOriginalCompanionType(String petId) {
+  debugPrint('🔍 [MAPPING] === MAPEANDO PET ID A TIPO ORIGINAL ===');
+  debugPrint('🆔 [MAPPING] Pet ID recibido: $petId');
+  
+  final petIdLower = petId.toLowerCase();
+  
+  // 🔥 MAPEO ESPECÍFICO PARA TUS PET IDS REALES
+  // Estos son los UUIDs reales de tu API
+  if (petId == 'e0512239-dc32-444f-a354-ef94446e5f1c') {
+    debugPrint('✅ [MAPPING] UUID de Dexter detectado');
+    return CompanionType.dexter;
+  }
+  if (petId == 'ab23c9ee-a63a-4114-aff7-8ef9899b33f6') {
+    debugPrint('✅ [MAPPING] UUID de Elly detectado');
+    return CompanionType.elly;
+  }
+  if (petId == 'afdfcdfa-aed6-4320-a8e5-51debbd1bccf') {
+    debugPrint('✅ [MAPPING] UUID de Paxolotl detectado');
+    return CompanionType.paxolotl;
+  }
+  if (petId == '19119059-bb47-40e2-8eb5-8cf7a66f21b8') {
+    debugPrint('✅ [MAPPING] UUID de Yami detectado');
+    return CompanionType.yami;
+  }
+  
+  // 🔥 MAPEO POR PATRONES DE NOMBRE
+  if (petIdLower.contains('dexter') ||
+      petIdLower.contains('dog') ||
+      petIdLower.contains('chihuahua') ||
+      petIdLower.contains('mammal') ||
+      petIdLower.contains('canine')) {
+    debugPrint('✅ [MAPPING] Dexter detectado por nombre');
+    return CompanionType.dexter;
+  } else if (petIdLower.contains('elly') || 
+             petIdLower.contains('panda') ||
+             petIdLower.contains('bear') ||
+             petIdLower.contains('oso')) {
+    debugPrint('✅ [MAPPING] Elly detectado por nombre');
+    return CompanionType.elly;
+  } else if (petIdLower.contains('paxolotl') ||
+             petIdLower.contains('axolotl') ||
+             petIdLower.contains('ajolote') ||
+             petIdLower.contains('amphibian') ||
+             petIdLower.contains('anfibio')) {
+    debugPrint('✅ [MAPPING] Paxolotl detectado por nombre');
+    return CompanionType.paxolotl;
+  } else if (petIdLower.contains('yami') || 
+             petIdLower.contains('jaguar') ||
+             petIdLower.contains('felino') ||
+             petIdLower.contains('cat') ||
+             petIdLower.contains('feline')) {
+    debugPrint('✅ [MAPPING] Yami detectado por nombre');
+    return CompanionType.yami;
+  }
+
+  // 🔥 MAPEO POR PATRONES NUMÉRICOS
+  if (petIdLower.contains('001') || petIdLower.contains('pet1') || petIdLower.startsWith('d')) {
+    debugPrint('✅ [MAPPING] Dexter detectado por patrón');
+    return CompanionType.dexter;
+  } else if (petIdLower.contains('002') || petIdLower.contains('pet2') || petIdLower.startsWith('e')) {
+    debugPrint('✅ [MAPPING] Elly detectado por patrón');
+    return CompanionType.elly;
+  } else if (petIdLower.contains('003') || petIdLower.contains('pet3') || petIdLower.startsWith('p')) {
+    debugPrint('✅ [MAPPING] Paxolotl detectado por patrón');
+    return CompanionType.paxolotl;
+  } else if (petIdLower.contains('004') || petIdLower.contains('pet4') || petIdLower.startsWith('y')) {
+    debugPrint('✅ [MAPPING] Yami detectado por patrón');
+    return CompanionType.yami;
+  }
+
+  // 🔥 ADVERTENCIA: No se pudo mapear
+  debugPrint('⚠️ [MAPPING] No se pudo mapear Pet ID: $petId');
+  debugPrint('🔧 [MAPPING] Usando hash para distribución equitativa');
+  
+  // Usar hash del petId para distribución más equitativa
+  final hash = petId.hashCode.abs() % 4;
+  switch (hash) {
+    case 0:
+      debugPrint('🎲 [MAPPING] Hash asignado a Dexter');
+      return CompanionType.dexter;
+    case 1:
+      debugPrint('🎲 [MAPPING] Hash asignado a Elly');
+      return CompanionType.elly;
+    case 2:
+      debugPrint('🎲 [MAPPING] Hash asignado a Paxolotl');
+      return CompanionType.paxolotl;
+    case 3:
+      debugPrint('🎲 [MAPPING] Hash asignado a Yami');
+      return CompanionType.yami;
+    default:
+      debugPrint('🔄 [MAPPING] Fallback final a Dexter');
+      return CompanionType.dexter;
+  }
+}
+
+// 🔥 NUEVO MÉTODO: Crear companion evolucionado con tipo correcto
+CompanionModel _createEvolvedCompanionWithCorrectType(
+  String petId, 
+  CompanionStage currentStage, 
+  CompanionType originalType
+) {
+  debugPrint('🦋 [EVOLUTION] === CREANDO COMPANION EVOLUCIONADO CON TIPO CORRECTO ===');
+  debugPrint('🆔 [EVOLUTION] Pet ID: $petId');
+  debugPrint('🎯 [EVOLUTION] Tipo original: ${originalType.name}');
+  debugPrint('📊 [EVOLUTION] Etapa actual: ${currentStage.name}');
+  
+  // 🔥 DETERMINAR LA SIGUIENTE ETAPA DE EVOLUCIÓN
+  CompanionStage nextStage;
+  switch (currentStage) {
+    case CompanionStage.baby:
+      nextStage = CompanionStage.young;
+      break;
+    case CompanionStage.young:
+      nextStage = CompanionStage.adult;
+      break;
+    case CompanionStage.adult:
+      nextStage = CompanionStage.adult; // Ya está en máxima evolución
+      break;
+  }
+  
+  debugPrint('✨ [EVOLUTION] Evolución: ${currentStage.name} → ${nextStage.name}');
+  debugPrint('🎯 [EVOLUTION] Tipo PRESERVADO: ${originalType.name}');
+  
+  // 🔥 GENERAR NUEVO ID LOCAL PARA LA ETAPA EVOLUCIONADA CON EL TIPO CORRECTO
+  final evolvedLocalId = '${originalType.name}_${nextStage.name}';
+  
+  // 🔥 CREAR COMPANION EVOLUCIONADO CON EL TIPO CORRECTO
+  final evolvedCompanion = CompanionModelWithPetId(
+    id: evolvedLocalId,
+    type: originalType, // 🔥 USAR EL TIPO ORIGINAL CORRECTO
+    stage: nextStage,
+    name: _getCompanionNameForStageAndType(originalType, nextStage),
+    description: _generateDescriptionForType(originalType, nextStage),
+    level: _getInitialLevelForStage(nextStage),
+    experience: 0,
+    happiness: 85,
+    hunger: 15,
+    energy: 90,
+    currentMood: CompanionMood.excited,
+    lastFeedTime: DateTime.now().subtract(const Duration(hours: 2)),
+    lastLoveTime: DateTime.now().subtract(const Duration(hours: 1)),
+    isOwned: true,
+    isSelected: false,
+    purchasePrice: 0,
+    evolutionPrice: _getEvolutionPriceForStage(_getStageNumber(nextStage)),
+    unlockedAnimations: _getAnimationsForStage(nextStage),
+    createdAt: DateTime.now(),
+    petId: petId, // 🔥 PRESERVAR EL PET ID ORIGINAL
+  );
+  
+  debugPrint('🎉 [EVOLUTION] === COMPANION EVOLUCIONADO CREADO CORRECTAMENTE ===');
+  debugPrint('🐾 [EVOLUTION] Nombre: ${evolvedCompanion.displayName}');
+  debugPrint('🎯 [EVOLUTION] Tipo FINAL: ${evolvedCompanion.type.name}');
+  debugPrint('📊 [EVOLUTION] Etapa FINAL: ${evolvedCompanion.stage.name}');
+  debugPrint('🆔 [EVOLUTION] Pet ID preservado: ${evolvedCompanion.petId}');
+  
+  return evolvedCompanion;
+}
+
+// 🔥 MÉTODO CORREGIDO: Crear companion desde respuesta con validación de tipo
+CompanionModel _createEvolvedCompanionFromResponseCorrected(
+  String petId, 
+  dynamic responseData, 
+  CompanionStage? currentStage
+) {
+  debugPrint('🦋 [EVOLUTION] === CREANDO DESDE RESPUESTA CORREGIDA ===');
+  debugPrint('🆔 [EVOLUTION] Pet ID: $petId');
+  debugPrint('📄 [EVOLUTION] Response data: $responseData');
+
+  // 🔥 OBTENER EL TIPO ORIGINAL CORRECTO PRIMERO
+  final originalType = _mapPetIdToOriginalCompanionType(petId);
+  debugPrint('🎯 [EVOLUTION] Tipo original detectado: ${originalType.name}');
+
+  // 🔥 MAPEAR ETAPA DESDE LA RESPUESTA O USAR ACTUAL + 1
+  CompanionStage nextStage = CompanionStage.young; // Fallback
+  
+  if (currentStage != null) {
+    switch (currentStage) {
+      case CompanionStage.baby:
+        nextStage = CompanionStage.young;
+        break;
+      case CompanionStage.young:
+        nextStage = CompanionStage.adult;
+        break;
+      case CompanionStage.adult:
+        nextStage = CompanionStage.adult;
+        break;
+    }
+  }
+
+  // 🔥 EXTRAER INFORMACIÓN DE EVOLUCIÓN DE LA RESPUESTA
+  String realName = _getCompanionNameForStageAndType(originalType, nextStage);
+  int newLevel = 2;
+  
+  if (responseData is Map<String, dynamic>) {
+    realName = responseData['name'] as String? ??
+               responseData['pet_name'] as String? ??
+               responseData['nickname'] as String? ??
+               realName;
+               
+    newLevel = responseData['level'] as int? ??
+               responseData['new_level'] as int? ??
+               newLevel;
+               
+    // Intentar extraer nueva etapa de la respuesta
+    final newStageStr = responseData['stage'] as String? ??
+                       responseData['new_stage'] as String? ??
+                       responseData['evolution_stage'] as String?;
+                       
+    if (newStageStr != null) {
+      nextStage = _mapStringToCompanionStage(newStageStr);
+    }
+    
+    debugPrint('✅ [EVOLUTION] Datos extraídos - Nombre: $realName, Nivel: $newLevel, Etapa: ${nextStage.name}');
+  }
+
+  final localId = '${originalType.name}_${nextStage.name}'; // 🔥 USAR TIPO ORIGINAL
+  debugPrint('🆔 [EVOLUTION] Local ID CORREGIDO: $localId');
+
+  return CompanionModelWithPetId(
+    id: localId,
+    type: originalType, // 🔥 USAR TIPO ORIGINAL CORRECTO
+    stage: nextStage,
+    name: realName,
+    description: _generateDescriptionForType(originalType, nextStage),
+    level: newLevel,
+    experience: 0,
+    happiness: 100,
+    hunger: 100,
+    energy: 100,
+    isOwned: true,
+    isSelected: true,
+    purchasedAt: DateTime.now(),
+    currentMood: CompanionMood.excited,
+    purchasePrice: _getDefaultPrice(originalType, nextStage),
+    evolutionPrice: _getEvolutionPrice(nextStage),
+    unlockedAnimations: ['idle', 'blink', 'happy', 'excited'],
+    createdAt: DateTime.now(),
+    petId: petId,
+  );
+}
+
+// 🔥 HELPERS CORREGIDOS PARA USAR EL TIPO CORRECTO
+
+String _getCompanionNameForStageAndType(CompanionType type, CompanionStage stage) {
+  switch (type) {
+    case CompanionType.dexter:
+      switch (stage) {
+        case CompanionStage.baby: return 'Dexter Bebé';
+        case CompanionStage.young: return 'Dexter Joven';
+        case CompanionStage.adult: return 'Dexter Adulto';
+      }
+    case CompanionType.elly:
+      switch (stage) {
+        case CompanionStage.baby: return 'Elly Bebé';
+        case CompanionStage.young: return 'Elly Joven';
+        case CompanionStage.adult: return 'Elly Adulta';
+      }
+    case CompanionType.paxolotl:
+      switch (stage) {
+        case CompanionStage.baby: return 'Paxolotl Bebé';
+        case CompanionStage.young: return 'Paxolotl Joven';
+        case CompanionStage.adult: return 'Paxolotl Adulto';
+      }
+    case CompanionType.yami:
+      switch (stage) {
+        case CompanionStage.baby: return 'Yami Bebé';
+        case CompanionStage.young: return 'Yami Joven';
+        case CompanionStage.adult: return 'Yami Adulto';
+      }
+  }
+}
+
+
 
   // ==================== MÉTODOS LEGACY (mantener compatibilidad) ====================
   @override

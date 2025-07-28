@@ -135,60 +135,18 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Error al cargar quizzes',
+                    'No hay quizzes disponibles',
                     style: core_styles.AppTextStyles.h4.copyWith(
                       color: AppColors.error,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    errorMessage,
-                    style: core_styles.AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                  
                   const SizedBox(height: 16),
                   
                   // Información de debugging
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Debug Info:',
-                          style: core_styles.AppTextStyles.bodySmall.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Topic ID: ${widget.topicId}',
-                          style: core_styles.AppTextStyles.bodySmall.copyWith(
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        Text(
-                          'Category: ${widget.categoryTitle}',
-                          style: core_styles.AppTextStyles.bodySmall.copyWith(
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        Text(
-                          'Expected URL: /api/quiz/by-topic/${widget.topicId}',
-                          style: core_styles.AppTextStyles.bodySmall.copyWith(
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                 
                 ],
               ),
             ),
@@ -730,14 +688,7 @@ class _TriviaQuizSelectionContentState extends State<_TriviaQuizSelectionContent
               ),
             ),
             const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () => _showDebugDialog(context),
-              icon: const Icon(Icons.bug_report),
-              label: const Text('Ver Información Debug'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.warning,
-              ),
-            ),
+           
           ],
         ),
       ),
